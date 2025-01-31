@@ -501,9 +501,11 @@ static void cleanup_animation(void) {
         // Stop timer
         chVTReset(&anim_state.timer);
 
-        // Wait for thread to finish (with timeout)
+        // Ensure the loader thread terminates cleanly
         if (anim_state.loader_thread) {
             chThdTerminate(anim_state.loader_thread);
+            // IMPORTANT: Wait for the thread to actually exit
+            chThdWait(anim_state.loader_thread); 
             anim_state.loader_thread = NULL;
         }
 
@@ -768,9 +770,10 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
     int err;
     return_buf = data;
 
-    if (anim_init != true) {
-        init_animation_state();
-    }
+		if (!anim_init) {
+				init_animation_state();
+				anim_init = true;
+		}
 
     uprintf("Received packet. Parsing command.\r\n");
 
