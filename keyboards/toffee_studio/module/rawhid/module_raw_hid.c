@@ -552,7 +552,9 @@ static void cleanup_animation(void) {
 
         // Ensure the loader thread terminates cleanly
         if (anim_state.loader_thread) {
-            chThdWait(anim_state.loader_thread);
+            while (chThdGetState(anim_state.loader_thread) != THD_STATE_TERMINATED) {
+                chThdSleepMilliseconds(10);
+            }
             anim_state.loader_thread = NULL;
         }
 
