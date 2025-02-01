@@ -52,7 +52,7 @@ typedef struct {
     uint8_t current_buffer;     // Index of buffer currently being displayed
     uint8_t next_buffer;        // Index of buffer being loaded
     bool buffer_ready;          // Indicates if next buffer is ready
-    virtual_timer_t timer;
+    lv_timer_t *lv_timer;
     thread_t *loader_thread;    // Store thread reference for cleanup
     bool is_playing;
     bool should_stop;           // Flag to signal thread termination
@@ -527,9 +527,8 @@ static int parse_flash_remaining(uint8_t *data, uint8_t length) {
 // Forward declarations
 static void cleanup_animation(void);
 static THD_FUNCTION(FrameLoader, arg);
-static void frame_timer_callback(virtual_timer_t *vtp, void *arg);
+static void frame_timer_callback(lv_timer_t *timer);
 
-// Initialize animation state
 static void init_animation_state(void) {
     chMtxObjectInit(&anim_state.state_mutex);
     anim_state.should_stop = false;
@@ -538,7 +537,6 @@ static void init_animation_state(void) {
     anim_state.loader_thread = NULL;
 }
 
-// Cleanup existing animation resources
 static void cleanup_animation(void) {
     chMtxLock(&anim_state.state_mutex);
 
@@ -546,8 +544,11 @@ static void cleanup_animation(void) {
         // Signal thread to stop
         anim_state.should_stop = true;
 
-        // Stop timer
-        chVTReset(&anim_state.timer);
+        // Delete LVGL timer if exists
+        if (anim_state.lv_timer) {
+            lv_timer_del(anim_state.lv_timer);
+            anim_state.lv_timer = NULL;
+        }
 
         // Ensure the loader thread terminates cleanly
         if (anim_state.loader_thread) {
@@ -619,10 +620,8 @@ static THD_FUNCTION(FrameLoader, arg) {
     }
 }
 
-static void frame_timer_callback(virtual_timer_t *vtp, void *arg) {
-    (void)vtp;
-    (void)arg;
-
+static void frame_timer_callback(lv_timer_t *timer) {
+    (void) timer;
     chMtxLock(&anim_state.state_mutex);
 
     if (!anim_state.is_playing || !anim_state.buffer_ready) {
@@ -643,9 +642,6 @@ static void frame_timer_callback(virtual_timer_t *vtp, void *arg) {
 
     anim_state.buffer_ready = false;
     anim_state.current_frame = (anim_state.current_frame + 1) % anim_state.frame_count;
-
-    // Schedule next frame
-    chVTSet(&anim_state.timer, TIME_MS2I(FRAME_INTERVAL_MS), frame_timer_callback, NULL);
 
     chMtxUnlock(&anim_state.state_mutex);
 }
@@ -683,7 +679,7 @@ static int start_animation(const char *path) {
                                                 NORMALPRIO + 1, FrameLoader, NULL);
 
     // Start frame timer
-    chVTSet(&anim_state.timer, TIME_MS2I(FRAME_INTERVAL_MS), frame_timer_callback, NULL);
+    anim_state.lv_timer = lv_timer_create(frame_timer_callback, FRAME_INTERVAL_MS, NULL);
 
     return module_ret_success;
 }
@@ -874,3 +870,4 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
 
     return err;
 }
+
