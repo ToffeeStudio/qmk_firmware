@@ -8,6 +8,10 @@
 #include "module_raw_hid.h"
 #include "lvgl.h"
 
+#define CHUNK_SIZE 256
+static uint8_t file_buffer[CHUNK_SIZE];
+static size_t current_write_pointer = 0;
+
 #define DIRECTORY_MAX 64
 #define MAX_PATH_LENGTH 256
 #define FRAME_WIDTH 128
@@ -347,12 +351,11 @@ static int parse_open(uint8_t *data, uint8_t length) {
         return err;
     }
 
+    current_write_pointer = 0;
+    memset(file_buffer, 0, CHUNK_SIZE);
+
     return module_ret_success;
 }
-
-#define CHUNK_SIZE 256
-static uint8_t file_buffer[CHUNK_SIZE];
-static size_t current_write_pointer = 0;
 
 static int parse_write(uint8_t *data, uint8_t length) {
     if (length <= sizeof(struct packet_header)) {
@@ -361,8 +364,28 @@ static int parse_write(uint8_t *data, uint8_t length) {
     }
 
     uint8_t *write_data = data + sizeof(struct packet_header);
-    size_t data_length = length - sizeof(struct packet_header);
+    size_t data_length   = length - sizeof(struct packet_header);
 
+    // 1) Query how many blocks are used so far
+    lfs_ssize_t used_blocks = lfs_fs_size(&lfs);
+    if (used_blocks < 0) {
+        uprintf("Error reading used blocks: %ld\n", used_blocks);
+        return module_ret_invalid_command;
+    }
+
+    // 2) total_blocks (16MB / 4096)
+    uint32_t total_blocks = 4096;
+    uint32_t free_blocks  = (used_blocks < total_blocks)
+                            ? (total_blocks - (uint32_t)used_blocks)
+                            : 0;
+    uint32_t remaining_bytes = free_blocks * 4096;
+
+    if (data_length > remaining_bytes) {
+        uprintf("Not enough space, refusing to write.\n");
+        return module_ret_image_flash_full; // Or any error code you prefer
+    }
+
+    // 3) Continue with the existing logic that buffers data and writes in 256-byte chunks
     uprintf("Got data len: %d, current buf: %d\n", data_length, current_write_pointer);
 
     // Sanity check
@@ -386,13 +409,12 @@ static int parse_write(uint8_t *data, uint8_t length) {
         lfs_ssize_t written = lfs_file_write(&lfs, &current_file, file_buffer, CHUNK_SIZE);
 
         if (written < 0) {
-            uprintf("Write failed with %d\n", written);
-            current_write_pointer = 0;  // Reset on error
+            uprintf("Write failed with %ld\n", (long)written);            current_write_pointer = 0;  // Reset on error
             return written;
         }
 
         if (written != CHUNK_SIZE) {
-            uprintf("Incomplete write: %d of %d\n", written, CHUNK_SIZE);
+            uprintf("Incomplete write: %ld of %d\n", (long)written, CHUNK_SIZE);
             current_write_pointer = 0;  // Reset on error
             return -1;
         }
@@ -442,7 +464,15 @@ static int flush_write_buffer(void) {
 static int parse_close(uint8_t *data, uint8_t length) {
     uprintf("Close current file\n");
 
-    int err = close_file(&lfs, &current_file);
+    // 1) Flush leftover data in file_buffer[]
+    int err = flush_write_buffer();
+    if (err < 0) {
+        uprintf("Error flushing leftover data: %d\n", err);
+        // Decide whether to close anyway or return the error
+    }
+
+    // 2) Now do the usual close
+    err = close_file(&lfs, &current_file);
     if (err < 0) {
         return err;
     }
@@ -466,13 +496,31 @@ static int parse_format_filesystem(uint8_t *data, uint8_t length) {
 }
 
 static int parse_flash_remaining(uint8_t *data, uint8_t length) {
-    uprintf("Flash remaining\n");
-    lfs_ssize_t size = lfs_fs_size(&lfs);
+    uprintf(">>> Flash remaining NEW PRINT\n");
 
-    uint32_t remaining = 128 - size;  // Adjust based on actual flash size
-    memcpy(return_buf + 1, &remaining, sizeof(remaining));
+    // How many blocks are actually used in the current LFS partition
+    lfs_ssize_t used_blocks = lfs_fs_size(&lfs);
+    if (used_blocks < 0) {
+        uprintf("Error reading used blocks: %ld\n", used_blocks);
+        return module_ret_invalid_command;
+    }
 
-    uprintf("Size: %li\n", remaining);
+    // If your block size is 4096 (typical), and the entire partition is 16 MB:
+    // 16 MB / 4 KB = 4096 total blocks
+    uint32_t total_blocks = 4096;  // 16MB / 4KB
+
+    // Compute how many free blocks remain
+    uint32_t free_blocks = (used_blocks < total_blocks)
+                           ? (total_blocks - (uint32_t)used_blocks)
+                           : 0;
+
+    // Each block is 4096 bytes
+    uint32_t remaining_bytes = free_blocks * 4096;
+
+    // Return that to the host
+    memcpy(return_buf + 1, &remaining_bytes, sizeof(remaining_bytes));
+
+    uprintf("Remaining bytes: %lu\n", remaining_bytes);
     return module_ret_success;
 }
 
@@ -504,8 +552,6 @@ static void cleanup_animation(void) {
         // Ensure the loader thread terminates cleanly
         if (anim_state.loader_thread) {
             chThdTerminate(anim_state.loader_thread);
-            // IMPORTANT: Wait for the thread to actually exit
-            chThdWait(anim_state.loader_thread); 
             anim_state.loader_thread = NULL;
         }
 
@@ -539,25 +585,36 @@ static THD_FUNCTION(FrameLoader, arg) {
         }
 
         if (!anim_state.buffer_ready) {
-            // Calculate next frame position
+            // Calculate next frame's file offset
             lfs_off_t frame_pos = anim_state.current_frame * (lfs_off_t)FRAME_SIZE;
 
-            // Seek to next frame
+            // Seek & read
             lfs_file_seek(&lfs, &anim_state.file, frame_pos, LFS_SEEK_SET);
-
-            // Read directly into next buffer
             lfs_ssize_t bytes_read = lfs_file_read(&lfs, &anim_state.file,
                                                   frame_buffers[anim_state.next_buffer],
                                                   FRAME_SIZE);
 
-            if (bytes_read == FRAME_SIZE) {
+            if (bytes_read < 0) {
+                // Serious LFS error
+                uprintf("Error reading frame %ld: %ld\n",
+                        (long)anim_state.current_frame, (long)bytes_read);
+                // Stop or handle the error
+                anim_state.should_stop = true; 
+            } else if (bytes_read < FRAME_SIZE) {
+                // We got a partial frame
+                memset(frame_buffers[anim_state.next_buffer] + bytes_read,
+                       0,
+                       FRAME_SIZE - bytes_read);
+                anim_state.buffer_ready = true;
+                // We can keep going, or decide to stop if we do not want partial frames
+            } else {
+                // Normal full read
                 anim_state.buffer_ready = true;
             }
         }
 
         chMtxUnlock(&anim_state.state_mutex);
-
-        // Sleep for a portion of frame time to reduce CPU usage
+        // Sleep for some fraction of the frame interval
         chThdSleepMilliseconds(FRAME_INTERVAL_MS / 4);
     }
 }

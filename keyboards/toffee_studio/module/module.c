@@ -17,7 +17,22 @@
 #ifdef VIA_ENABLE
 
 void board_init(void) {
+		// DON'T USE THIS FUNCTION FOR NOW
+		return;
+		uprintf("CALLED HERE CALLED HERE\n");
     rp2040_mount_lfs(&lfs);
+
+		// Print how many blocks are used at mount
+    lfs_ssize_t used_blocks = lfs_fs_size(&lfs);
+    uprintf("At boot: LFS used blocks = %ld\n", used_blocks);
+
+    // Let's also do a quick check with parse_flash_remaining logic:
+    uint32_t total_blocks = 4096; // For 16MB at 4KB block
+    uint32_t free_blocks = (used_blocks < total_blocks)
+                           ? (total_blocks - (uint32_t)used_blocks)
+                           : 0;
+    uprintf("At boot: free blocks = %lu => %lu bytes\n",
+            free_blocks, free_blocks * 4096);
 
     debug_enable   = true;
     debug_matrix   = true;
@@ -43,20 +58,37 @@ __attribute__((weak)) void ui_init(void) {
     if (qp_lvgl_attach(oled)) {
         result = lv_fs_littlefs_set_driver(LV_FS_LITTLEFS_LETTER, &lfs);
         if (result == NULL) {
-            uprintf("Error mounting LFS");
+            uprintf("Error mounting LFS\n");
         }
     }
 }
 
 #ifdef QUANTUM_PAINTER_ENABLE
 void keyboard_post_init_kb(void) {
-    // Init the display
+    uprintf("keyboard_post_init_kb called\n");
+
+    // 1) Mount LFS here:
+    rp2040_mount_lfs(&lfs);
+
+    // 2) Optional debug prints:
+    lfs_ssize_t used_blocks = lfs_fs_size(&lfs);
+    uprintf("At boot: LFS used blocks = %ld\n", used_blocks);
+
+    uint32_t total_blocks = 4096; // For a 16MB partition with 4KB blocks
+    uint32_t free_blocks  = (used_blocks < total_blocks)
+                            ? (total_blocks - (uint32_t)used_blocks)
+                            : 0;
+    uprintf("At boot: free blocks = %lu => %lu bytes\n",
+            free_blocks, free_blocks * 4096);
+
+    // 3) Initialize your display
     setPinOutputPushPull(OLED_BL_PIN);
     writePinHigh(OLED_BL_PIN);
     ui_init();
+
+    // 4) Call the default post-init
     keyboard_post_init_user();
 }
-
 #endif //QUANTUM_PAINTER_ENABLE
 
 void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
