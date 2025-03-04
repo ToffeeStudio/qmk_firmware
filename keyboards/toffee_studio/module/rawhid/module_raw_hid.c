@@ -552,10 +552,15 @@ static void cleanup_animation(void) {
 
         // Ensure the loader thread terminates cleanly
         if (anim_state.loader_thread) {
-            while (chThdGetState(anim_state.loader_thread) != THD_STATE_TERMINATED) {
+            while (1) {
+                chSysLock();
+                if (anim_state.loader_thread == NULL) {
+                    chSysUnlock();
+                    break;
+                }
+                chSysUnlock();
                 chThdSleepMilliseconds(10);
             }
-            anim_state.loader_thread = NULL;
         }
 
         // Close file
@@ -620,6 +625,10 @@ static THD_FUNCTION(FrameLoader, arg) {
         // Sleep for some fraction of the frame interval
         chThdSleepMilliseconds(FRAME_INTERVAL_MS / 4);
     }
+    // Thread is exiting; mark it as terminated
+    chSysLock();
+    anim_state.loader_thread = NULL;
+    chSysUnlock();
 }
 
 static void frame_timer_callback(lv_timer_t *timer) {
