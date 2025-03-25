@@ -607,7 +607,7 @@ static THD_FUNCTION(FrameLoader, arg) {
                 uprintf("Error reading frame %ld: %ld\n",
                         (long)anim_state.current_frame, (long)bytes_read);
                 // Stop or handle the error
-                anim_state.should_stop = true; 
+                anim_state.should_stop = true;
             } else if (bytes_read < FRAME_SIZE) {
                 // We got a partial frame
                 memset(frame_buffers[anim_state.next_buffer] + bytes_read,

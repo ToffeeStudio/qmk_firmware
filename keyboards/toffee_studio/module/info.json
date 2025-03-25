@@ -9,7 +9,7 @@
         "pid": "0x626D",
         "device_version": "0.0.1"
     },
-    "lighting": "qmk_rgblight"
+    "lighting": "qmk_rgblight",
     "rgblight": {
         "animations": {
             "breathing": true,

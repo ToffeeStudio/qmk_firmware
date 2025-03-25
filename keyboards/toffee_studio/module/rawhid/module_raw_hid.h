@@ -21,6 +21,7 @@ enum module_command_id {
     id_module_cmd_choose_image      = 0x5C,
     id_module_cmd_write_display     = 0x5D,
     id_module_cmd_set_time          = 0x5E,
+    id_module_cmd_ping              = 0x5F,
     id_module_cmd_end               = 0xFF,
 };
 
