@@ -409,7 +409,8 @@ static int parse_write(uint8_t *data, uint8_t length) {
         lfs_ssize_t written = lfs_file_write(&lfs, &current_file, file_buffer, CHUNK_SIZE);
 
         if (written < 0) {
-            uprintf("Write failed with %ld\n", (long)written);            current_write_pointer = 0;  // Reset on error
+            uprintf("Write failed with %ld\n", (long)written);
+            current_write_pointer = 0;  // Reset on error
             return written;
         }
 
@@ -521,6 +522,14 @@ static int parse_flash_remaining(uint8_t *data, uint8_t length) {
     memcpy(return_buf + 1, &remaining_bytes, sizeof(remaining_bytes));
 
     uprintf("Remaining bytes: %lu\n", remaining_bytes);
+    return module_ret_success;
+}
+
+// New ping handler
+static int parse_ping(uint8_t *data, uint8_t length) {
+    uprintf("Ping command received.\n");
+    const char response[] = "TS_Module_v1";
+    virtser_send((const uint8_t *)response, sizeof(response) - 1);
     return module_ret_success;
 }
 
@@ -827,6 +836,7 @@ static module_raw_hid_parse_t* parse_packet_funcs[] = {
     parse_choose_image,
     parse_write_display,
     parse_set_time,
+    parse_ping,   // <-- Ping handler added here
 };
 
 static bool anim_init = false;
@@ -834,10 +844,10 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
     int err;
     return_buf = data;
 
-		if (!anim_init) {
-				init_animation_state();
-				anim_init = true;
-		}
+    if (!anim_init) {
+        init_animation_state();
+        anim_init = true;
+    }
 
     uprintf("Received packet. Parsing command.\r\n");
 
