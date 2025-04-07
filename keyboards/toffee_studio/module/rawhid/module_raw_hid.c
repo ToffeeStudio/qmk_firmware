@@ -91,7 +91,12 @@ static int close_file(lfs_t *lfs, lfs_file_t *file) {
 static uint8_t *return_buf;
 
 static int parse_ls(uint8_t *data, uint8_t length) {
-    uprintf("List files\n");
+    uprintf("[CMD]: List files\r\n");
+    chThdSleepMilliseconds(5);
+    const char *msg = "Hello from QMK CDC!\n";
+    while (*msg) {
+        virtser_send((uint8_t)*msg++);
+    }
 
     lfs_dir_t dir;
     int err = lfs_dir_open(&lfs, &dir, ".");
@@ -836,7 +841,7 @@ static module_raw_hid_parse_t* parse_packet_funcs[] = {
     parse_choose_image,
     parse_write_display,
     parse_set_time,
-    parse_ping,   // <-- Ping handler added here
+    parse_ping,
 };
 
 static bool anim_init = false;

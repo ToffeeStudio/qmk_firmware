@@ -754,6 +754,7 @@ void virtser_task(void) {
  * FIXME: Needs doc
  */
 void virtser_send(const uint8_t byte) {
+    uprintf("VIRTSER_SEND WAS CALLED\n");
     uint8_t timeout = 255;
     uint8_t ep      = Endpoint_GetCurrentEndpoint();
 

@@ -17,12 +17,12 @@
 #ifdef VIA_ENABLE
 
 void board_init(void) {
-		// DON'T USE THIS FUNCTION FOR NOW
-		return;
-		uprintf("CALLED HERE CALLED HERE\n");
+    // DON'T USE THIS FUNCTION FOR NOW
+    return;
+    uprintf("CALLED HERE CALLED HERE\n");
     rp2040_mount_lfs(&lfs);
 
-		// Print how many blocks are used at mount
+    // Print how many blocks are used at mount
     lfs_ssize_t used_blocks = lfs_fs_size(&lfs);
     uprintf("At boot: LFS used blocks = %ld\n", used_blocks);
 
@@ -43,28 +43,58 @@ void board_init(void) {
 static painter_device_t      oled;
 static painter_font_handle_t font;
 
+//------------------------------------------------------------------------------
+// New helper function to generate a colored gradient in RGB565 format.
+// This function creates a 128x128 gradient and displays it via LVGL.
+static void draw_gradient(void) {
+    const int width = 128;
+    const int height = 128;
+    static uint16_t gradient_buffer[128 * 128];
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            // Create a diagonal gradient:
+            // red increases with x, blue increases with y, green is a mix.
+            uint8_t red   = (x * 31) / (width - 1);             // 5-bit red
+            uint8_t green = ((x + y) * 63) / (width + height - 2); // 6-bit green
+            uint8_t blue  = (y * 31) / (height - 1);              // 5-bit blue
+            uint16_t color = (red << 11) | (green << 5) | blue;    // Pack into RGB565
+            gradient_buffer[y * width + x] = color;
+        }
+    }
+
+    static lv_img_dsc_t gradient_img;
+    gradient_img.header.always_zero = 0;
+    gradient_img.header.w = width;
+    gradient_img.header.h = height;
+    gradient_img.data_size = width * height * 2;  // 2 bytes per pixel
+    gradient_img.header.cf = LV_IMG_CF_TRUE_COLOR;
+    gradient_img.data = (const uint8_t *)gradient_buffer;
+
+    lv_obj_t *img = lv_img_create(lv_scr_act());
+    lv_img_set_src(img, &gradient_img);
+}
+
 #include "qp_comms.h"
 #include "qp_gc9xxx_opcodes.h"
 
+//------------------------------------------------------------------------------
+// Override ui_init() to initialize the display and show the gradient.
 __attribute__((weak)) void ui_init(void) {
+    // Initialize the OLED display.
     oled = qp_gc9107_make_spi_device(128, 128, 0xFF, OLED_DC_PIN, 0xFF, 8, 0);
-
     qp_init(oled, QP_ROTATION_180);
-
     qp_power(oled, true);
 
-    volatile lv_fs_drv_t *result;
+    // Attach LVGL to the OLED.
+    qp_lvgl_attach(oled);
 
-    if (qp_lvgl_attach(oled)) {
-        result = lv_fs_littlefs_set_driver(LV_FS_LITTLEFS_LETTER, &lfs);
-        if (result == NULL) {
-            uprintf("Error mounting LFS\n");
-        }
-    }
+    // Draw and display the colored gradient.
+    draw_gradient();
 }
 
 #ifdef QUANTUM_PAINTER_ENABLE
 void keyboard_post_init_kb(void) {
+    virtser_send((const uint8_t*)"Hello CDC!\n", 11);
     uprintf("keyboard_post_init_kb called\n");
 
     // 1) Mount LFS here:
@@ -93,10 +123,10 @@ void keyboard_post_init_kb(void) {
 
 void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
     int err;
-
     err = module_raw_hid_parse_packet(data, length);
     if (err < 0) {
         uprintf("Error parsing packet: %d\n", err);
     }
 }
 #endif
+
