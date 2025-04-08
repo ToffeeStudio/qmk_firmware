@@ -14,7 +14,29 @@
 #include "module.h"
 #include "module_raw_hid.h"
 
-#ifdef VIA_ENABLE
+
+// --- VIRTSER RECEIVE FUNCTIONALITY -------
+
+#define RECEIVE_BUFFER_SIZE 64
+static uint8_t cdc_receive_buffer[RECEIVE_BUFFER_SIZE];
+static uint16_t cdc_buffer_index = 0;
+
+void virtser_recv(const uint8_t ch) {
+    if (cdc_buffer_index < RECEIVE_BUFFER_SIZE) {
+        cdc_receive_buffer[cdc_buffer_index] = ch;
+        cdc_buffer_index++;
+        if (cdc_buffer_index == RECEIVE_BUFFER_SIZE || ch == '\n') {
+            uprintf("[CDC]: Buffer filled (%u bytes):\n", cdc_buffer_index);
+            chThdSleepMilliseconds(5);
+            for (uint16_t i = 0; i < cdc_buffer_index; i++) {
+                uprintf("%02X ", cdc_receive_buffer[i]);
+                chThdSleepMilliseconds(1);
+            }
+            uprintf("\n");
+            chThdSleepMilliseconds(5);
+        }
+    }
+}
 
 void board_init(void) {
     // DON'T USE THIS FUNCTION FOR NOW
@@ -128,5 +150,4 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
         uprintf("Error parsing packet: %d\n", err);
     }
 }
-#endif
 
