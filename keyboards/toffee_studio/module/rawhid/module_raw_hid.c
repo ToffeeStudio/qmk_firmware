@@ -91,59 +91,89 @@ static int close_file(lfs_t *lfs, lfs_file_t *file) {
 static uint8_t *return_buf;
 
 static int parse_ls(uint8_t *data, uint8_t length) {
-    uprintf("[CMD]: List files\r\n");
-    chThdSleepMilliseconds(5);
-    const char *msg = "Hello from QMK CDC!\n";
-    while (*msg) {
-        virtser_send((uint8_t)*msg++);
-    }
+    uprintf("List files (Simplified)\n");
+
+    // 'return_buf' points to the same memory as 'data' in this setup.
+    // We will overwrite 'data' starting from index 1 to prepare the response.
+    uint8_t *response_payload = return_buf + 1; // Where we write the listing
+    const uint8_t max_payload_size = RAW_EPSIZE - 1; // Max bytes for the listing itself
+    uint8_t current_offset = 0; // Offset within the response_payload
 
     lfs_dir_t dir;
-    int err = lfs_dir_open(&lfs, &dir, ".");
+    int err = lfs_dir_open(&lfs, &dir, "."); // Open current directory
     if (err < 0) {
         uprintf("Error opening directory: %d\n", err);
-        return module_ret_invalid_command;
+        // Set error code in the response buffer's first byte
+        return_buf[0] = module_ret_invalid_command; // Or a specific LFS error?
+        // Indicate how many bytes to send back (just the status byte) - QMK handles this implicitly usually
+        // For Via Raw channel, modifying data[0] and returning success might be enough.
+        return err; // Return negative LFS error code
     }
 
     struct lfs_info info;
-    int offset = 1;  // Start at index 1 to leave room for the return code
-
     while (true) {
         int res = lfs_dir_read(&lfs, &dir, &info);
         if (res < 0) {
             uprintf("Error reading directory: %d\n", res);
             lfs_dir_close(&lfs, &dir);
-            return module_ret_invalid_command;
+            return_buf[0] = module_ret_invalid_command; // Indicate error
+            return res; // Return negative LFS error code
         }
         if (res == 0) {
-            break;
+            break; // End of directory listing
         }
 
+        // Skip "." and ".." entries
         if (strcmp(info.name, ".") == 0 || strcmp(info.name, "..") == 0) {
             continue;
         }
 
         int name_len = strlen(info.name);
+        // Calculate needed space: name + type_char + newline_char
+        int needed_space = name_len + 2;
 
-        // Ensure name_len does not exceed buffer size
-        if (name_len > RAW_EPSIZE - offset - 2) {
-            name_len = RAW_EPSIZE - offset - 2;
+        // --- BOUNDS CHECK ---
+        // Check if adding this entry would exceed the single packet payload size
+        if (current_offset + needed_space > max_payload_size) {
+            uprintf("Response buffer full, truncating ls output.\n");
+            break; // Stop adding entries if buffer is full
         }
 
-        if (offset + name_len + 2 > RAW_EPSIZE) {
-            memset(return_buf + 1, 0, RAW_EPSIZE - 1);  // Clear all but the first byte
-            offset = 1;
-        }
+        // --- Copy data if it fits ---
+        // Copy filename
+        memcpy(response_payload + current_offset, info.name, name_len);
+        current_offset += name_len;
 
-        strncpy((char *)return_buf + offset, info.name, name_len);
-        offset += name_len;
-        return_buf[offset++] = (info.type == LFS_TYPE_DIR) ? '/' : ' ';
-        return_buf[offset++] = '\n';
+        // Add type indicator ('/' for dir, ' ' for file)
+        response_payload[current_offset++] = (info.type == LFS_TYPE_DIR) ? '/' : ' ';
+
+        // Add newline separator
+        response_payload[current_offset++] = '\n';
     }
+
+    // Ensure null termination *if* space allows (good practice, host might expect it)
+    if (current_offset < max_payload_size) {
+        response_payload[current_offset] = '\0';
+    } else {
+        // If exactly full, the last char written might have been the newline.
+        // Ensure the *last possible byte* isn't part of multi-byte char etc.
+        // In this simplified case, we just don't add null terminator if full.
+    }
+
 
     lfs_dir_close(&lfs, &dir);
 
-    return module_ret_success;
+    // Set success code in the response buffer's first byte
+    return_buf[0] = module_ret_success;
+
+    // Implicitly, the framework handling the raw HID request (likely Via's handler calling this)
+    // should send back the contents of the 'data'/'return_buf' buffer.
+    // The length sent back is often determined by the return value of the handler,
+    // or by convention (e.g., always RAW_EPSIZE).
+    // By modifying return_buf[0] and returning success, we signal the operation succeeded.
+    // IMPORTANT: We did NOT write past return_buf[RAW_EPSIZE-1].
+
+    return module_ret_success; // Indicate success to the caller function
 }
 
 static int parse_cd(uint8_t *data, uint8_t length) {
