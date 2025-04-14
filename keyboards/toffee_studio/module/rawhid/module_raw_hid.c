@@ -7,6 +7,8 @@
 #include "module.h"
 #include "module_raw_hid.h"
 #include "lvgl.h"
+#include "virtser.h"
+#include <string.h>
 
 #define CHUNK_SIZE 256
 static uint8_t file_buffer[CHUNK_SIZE];
@@ -19,6 +21,10 @@ static size_t current_write_pointer = 0;
 #define FRAME_SIZE ((FRAME_WIDTH * FRAME_HEIGHT) * LV_COLOR_DEPTH / 8)
 #define FPS 12
 #define FRAME_INTERVAL_MS (1000 / FPS)
+
+// Static variables for paged directory listings
+static lfs_dir_t paged_ls_dir;
+static bool paged_ls_dir_open = false;
 
 // Double buffered image data
 static uint8_t frame_buffers[2][FRAME_SIZE];
@@ -91,36 +97,177 @@ static int close_file(lfs_t *lfs, lfs_file_t *file) {
 static uint8_t *return_buf;
 
 static int parse_ls(uint8_t *data, uint8_t length) {
-    uprintf("List files (Simplified)\n");
+    uprintf("List files (First Page)\n");
 
-    // 'return_buf' points to the same memory as 'data' in this setup.
-    // We will overwrite 'data' starting from index 1 to prepare the response.
-    uint8_t *response_payload = return_buf + 1; // Where we write the listing
-    const uint8_t max_payload_size = RAW_EPSIZE - 1; // Max bytes for the listing itself
-    uint8_t current_offset = 0; // Offset within the response_payload
-
-    lfs_dir_t dir;
-    int err = lfs_dir_open(&lfs, &dir, "."); // Open current directory
-    if (err < 0) {
-        uprintf("Error opening directory: %d\n", err);
-        // Set error code in the response buffer's first byte
-        return_buf[0] = module_ret_invalid_command; // Or a specific LFS error?
-        // Indicate how many bytes to send back (just the status byte) - QMK handles this implicitly usually
-        // For Via Raw channel, modifying data[0] and returning success might be enough.
-        return err; // Return negative LFS error code
+    // Close any previously open directory listing
+    if (paged_ls_dir_open) {
+        uprintf("Closing previously open paged directory handle.\n");
+        lfs_dir_close(&lfs, &paged_ls_dir);
+        paged_ls_dir_open = false;
     }
 
+    // 'return_buf' points to the same memory as 'data'.
+    // We overwrite 'data' starting from index 1 for the response.
+    return_buf = data; // Ensure return_buf is set correctly
+    uint8_t *response_payload = return_buf + 1; // Payload starts after the return code byte
+    const uint8_t max_payload_size = RAW_EPSIZE - 1; // Max bytes for filenames + separators
+    uint8_t current_offset = 0;
+
+    // Clear the response payload area first
+    memset(response_payload, 0, max_payload_size);
+
+    // Open the current directory for listing
+    int err = lfs_dir_open(&lfs, &paged_ls_dir, "."); // Open "."
+    if (err < 0) {
+        uprintf("Error opening directory '.': %d\n", err);
+        return_buf[0] = module_ret_invalid_command; // Use enum for clarity
+        return module_ret_invalid_command; // Return error code
+    }
+    paged_ls_dir_open = true; // Mark directory as open for paging
+    uprintf("Opened directory '.' for paged listing.\n");
+
     struct lfs_info info;
+    bool has_more = false;
+
+    // Read directory entries until buffer is full or end of directory
     while (true) {
-        int res = lfs_dir_read(&lfs, &dir, &info);
+        // Store position *before* reading the next entry
+        lfs_off_t current_pos = lfs_dir_tell(&lfs, &paged_ls_dir);
+        if (current_pos < 0) {
+            uprintf("Error getting directory position: %ld\n", (long)current_pos);
+            lfs_dir_close(&lfs, &paged_ls_dir);
+            paged_ls_dir_open = false;
+            return_buf[0] = module_ret_invalid_command;
+            return module_ret_invalid_command;
+        }
+
+        int res = lfs_dir_read(&lfs, &paged_ls_dir, &info);
+        if (res < 0) {
+            uprintf("Error reading directory entry: %d\n", res);
+            lfs_dir_close(&lfs, &paged_ls_dir);
+            paged_ls_dir_open = false;
+            return_buf[0] = module_ret_invalid_command;
+            return module_ret_invalid_command;
+        }
+
+        if (res == 0) {
+            // End of directory reached
+            uprintf("End of directory reached in parse_ls.\n");
+            lfs_dir_close(&lfs, &paged_ls_dir); // Close the directory
+            paged_ls_dir_open = false;         // Mark as closed
+            has_more = false; // Ensure has_more is false
+            break;            // Exit the loop
+        }
+
+        // Skip "." and ".." entries if they appear (should only be first two)
+        if (strcmp(info.name, ".") == 0 || strcmp(info.name, "..") == 0) {
+            uprintf("Skipping '.' or '..'\n");
+            continue;
+        }
+
+        // Filter out potentially invalid names or empty strings
+        if (info.name[0] == '\0') {
+            uprintf("Skipping empty filename entry.\n");
+            continue;
+        }
+
+        int name_len = strlen(info.name);
+        // Calculate needed space: name + type_char + null_separator_char
+        int needed_space = name_len + 2;
+
+        // Check if adding this entry *would* exceed the buffer
+        if (current_offset + needed_space > max_payload_size) {
+            uprintf("Buffer would be full with '%s' (%d bytes needed, %d available), more entries remain.\n", info.name, needed_space, max_payload_size - current_offset);
+            has_more = true; // Mark that there are more entries
+
+            // *** THE FIX: Rewind the directory iterator ***
+            // Seek back to the position *before* we read the entry that didn't fit.
+            int seek_err = lfs_dir_seek(&lfs, &paged_ls_dir, current_pos);
+            if (seek_err < 0) {
+                 uprintf("Error rewinding directory iterator: %d\n", seek_err);
+                 lfs_dir_close(&lfs, &paged_ls_dir); // Close on error
+                 paged_ls_dir_open = false;
+                 return_buf[0] = module_ret_invalid_command; // Indicate error
+                 return module_ret_invalid_command;
+            }
+             uprintf("Rewound directory iterator to position %ld for next read.\n", (long)current_pos);
+            // ******************************************
+
+            break; // Exit the loop, leaving the directory open
+        }
+
+        // If we reach here, the entry fits. Copy filename
+        memcpy(response_payload + current_offset, info.name, name_len);
+        current_offset += name_len;
+
+        // Add type indicator ('/' for dir, ' ' for file)
+        response_payload[current_offset++] = (info.type == LFS_TYPE_DIR) ? '/' : ' ';
+
+        // Add NULL separator
+        response_payload[current_offset++] = '\0';
+
+        uprintf("Added entry: %s%c\n", info.name, (info.type == LFS_TYPE_DIR) ? '/' : ' ');
+    }
+
+    // Set appropriate return code based on whether more entries are available
+    if (has_more) {
+        uprintf("More entries available, returning MORE_ENTRIES code\n");
+        return_buf[0] = module_ret_more_entries;
+        return module_ret_more_entries; // Return "more entries" code
+    } else {
+        // If we finished without filling the buffer, it means no more entries *or*
+        // the directory was empty after skipping '.' and '..'.
+        // The directory should have been closed in the (res == 0) block if end was reached.
+        uprintf("No more entries, returning SUCCESS code (dir_open=%d)\n", paged_ls_dir_open);
+        // Ensure directory is closed if loop finished naturally
+        if (paged_ls_dir_open) {
+             uprintf("Closing directory handle at the end of parse_ls.\n");
+             lfs_dir_close(&lfs, &paged_ls_dir);
+             paged_ls_dir_open = false;
+        }
+        return_buf[0] = module_ret_success;
+        return module_ret_success;
+    }
+}
+
+static int parse_ls_next(uint8_t *data, uint8_t length) {
+    uprintf("List files (Next Page)\n");
+
+    // Check if we have an active directory listing
+    if (!paged_ls_dir_open) {
+        uprintf("No active directory listing for paging\n");
+        return_buf[0] = module_ret_invalid_command;
+        return module_ret_invalid_command;
+    }
+
+    // 'return_buf' points to the same memory as 'data'.
+    // We overwrite 'data' starting from index 1 for the response.
+    uint8_t *response_payload = return_buf + 1;
+    const uint8_t max_payload_size = RAW_EPSIZE - 1;
+    uint8_t current_offset = 0;
+
+    // Clear the response payload area first
+    memset(response_payload, 0, max_payload_size);
+
+    struct lfs_info info;
+    bool has_more = false;
+
+    // Read directory entries until we fill the buffer or reach the end
+    while (true) {
+        int res = lfs_dir_read(&lfs, &paged_ls_dir, &info);
         if (res < 0) {
             uprintf("Error reading directory: %d\n", res);
-            lfs_dir_close(&lfs, &dir);
-            return_buf[0] = module_ret_invalid_command; // Indicate error
-            return res; // Return negative LFS error code
+            lfs_dir_close(&lfs, &paged_ls_dir);
+            paged_ls_dir_open = false;
+            return_buf[0] = module_ret_invalid_command;
+            return module_ret_invalid_command;
         }
         if (res == 0) {
-            break; // End of directory listing
+            // End of directory - close and reset state
+            uprintf("End of directory reached in ls_next\n");
+            lfs_dir_close(&lfs, &paged_ls_dir);
+            paged_ls_dir_open = false;
+            break;
         }
 
         // Skip "." and ".." entries
@@ -128,18 +275,25 @@ static int parse_ls(uint8_t *data, uint8_t length) {
             continue;
         }
 
-        int name_len = strlen(info.name);
-        // Calculate needed space: name + type_char + newline_char
-        int needed_space = name_len + 2;
-
-        // --- BOUNDS CHECK ---
-        // Check if adding this entry would exceed the single packet payload size
-        if (current_offset + needed_space > max_payload_size) {
-            uprintf("Response buffer full, truncating ls output.\n");
-            break; // Stop adding entries if buffer is full
+        // Filter out potentially invalid names
+        if (info.name[0] == '\0') {
+            uprintf("Skipping empty filename entry.\n");
+            continue;
         }
 
-        // --- Copy data if it fits ---
+        int name_len = strlen(info.name);
+        // Calculate needed space: name + type_char + null_separator_char
+        int needed_space = name_len + 2;
+
+        // Check if adding this entry would exceed the buffer
+        if (current_offset + needed_space > max_payload_size) {
+            // Buffer would be full with this entry, so we have more entries
+            // for a subsequent page
+            uprintf("Buffer would be full with this entry in ls_next, more entries remain.\n");
+            has_more = true;
+            break;
+        }
+
         // Copy filename
         memcpy(response_payload + current_offset, info.name, name_len);
         current_offset += name_len;
@@ -147,33 +301,22 @@ static int parse_ls(uint8_t *data, uint8_t length) {
         // Add type indicator ('/' for dir, ' ' for file)
         response_payload[current_offset++] = (info.type == LFS_TYPE_DIR) ? '/' : ' ';
 
-        // Add newline separator
-        response_payload[current_offset++] = '\n';
+        // Add NULL separator
+        response_payload[current_offset++] = '\0';
+
+        uprintf("Added entry in ls_next: %s%c\n", info.name, (info.type == LFS_TYPE_DIR) ? '/' : ' ');
     }
 
-    // Ensure null termination *if* space allows (good practice, host might expect it)
-    if (current_offset < max_payload_size) {
-        response_payload[current_offset] = '\0';
+    // Set appropriate return code based on whether more entries are available
+    if (has_more) {
+        uprintf("More entries available in ls_next, returning MORE_ENTRIES code\n");
+        return_buf[0] = module_ret_more_entries;
+        return module_ret_more_entries; // Return "more entries" code
     } else {
-        // If exactly full, the last char written might have been the newline.
-        // Ensure the *last possible byte* isn't part of multi-byte char etc.
-        // In this simplified case, we just don't add null terminator if full.
+        uprintf("No more entries in ls_next, returning SUCCESS code\n");
+        return_buf[0] = module_ret_success;
+        return module_ret_success;
     }
-
-
-    lfs_dir_close(&lfs, &dir);
-
-    // Set success code in the response buffer's first byte
-    return_buf[0] = module_ret_success;
-
-    // Implicitly, the framework handling the raw HID request (likely Via's handler calling this)
-    // should send back the contents of the 'data'/'return_buf' buffer.
-    // The length sent back is often determined by the return value of the handler,
-    // or by convention (e.g., always RAW_EPSIZE).
-    // By modifying return_buf[0] and returning success, we signal the operation succeeded.
-    // IMPORTANT: We did NOT write past return_buf[RAW_EPSIZE-1].
-
-    return module_ret_success; // Indicate success to the caller function
 }
 
 static int parse_cd(uint8_t *data, uint8_t length) {
@@ -702,40 +845,135 @@ static void frame_timer_callback(lv_timer_t *timer) {
 }
 
 static int start_animation(const char *path) {
+    // *** ADD DEBUG PRINT AND DELAY HERE ***
+    uprintf("start_animation: Received path: '%s'\n", path);
+    uprintf("start_animation: Adding short delay before lfs_stat...\n");
+    chThdSleepMilliseconds(50);
+
     // Get file size for frame count
     struct lfs_info info;
+    uprintf("start_animation: Calling lfs_stat for '%s'...\n", path); // Print right before call
     int err = lfs_stat(&lfs, path, &info);
-    if (err < 0) return err;
+    if (err < 0) {
+        uprintf("start_animation: lfs_stat failed for '%s' with error %d (LFS_ERR_NOENT = -2)\n", path, err);
+        return err; // Return the LFS error code
+    }
+    uprintf("start_animation: lfs_stat successful. Size: %lu\n", (unsigned long)info.size);
 
-    // Initialize animation state
+
+    // Initialize animation state (Ensure this doesn't re-open the file if already open, but cleanup should handle it)
     anim_state.frame_count = info.size / FRAME_SIZE;
+    if (anim_state.frame_count == 0 && info.size > 0) {
+        uprintf("start_animation: Warning - file size %lu is less than one frame (%d)?\n", (unsigned long)info.size, FRAME_SIZE);
+        // Decide how to handle: maybe treat as 1 frame? or error out?
+        // For now, let it proceed, might just display garbage or nothing.
+    } else if (info.size % FRAME_SIZE != 0) {
+         uprintf("start_animation: Warning - file size %lu is not an exact multiple of frame size %d.\n", (unsigned long)info.size, FRAME_SIZE);
+         // Playback might be truncated or behave unexpectedly at the end.
+    }
+     uprintf("start_animation: Calculated frame count: %lu\n", anim_state.frame_count);
+
     anim_state.current_frame = 0;
     anim_state.current_buffer = 0;
     anim_state.next_buffer = 1;
     anim_state.buffer_ready = false;
-    anim_state.should_stop = false;
+    anim_state.should_stop = false; // Ensure stop flag is clear
 
     // Open file for animation
+    uprintf("start_animation: Attempting to open file '%s' for reading...\n", path);
     err = lfs_file_open(&lfs, &anim_state.file, path, LFS_O_RDONLY);
-    if (err < 0) return err;
+    if (err < 0) {
+        uprintf("start_animation: lfs_file_open failed for '%s' with error %d\n", path, err);
+        // Clean up any partially set state? (Might not be necessary if cleanup_animation handles it)
+        return err; // Return the LFS error code
+    }
+    uprintf("start_animation: File '%s' opened successfully for reading.\n", path);
 
-    // Create LVGL image object if needed
+    // Create LVGL image object if needed (should be done only once ideally)
+    // Consider moving img creation outside start_animation if possible,
+    // or ensure cleanup_animation reliably deletes it.
     if (!anim_state.img) {
+        uprintf("start_animation: Creating lv_img object.\n");
         anim_state.img = lv_img_create(lv_scr_act());
+        if (!anim_state.img) {
+             uprintf("start_animation: ERROR - Failed to create lv_img object!\n");
+             lfs_file_close(&lfs, &anim_state.file); // Close the file we just opened
+             return -1; // Indicate generic error
+        }
+         lv_obj_align(anim_state.img, LV_ALIGN_CENTER, 0, 0); // Center it once
+    } else {
+         uprintf("start_animation: Reusing existing lv_img object.\n");
+         // Ensure it's visible/on top if other things were drawn
+         lv_obj_clear_flag(anim_state.img, LV_OBJ_FLAG_HIDDEN);
+         lv_obj_move_foreground(anim_state.img);
     }
 
-    // Set initial image (first buffer)
-    lv_img_set_src(anim_state.img, &images[0]);
 
-    anim_state.is_playing = true;
+    // Set initial image (first buffer) - Load the first frame immediately?
+    // The current logic relies on the loader thread and timer, let's stick with that for now.
+    // Need to ensure the first frame gets loaded promptly.
+    // Maybe pre-load the *first* frame here synchronously?
+    uprintf("start_animation: Pre-loading first frame into buffer 0...\n");
+    lfs_file_seek(&lfs, &anim_state.file, 0, LFS_SEEK_SET); // Go to start
+    lfs_ssize_t bytes_read = lfs_file_read(&lfs, &anim_state.file, frame_buffers[0], FRAME_SIZE);
+    if (bytes_read < FRAME_SIZE) {
+         uprintf("start_animation: Warning - read only %ld bytes for first frame.\n", bytes_read);
+         // Zero out the rest if needed
+         if (bytes_read > 0) {
+            memset(frame_buffers[0] + bytes_read, 0, FRAME_SIZE - bytes_read);
+         } else if (bytes_read < 0) {
+             uprintf("start_animation: ERROR reading first frame: %ld\n", bytes_read);
+             lfs_file_close(&lfs, &anim_state.file);
+             // Optionally delete lv_img if created here? cleanup_animation should handle it.
+             return bytes_read;
+         }
+    }
+    lv_img_set_src(anim_state.img, &images[0]); // Set src to buffer 0
+    lv_obj_invalidate(anim_state.img); // Force redraw
+    uprintf("start_animation: First frame loaded and displayed.\n");
 
-    // Start background loader thread
-    anim_state.loader_thread = chThdCreateStatic(waFrameLoader, sizeof(waFrameLoader),
-                                                NORMALPRIO + 1, FrameLoader, NULL);
 
-    // Start frame timer
-    anim_state.lv_timer = lv_timer_create(frame_timer_callback, FRAME_INTERVAL_MS, NULL);
+    anim_state.is_playing = true; // Mark as playing *after* essential setup
 
+    // Start background loader thread (if not already running from a previous attempt?)
+    // cleanup_animation should ensure the old one is stopped.
+    if (!anim_state.loader_thread) {
+        uprintf("start_animation: Creating FrameLoader thread...\n");
+        anim_state.loader_thread = chThdCreateStatic(waFrameLoader, sizeof(waFrameLoader),
+                                                    NORMALPRIO + 1, FrameLoader, NULL);
+        if(!anim_state.loader_thread) {
+             uprintf("start_animation: ERROR - Failed to create FrameLoader thread!\n");
+             anim_state.is_playing = false;
+             lfs_file_close(&lfs, &anim_state.file);
+             // cleanup?
+             return -1;
+        }
+    } else {
+         uprintf("start_animation: FrameLoader thread might already exist?\n"); // Should not happen if cleanup works
+    }
+
+
+    // Start frame timer (if not already running?)
+    // cleanup_animation should ensure the old one is stopped.
+    if (!anim_state.lv_timer) {
+         uprintf("start_animation: Creating LVGL timer...\n");
+         anim_state.lv_timer = lv_timer_create(frame_timer_callback, FRAME_INTERVAL_MS, NULL);
+         if (!anim_state.lv_timer) {
+              uprintf("start_animation: ERROR - Failed to create LVGL timer!\n");
+              anim_state.is_playing = false;
+              lfs_file_close(&lfs, &anim_state.file);
+              // Need to potentially stop thread if created
+              anim_state.should_stop = true; // Signal thread
+              // cleanup?
+              return -1;
+         }
+    } else {
+         uprintf("start_animation: LVGL timer might already exist?\n"); // Should not happen if cleanup works
+         lv_timer_reset(anim_state.lv_timer); // Reset existing timer?
+         lv_timer_resume(anim_state.lv_timer);
+    }
+
+    uprintf("start_animation: Animation setup complete.\n");
     return module_ret_success;
 }
 
@@ -855,6 +1093,106 @@ static int parse_set_time(uint8_t *data, uint8_t length) {
     return module_ret_success;
 }
 
+static int parse_dump_files_cdc(uint8_t *data, uint8_t length) {
+    (void)data; // Mark as unused
+    (void)length; // Mark as unused
+    uprintf("CMD: Dump files over CDC requested.\n");
+
+    lfs_dir_t dir;
+    struct lfs_info info;
+    int open_dir_err = lfs_dir_open(&lfs, &dir, "."); // Open root directory
+    if (open_dir_err < 0) {
+        uprintf("CDC DUMP ERR: Failed to open root directory: %d\n", open_dir_err);
+        return module_ret_invalid_command; // Or a more specific LFS error code?
+    }
+    uprintf("CDC DUMP: Opened root directory.\n");
+
+    #define CDC_READ_BUFFER_SIZE 256 // Size of buffer to read file chunks
+    static uint8_t cdc_file_read_buffer[CDC_READ_BUFFER_SIZE];
+
+    // Loop through directory entries
+    while (true) {
+        int read_dir_res = lfs_dir_read(&lfs, &dir, &info);
+        if (read_dir_res < 0) {
+            uprintf("CDC DUMP ERR: Failed reading directory entry: %d\n", read_dir_res);
+            break;
+        }
+
+        if (read_dir_res == 0) {
+            // End of directory
+            uprintf("CDC DUMP: Reached end of directory.\n");
+            break;
+        }
+
+        // Skip "." and ".."
+        if (strcmp(info.name, ".") == 0 || strcmp(info.name, "..") == 0) {
+            continue;
+        }
+
+        // Skip directories, only send files for now
+        if (info.type == LFS_TYPE_DIR) {
+            uprintf("CDC DUMP: Skipping directory: %s\n", info.name);
+            continue;
+        }
+
+        // Process Files
+        if (info.type == LFS_TYPE_REG) {
+            uprintf("CDC DUMP: Processing file: %s (Size: %lu)\n", info.name, (unsigned long)info.size);
+
+            // 1. Send Filename (UTF-8, null-terminated)
+            virtser_send((uint8_t*)info.name, strlen(info.name));
+            virtser_send((uint8_t*)"\0", 1); // Send null terminator
+            // uprintf("CDC DUMP: Sent filename '%s'\n", info.name); // Debug
+            // chThdSleepMilliseconds(10); // Small delay? Might help host side keep up initially
+
+            // 2. Send File Size (4 bytes, little-endian)
+            uint32_t file_size = info.size;
+            virtser_send((uint8_t*)&file_size, sizeof(file_size));
+            // uprintf("CDC DUMP: Sent size %lu\n", file_size); // Debug
+            // chThdSleepMilliseconds(10); // Small delay?
+
+            // 3. Send File Content
+            lfs_file_t file;
+            int open_file_err = lfs_file_open(&lfs, &file, info.name, LFS_O_RDONLY);
+            if (open_file_err < 0) {
+                uprintf("CDC DUMP ERR: Failed to open file '%s': %d\n", info.name, open_file_err);
+                continue; // Skip to next directory entry
+            }
+
+            // uprintf("CDC DUMP: Opened '%s', sending content...\n", info.name); // Debug
+            lfs_ssize_t bytes_read;
+            lfs_size_t total_sent = 0;
+            while ((bytes_read = lfs_file_read(&lfs, &file, cdc_file_read_buffer, CDC_READ_BUFFER_SIZE)) > 0) {
+                virtser_send(cdc_file_read_buffer, bytes_read); // Use multi-byte send
+                total_sent += bytes_read;
+                // uprintf("CDC DUMP: Sent %ld bytes for '%s' (Total: %lu/%lu)\n", bytes_read, info.name, total_sent, file_size); // Verbose Debug
+                // Add tiny sleep if virtser_send blocks or host struggles?
+                 chThdSleepMilliseconds(1); // Maybe helps prevent buffer overflows? EXPERIMENT
+            }
+
+            if (bytes_read < 0) {
+                 uprintf("CDC DUMP ERR: Failed reading content from '%s': %ld\n", info.name, bytes_read);
+            }
+            // uprintf("CDC DUMP: Finished sending '%s'. Total sent: %lu\n", info.name, total_sent); // Debug
+
+            lfs_file_close(&lfs, &file); // Close the file
+        }
+    } // End while(true) loop for directory reading
+
+    // Close the directory handle
+    lfs_dir_close(&lfs, &dir);
+    uprintf("CDC DUMP: Closed root directory.\n");
+
+    // Send termination signal (empty filename: just a null byte)
+    uprintf("CDC DUMP: Sending termination signal (null byte).\n");
+    virtser_send((uint8_t*)"\0", 1);
+    // virtser_flush(); // Flush if available/necessary
+
+    // Return success via HID immediately after *starting* the process.
+    // The actual transfer happens asynchronously over CDC.
+    return module_ret_success;
+}
+
 static module_raw_hid_parse_t* parse_packet_funcs[] = {
     parse_ls,
     parse_cd,
@@ -872,6 +1210,8 @@ static module_raw_hid_parse_t* parse_packet_funcs[] = {
     parse_write_display,
     parse_set_time,
     parse_ping,
+    parse_ls_next,
+    parse_dump_files_cdc,
 };
 
 static bool anim_init = false;
@@ -921,9 +1261,12 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
         uprintf("Error parsing packet: %d\n", err);
         return_buf[0] = err;
     } else {
-        return_buf[0] = module_ret_success;
+        // DON'T override the return code if the function already set it!
+        // Only set the success code if no other code was set
+        if (return_buf[0] != module_ret_more_entries) {
+            return_buf[0] = module_ret_success;
+        }
     }
 
     return err;
 }
-

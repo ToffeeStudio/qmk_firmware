@@ -8,4 +8,5 @@ lfs_t lfs;
 #define LFS_TRACE_(fmt, ...) \
     uprintf("%s:%d:trace: " fmt "%s\n", __FILE__, __LINE__, __VA_ARGS__)
 
+void send_all_files_over_cdc(void);
 #endif

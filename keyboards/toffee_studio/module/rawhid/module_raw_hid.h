@@ -22,6 +22,8 @@ enum module_command_id {
     id_module_cmd_write_display     = 0x5D,
     id_module_cmd_set_time          = 0x5E,
     id_module_cmd_ping              = 0x5F,
+    id_module_cmd_ls_next           = 0x60,
+    id_module_cmd_dump_files_cdc    = 0x61,
     id_module_cmd_end               = 0xFF,
 };
 
@@ -39,6 +41,7 @@ enum module_return_codes {
     module_ret_image_packet_id_err    = 0xE8,
     module_ret_flash_remaining        = 0xE9,
     module_ret_invalid_command        = 0xEF,
+    module_ret_more_entries           = 0xEA,
 };
 
 struct __attribute__((packed)) packet_header {

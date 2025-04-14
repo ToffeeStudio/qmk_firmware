@@ -1,7 +1,3 @@
-// =========================================================================
-// Includes
-// =========================================================================
-
 // --- Core QMK Includes ---
 #include "quantum.h" // Includes core QMK functionality, ChibiOS, config files etc.
 #include "print.h"   // For uprintf
@@ -9,7 +5,7 @@
 // --- Feature Includes ---
 #include <stdint.h>
 #include <stdbool.h>
-#include <string.h> // For memset if used
+#include <string.h> // For memset, strlen etc. <--- Added/Ensured this include
 
 #ifdef QUANTUM_PAINTER_ENABLE
 #include "qp.h"               // Quantum Painter core
@@ -36,195 +32,249 @@
 // --- Include the header defining the global `lfs` object ---
 #include "module.h" // Assumes `lfs_t lfs;` is declared here or in a common header included by module.h
 
+
 // =========================================================================
-// CDC Receive Logic (with LFS writing)
+// CDC Receive Logic (Filename + Size Header + Direct LFS Write)
 // =========================================================================
 
-#if defined(CONSOLE_ENABLE) && defined(LITTLEFS_ENABLE) // Only compile CDC receive logic if CONSOLE and LFS are enabled
+#if defined(VIRTSER_ENABLE) && defined(LITTLEFS_ENABLE) // Ensure Virtser (CDC) and LFS are enabled
 
 // --- Configuration ---
-#define CDC_DATA_BUFFER_SIZE 32768 // Buffer sized for 128x128x2 bytes
-#define CDC_TARGET_FILENAME "cdc_image.raw" // Hardcoded filename for CDC uploads
+#define MAX_FILENAME_LEN 64 // Maximum allowed filename length (including null terminator)
 
 // --- State Machine ---
 typedef enum {
+    CDC_STATE_WAITING_FOR_FILENAME,
+    CDC_STATE_RECEIVING_FILENAME,
     CDC_STATE_WAITING_FOR_SIZE,
+    CDC_STATE_RECEIVING_SIZE,
     CDC_STATE_RECEIVING_DATA
 } CdcReceiveState;
 
 // --- Static Variables ---
-static CdcReceiveState cdc_state = CDC_STATE_WAITING_FOR_SIZE; // Default state
+static CdcReceiveState cdc_state = CDC_STATE_WAITING_FOR_FILENAME; // Start waiting for filename
 
-static uint8_t size_buffer[4];
-static uint8_t size_buffer_index = 0;
+// Filename reception
+static char     cdc_target_filename[MAX_FILENAME_LEN];
+static uint8_t  filename_index = 0;
 
+// Size reception
+static uint8_t  size_buffer[4];
+static uint8_t  size_buffer_index = 0;
 static uint32_t expected_data_size = 0;
-static uint32_t received_data_count = 0;
 
-// Buffer to hold the *entire* image data for now
-static uint8_t cdc_data_buffer[CDC_DATA_BUFFER_SIZE];
-
-// LFS file handle for the duration of the transfer
+// Data reception / LFS writing
+static uint32_t   received_data_count = 0;
 static lfs_file_t cdc_current_file;
-static bool cdc_file_is_open = false; // Track if the file is open
+static bool       cdc_file_is_open = false; // Track if the file is open
+
+// Function to reset the state machine completely
+static void reset_cdc_state(void) {
+    uprintf("CDC: Resetting state machine.\n");
+    if (cdc_file_is_open) {
+        uprintf("CDC: Closing potentially open file during reset.\n");
+        int close_err = lfs_file_close(&lfs, &cdc_current_file);
+        if (close_err < 0) {
+            uprintf("CDC: Error closing file during reset: %d\n", close_err);
+        }
+        cdc_file_is_open = false;
+    }
+    cdc_state = CDC_STATE_WAITING_FOR_FILENAME;
+    filename_index = 0;
+    size_buffer_index = 0;
+    expected_data_size = 0;
+    received_data_count = 0;
+    memset(cdc_target_filename, 0, MAX_FILENAME_LEN);
+    memset(size_buffer, 0, sizeof(size_buffer));
+}
 
 // --- virtser_recv Implementation ---
+// This is called for EACH byte received over the CDC serial port.
 void virtser_recv(const uint8_t ch) {
-    int lfs_err; // Variable for LFS error codes
+    int lfs_err;
 
     switch (cdc_state) {
-        case CDC_STATE_WAITING_FOR_SIZE:
-            if (cdc_file_is_open) {
-                // Safety check: Should not be waiting for size if file is open. Reset.
-                uprintf("CDC: ERROR - State mismatch (S_WAIT but file open)! Closing file and resetting.\n");
-                lfs_file_close(&lfs, &cdc_current_file); // Attempt close
-                cdc_file_is_open = false;
-                // Reset other state vars
-                size_buffer_index = 0;
-                expected_data_size = 0;
-                received_data_count = 0;
-                // Stay in WAITING state
-                return; // Exit function for this byte
+        case CDC_STATE_WAITING_FOR_FILENAME:
+            // First byte received marks the start of the filename
+            // uprintf("CDC: S_WAIT_FN: Got first byte 0x%02X, starting filename receive.\n", ch); // Debug
+            memset(cdc_target_filename, 0, MAX_FILENAME_LEN); // Clear buffer for new name
+            filename_index = 0;
+            cdc_state = CDC_STATE_RECEIVING_FILENAME;
+            // Fall through to process this first byte in the new state immediately
+            __attribute__((fallthrough)); // Explicit fallthrough annotation
+
+        case CDC_STATE_RECEIVING_FILENAME:
+            if (ch == '\0') { // Null terminator marks end of filename
+                cdc_target_filename[filename_index] = '\0'; // Ensure null termination
+                uprintf("CDC: S_RECV_FN: Received Filename: '%s'\n", cdc_target_filename);
+
+                // Basic filename validation (optional, but good practice)
+                if (filename_index == 0) {
+                    uprintf("CDC: ERROR - Received empty filename. Resetting.\n");
+                    reset_cdc_state();
+                    return;
+                }
+                // Add more checks? (e.g., invalid characters '/')
+
+                // Transition to waiting for size
+                cdc_state = CDC_STATE_WAITING_FOR_SIZE;
+                size_buffer_index = 0; // Reset size buffer index
+                memset(size_buffer, 0, sizeof(size_buffer));
+                uprintf("CDC: S_RECV_FN: Transitioning to S_WAIT_SIZE.\n");
+
+            } else if (filename_index < MAX_FILENAME_LEN - 1) {
+                // Store the character if space allows (leave room for null terminator)
+                cdc_target_filename[filename_index++] = (char)ch;
+                // uprintf("CDC: S_RECV_FN[%d]: Got char '%c' (0x%02X)\n", filename_index - 1, ch, ch); // Debug
+
+            } else {
+                // Filename buffer overflow
+                uprintf("CDC: ERROR - Filename received exceeds buffer size (%d). Resetting.\n", MAX_FILENAME_LEN);
+                reset_cdc_state();
+                // Don't process this character further
             }
+            break;
 
-            // Collect the 4 bytes for the size header
+        case CDC_STATE_WAITING_FOR_SIZE:
+            // Start collecting the 4 size bytes
+            // uprintf("CDC: S_WAIT_SIZE: Starting size receive.\n"); // Debug
+            size_buffer_index = 0;
+            memset(size_buffer, 0, sizeof(size_buffer));
+            cdc_state = CDC_STATE_RECEIVING_SIZE;
+            // Fall through to process this first byte
+             __attribute__((fallthrough)); // Explicit fallthrough annotation
+
+        case CDC_STATE_RECEIVING_SIZE:
             if (size_buffer_index < 4) {
-                 // uprintf("CDC: S_WAIT[%d]: Got byte 0x%02X\n", size_buffer_index, ch); // Reduce verbosity
-                 size_buffer[size_buffer_index++] = ch;
+                // uprintf("CDC: S_RECV_SIZE[%d]: Got byte 0x%02X\n", size_buffer_index, ch); // Debug
+                size_buffer[size_buffer_index++] = ch;
 
-                 if (size_buffer_index == 4) {
-                    // uprintf("CDC: S_WAIT: Reconstructing size from bytes: %02X %02X %02X %02X\n",
-                    //         size_buffer[0], size_buffer[1], size_buffer[2], size_buffer[3]);
-
+                if (size_buffer_index == 4) {
+                    // Reconstruct size (Little Endian)
                     expected_data_size = (uint32_t)size_buffer[0] |
                                          ((uint32_t)size_buffer[1] << 8) |
                                          ((uint32_t)size_buffer[2] << 16) |
                                          ((uint32_t)size_buffer[3] << 24);
 
-                    size_buffer_index = 0; // Reset index for next potential header
-                    uprintf("CDC: Reconstructed size value: %lu bytes\n", expected_data_size);
+                    uprintf("CDC: S_RECV_SIZE: Reconstructed size: %lu bytes\n", expected_data_size);
 
                     // --- Validate Size ---
                     if (expected_data_size == 0) {
-                        uprintf("CDC: WARN - Received size 0. Ignoring header.\n");
-                    } else if (expected_data_size > CDC_DATA_BUFFER_SIZE) {
-                        uprintf("CDC: ERROR - Expected size (%lu) > buffer size (%d). Ignoring header.\n",
-                                expected_data_size, CDC_DATA_BUFFER_SIZE);
-                        expected_data_size = 0; // Clear the invalid size
+                        // Handle 0-byte file: create/truncate and finish
+                        uprintf("CDC: Received size 0. Creating/truncating file '%s'.\n", cdc_target_filename);
+                        lfs_err = lfs_file_open(&lfs, &cdc_current_file, cdc_target_filename, LFS_O_WRONLY | LFS_O_CREAT | LFS_O_TRUNC);
+                        if (lfs_err < 0) {
+                             uprintf("CDC: ERROR - Failed to open/truncate 0-byte file! LFS Error: %d. Resetting.\n", lfs_err);
+                        } else {
+                             lfs_err = lfs_file_close(&lfs, &cdc_current_file); // Close immediately
+                             if (lfs_err < 0) {
+                                 uprintf("CDC: ERROR - Failed to close 0-byte file! LFS Error: %d.\n", lfs_err);
+                             } else {
+                                 uprintf("CDC: 0-byte file '%s' processed.\n", cdc_target_filename);
+                             }
+                        }
+                        reset_cdc_state(); // Reset for next transfer regardless of close error
+                        return;
+
                     } else {
-                        // --- Size is Valid: Try to Open File ---
-                        uprintf("CDC: Size OK. Attempting to open file '%s' for writing...\n", CDC_TARGET_FILENAME);
-                        // Open for writing, create if doesn't exist, truncate if it does
-                        lfs_err = lfs_file_open(&lfs, &cdc_current_file, CDC_TARGET_FILENAME, LFS_O_WRONLY | LFS_O_CREAT | LFS_O_TRUNC);
+                        // --- Size > 0: Try to Open File for Writing ---
+                        uprintf("CDC: Attempting to open file '%s' for writing...\n", cdc_target_filename);
+                        lfs_err = lfs_file_open(&lfs, &cdc_current_file, cdc_target_filename, LFS_O_WRONLY | LFS_O_CREAT | LFS_O_TRUNC);
 
                         if (lfs_err < 0) {
-                            uprintf("CDC: ERROR - Failed to open file '%s'! LFS Error: %d. Aborting transfer.\n", CDC_TARGET_FILENAME, lfs_err);
-                            expected_data_size = 0; // Invalidate size, stay in WAITING state
+                            uprintf("CDC: ERROR - Failed to open file '%s'! LFS Error: %d. Resetting.\n", cdc_target_filename, lfs_err);
+                            reset_cdc_state();
                         } else {
-                            uprintf("CDC: File '%s' opened successfully. Switching to S_RECV state.\n", CDC_TARGET_FILENAME);
-                            cdc_file_is_open = true; // Mark file as open
+                            uprintf("CDC: File '%s' opened successfully. Switching to S_RECV_DATA state.\n", cdc_target_filename);
+                            cdc_file_is_open = true;
                             received_data_count = 0; // Reset data counter
                             cdc_state = CDC_STATE_RECEIVING_DATA; // *** Change State ***
                         }
                     }
                 }
-                 // else: Size header not yet complete, continue collecting bytes...
+                // else: Size header not yet complete, continue collecting bytes...
             }
-            // else: Should not happen if index logic correct, defensive reset removed for simplicity here
-            break; // End WAITING_FOR_SIZE case
+            // else: Should not happen if index logic is correct
+            break;
 
         case CDC_STATE_RECEIVING_DATA:
             if (!cdc_file_is_open) {
                 // Safety check: Should not be in this state if file isn't tracked as open
-                uprintf("CDC: ERROR - State mismatch (S_RECV but file not tracked as open)! Resetting state.\n");
-                cdc_state = CDC_STATE_WAITING_FOR_SIZE;
-                size_buffer_index = 0;
-                expected_data_size = 0;
-                received_data_count = 0;
+                uprintf("CDC: ERROR - State mismatch (S_RECV_DATA but file not tracked as open)! Resetting state.\n");
+                reset_cdc_state();
                 return; // Exit function for this byte
             }
 
-            // Collect data bytes until expected size is reached
-            if (received_data_count < expected_data_size) {
-                 // Store the byte in the RAM buffer (bounds check already done)
-                 cdc_data_buffer[received_data_count] = ch;
-                 received_data_count++;
+            // Write received byte directly to the opened file
+            lfs_ssize_t written = lfs_file_write(&lfs, &cdc_current_file, &ch, 1); // Write single byte
 
-                // Check if this was the *last* byte
-                if (received_data_count == expected_data_size) {
-                    uprintf("CDC: OK - Received expected %lu data bytes into RAM buffer.\n", received_data_count);
+            if (written < 0) {
+                uprintf("CDC: ERROR - Failed to write byte to file! LFS Error: %ld. Resetting.\n", written);
+                reset_cdc_state(); // Includes closing the file
+                return;
+            } else if (written != 1) {
+                 uprintf("CDC: ERROR - Failed to write byte (wrote %ld instead of 1). Resetting.\n", written);
+                 reset_cdc_state(); // Includes closing the file
+                 return;
+            }
 
-                    // --- Write Buffered Data to Flash ---
-                    uprintf("CDC: Attempting to write %lu bytes from buffer to file '%s'...\n", expected_data_size, CDC_TARGET_FILENAME);
-                    lfs_ssize_t written = lfs_file_write(&lfs, &cdc_current_file, cdc_data_buffer, expected_data_size);
+            // Increment counter AFTER successful write
+            received_data_count++;
 
-                    if (written < 0) {
-                        uprintf("CDC: ERROR - Failed to write to file! LFS Error: %ld\n", written);
-                    } else if ((uint32_t)written != expected_data_size) {
-                        uprintf("CDC: ERROR - Partial write! Wrote %ld bytes, expected %lu.\n", written, expected_data_size);
-                    } else {
-                        uprintf("CDC: Successfully wrote %ld bytes to file.\n", written);
-                        // Optional: Sync data to flash before closing (safer but slower)
-                        // uprintf("CDC: Syncing file...\n");
-                        // lfs_err = lfs_file_sync(&lfs, &cdc_current_file);
-                        // if (lfs_err < 0) {
-                        //     uprintf("CDC: ERROR - Failed to sync file! LFS Error: %d\n", lfs_err);
-                        // }
-                    }
+            // Optional: Progress indicator (can slow things down if too frequent)
+            // if (received_data_count % 4096 == 0) {
+            //     uprintf("CDC: Received %lu / %lu bytes\n", received_data_count, expected_data_size);
+            // }
 
-                    // --- Close the File ---
-                    uprintf("CDC: Closing file '%s'.\n", CDC_TARGET_FILENAME);
-                    lfs_err = lfs_file_close(&lfs, &cdc_current_file);
-                    cdc_file_is_open = false; // Mark file as closed *before* changing state
-                    if (lfs_err < 0) {
-                        uprintf("CDC: ERROR - Failed to close file! LFS Error: %d\n", lfs_err);
-                    }
+            // Check if this was the *last* byte
+            if (received_data_count == expected_data_size) {
+                uprintf("CDC: OK - Received final byte. Total %lu bytes written to '%s'.\n", received_data_count, cdc_target_filename);
 
-                    // --- Reset state for the next transfer ---
-                    uprintf("CDC: Block complete. Resetting to S_WAIT state.\n");
-                    cdc_state = CDC_STATE_WAITING_FOR_SIZE;
-                    size_buffer_index = 0;
-                    expected_data_size = 0;
-                    received_data_count = 0;
-                }
-                // else: More data bytes needed for this block... keep receiving
-            } else {
-                // Received data when we shouldn't have (already got expected_data_size)
-                uprintf("CDC: WARN - Received unexpected extra data byte (0x%02X) in S_RECV state! Closing file & Resetting.\n", ch);
-
-                // Attempt to close the file cleanly before resetting
-                if (cdc_file_is_open) {
-                    lfs_file_close(&lfs, &cdc_current_file);
-                    cdc_file_is_open = false;
+                // --- Sync and Close the File ---
+                uprintf("CDC: Syncing file...\n");
+                lfs_err = lfs_file_sync(&lfs, &cdc_current_file);
+                if (lfs_err < 0) {
+                     uprintf("CDC: ERROR - Failed to sync file! LFS Error: %d\n", lfs_err);
+                     // Continue to close attempt anyway
                 }
 
-                // Reset state machine
-                cdc_state = CDC_STATE_WAITING_FOR_SIZE;
+                uprintf("CDC: Closing file '%s'.\n", cdc_target_filename);
+                lfs_err = lfs_file_close(&lfs, &cdc_current_file);
+                // Mark file closed *before* resetting state, even if close fails
+                cdc_file_is_open = false;
+                if (lfs_err < 0) {
+                    uprintf("CDC: ERROR - Failed to close file! LFS Error: %d\n", lfs_err);
+                }
+
+                // --- Reset state for the next transfer ---
+                uprintf("CDC: Transfer complete. Resetting to S_WAIT_FN state.\n");
+                cdc_state = CDC_STATE_WAITING_FOR_FILENAME; // Ready for next filename
+                // Reset other variables just in case
+                filename_index = 0;
+                size_buffer_index = 0;
                 expected_data_size = 0;
                 received_data_count = 0;
+                memset(cdc_target_filename, 0, MAX_FILENAME_LEN);
+                memset(size_buffer, 0, sizeof(size_buffer));
 
-                // Assume this byte might be the start of the next header
-                size_buffer[0] = ch;
-                size_buffer_index = 1;
+            } else if (received_data_count > expected_data_size) {
+                 // This should theoretically not happen if expected_data_size was correct
+                 uprintf("CDC: ERROR - Received MORE data than expected (%lu > %lu)! Resetting.\n", received_data_count, expected_data_size);
+                 reset_cdc_state(); // Includes closing file
             }
-            break; // End RECEIVING_DATA case
+            // else: More data bytes needed for this block... keep receiving
+            break;
 
         default:
             // Invalid state - Should never happen
             uprintf("CDC: FATAL - Invalid state (%d)! Resetting state.\n", cdc_state);
-            if (cdc_file_is_open) { // Attempt close if file was somehow open
-                lfs_file_close(&lfs, &cdc_current_file);
-                cdc_file_is_open = false;
-            }
-            cdc_state = CDC_STATE_WAITING_FOR_SIZE;
-            size_buffer_index = 0;
-            expected_data_size = 0;
-            received_data_count = 0;
+            reset_cdc_state(); // Includes closing file if open
             break;
     }
 }
 
-#endif // CONSOLE_ENABLE && LITTLEFS_ENABLE check for CDC receive logic
+#endif // VIRTSER_ENABLE && LITTLEFS_ENABLE check for CDC receive logic
+
 
 // =========================================================================
 // Dynamic Gradient Drawing
@@ -366,11 +416,28 @@ void keyboard_post_init_kb(void) {
     lfs_ssize_t used_blocks = lfs_fs_size(&lfs);
     if(used_blocks >= 0) {
         uprintf("LFS used blocks at boot: %ld\n", used_blocks);
-        // Use literal value for reservation KB from rules.mk
-        uint32_t total_blocks = (PICO_FLASH_SIZE_BYTES / 1024 - 1024) / 4; // Use literal 1024 KB reservation
-        uprintf("Estimated total LFS blocks: %lu\n", total_blocks);
+        // Use literal value for reservation KB from rules.mk if PICO_FLASH_SIZE_BYTES is standard
+        #ifndef FLASH_RESERVATION_KB
+        #define FLASH_RESERVATION_KB 1024 // Default if not in rules.mk
+        #warning "FLASH_RESERVATION_KB not defined in rules.mk, using default 1024"
+        #endif
+        #ifndef PICO_FLASH_SIZE_BYTES
+        #define PICO_FLASH_SIZE_BYTES (2 * 1024 * 1024) // Default Pico size if not defined
+        #warning "PICO_FLASH_SIZE_BYTES not defined, using default 2MB"
+        #endif
+        // Calculate total LFS size: Total Flash - Bootloader (assume standard size?) - Code/Firmware (hard to know exactly) - Reservation
+        // Simplification: Assume LFS partition starts after reservation
+        // WARNING: This calculation is a rough estimate!
+        uint32_t lfs_partition_bytes = PICO_FLASH_SIZE_BYTES - (FLASH_RESERVATION_KB * 1024);
+        uint32_t lfs_block_size = 4096; // Common LFS block size for RP2040 SPI flash
+        if(lfs.cfg) { // Use configured block size if available
+             lfs_block_size = lfs.cfg->block_size;
+        }
+        uint32_t total_blocks = lfs_partition_bytes / lfs_block_size;
+
+        uprintf("Estimated total LFS blocks: %lu (based on %lu KB reservation and %lu byte blocks)\n", total_blocks, (unsigned long)FLASH_RESERVATION_KB, (unsigned long)lfs_block_size);
         uint32_t free_blocks  = (used_blocks < total_blocks) ? (total_blocks - (uint32_t)used_blocks) : 0;
-        uprintf("Estimated free space: %lu blocks => %lu bytes\n", free_blocks, free_blocks * 4096);
+        uprintf("Estimated free space: %lu blocks => %lu bytes\n", free_blocks, free_blocks * lfs_block_size);
     } else {
          uprintf("Error getting LFS size: %ld\n", used_blocks);
     }
@@ -386,13 +453,9 @@ void keyboard_post_init_kb(void) {
 #endif // QUANTUM_PAINTER_ENABLE
 
     // --- Initialize CDC Receive State ---
-    #if defined(CONSOLE_ENABLE) && defined(LITTLEFS_ENABLE)
+    #if defined(VIRTSER_ENABLE) && defined(LITTLEFS_ENABLE) // <--- Use the new CDC logic condition
     uprintf("Initializing CDC Receive State...\n");
-    cdc_state = CDC_STATE_WAITING_FOR_SIZE; // Explicitly set initial state
-    size_buffer_index = 0;
-    expected_data_size = 0;
-    received_data_count = 0;
-    cdc_file_is_open = false; // Ensure file starts as closed
+    reset_cdc_state(); // <--- Use the reset function to ensure clean start
     #endif
 
     // 4) Call the default post-init user function if it exists
