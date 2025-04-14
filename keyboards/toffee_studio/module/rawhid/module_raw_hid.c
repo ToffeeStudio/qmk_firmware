@@ -97,6 +97,13 @@ static uint8_t *return_buf;
 static int parse_ls(uint8_t *data, uint8_t length) {
     uprintf("List files (First Page)\n");
 
+    const char *message_to_send = "LS PARSED\r\n";
+    const char *ptr = message_to_send; // Create a pointer to the start of the string
+    while (*ptr != '\0') {
+        virtser_send((uint8_t)(*ptr)); // Send the byte pointed to by ptr
+        ptr++;                        // Move the pointer to the next character
+    }
+
     // Close any previously open directory listing
     if (paged_ls_dir_open) {
         uprintf("Closing previously open paged directory handle.\n");
@@ -1091,6 +1098,11 @@ static int parse_set_time(uint8_t *data, uint8_t length) {
     return module_ret_success;
 }
 
+static int parse_placeholder(uint8_t *data, uint8_t length) {
+    uprintf("Unimplemented command received.\n");
+    return module_ret_invalid_command; // Or another appropriate error
+}
+
 static module_raw_hid_parse_t* parse_packet_funcs[] = {
     parse_ls,
     parse_cd,
@@ -1107,7 +1119,7 @@ static module_raw_hid_parse_t* parse_packet_funcs[] = {
     parse_choose_image,
     parse_write_display,
     parse_set_time,
-    parse_ping,
+    parse_placeholder,
     parse_ls_next, // Add the new function to handle "next page" requests
 };
 
