@@ -7,8 +7,6 @@
 #include "module.h"
 #include "module_raw_hid.h"
 #include "lvgl.h"
-#include "virtser.h"
-#include <string.h>
 
 #define CHUNK_SIZE 256
 static uint8_t file_buffer[CHUNK_SIZE];
@@ -1093,106 +1091,6 @@ static int parse_set_time(uint8_t *data, uint8_t length) {
     return module_ret_success;
 }
 
-static int parse_dump_files_cdc(uint8_t *data, uint8_t length) {
-    (void)data; // Mark as unused
-    (void)length; // Mark as unused
-    uprintf("CMD: Dump files over CDC requested.\n");
-
-    lfs_dir_t dir;
-    struct lfs_info info;
-    int open_dir_err = lfs_dir_open(&lfs, &dir, "."); // Open root directory
-    if (open_dir_err < 0) {
-        uprintf("CDC DUMP ERR: Failed to open root directory: %d\n", open_dir_err);
-        return module_ret_invalid_command; // Or a more specific LFS error code?
-    }
-    uprintf("CDC DUMP: Opened root directory.\n");
-
-    #define CDC_READ_BUFFER_SIZE 256 // Size of buffer to read file chunks
-    static uint8_t cdc_file_read_buffer[CDC_READ_BUFFER_SIZE];
-
-    // Loop through directory entries
-    while (true) {
-        int read_dir_res = lfs_dir_read(&lfs, &dir, &info);
-        if (read_dir_res < 0) {
-            uprintf("CDC DUMP ERR: Failed reading directory entry: %d\n", read_dir_res);
-            break;
-        }
-
-        if (read_dir_res == 0) {
-            // End of directory
-            uprintf("CDC DUMP: Reached end of directory.\n");
-            break;
-        }
-
-        // Skip "." and ".."
-        if (strcmp(info.name, ".") == 0 || strcmp(info.name, "..") == 0) {
-            continue;
-        }
-
-        // Skip directories, only send files for now
-        if (info.type == LFS_TYPE_DIR) {
-            uprintf("CDC DUMP: Skipping directory: %s\n", info.name);
-            continue;
-        }
-
-        // Process Files
-        if (info.type == LFS_TYPE_REG) {
-            uprintf("CDC DUMP: Processing file: %s (Size: %lu)\n", info.name, (unsigned long)info.size);
-
-            // 1. Send Filename (UTF-8, null-terminated)
-            virtser_send((uint8_t*)info.name, strlen(info.name));
-            virtser_send((uint8_t*)"\0", 1); // Send null terminator
-            // uprintf("CDC DUMP: Sent filename '%s'\n", info.name); // Debug
-            // chThdSleepMilliseconds(10); // Small delay? Might help host side keep up initially
-
-            // 2. Send File Size (4 bytes, little-endian)
-            uint32_t file_size = info.size;
-            virtser_send((uint8_t*)&file_size, sizeof(file_size));
-            // uprintf("CDC DUMP: Sent size %lu\n", file_size); // Debug
-            // chThdSleepMilliseconds(10); // Small delay?
-
-            // 3. Send File Content
-            lfs_file_t file;
-            int open_file_err = lfs_file_open(&lfs, &file, info.name, LFS_O_RDONLY);
-            if (open_file_err < 0) {
-                uprintf("CDC DUMP ERR: Failed to open file '%s': %d\n", info.name, open_file_err);
-                continue; // Skip to next directory entry
-            }
-
-            // uprintf("CDC DUMP: Opened '%s', sending content...\n", info.name); // Debug
-            lfs_ssize_t bytes_read;
-            lfs_size_t total_sent = 0;
-            while ((bytes_read = lfs_file_read(&lfs, &file, cdc_file_read_buffer, CDC_READ_BUFFER_SIZE)) > 0) {
-                virtser_send(cdc_file_read_buffer, bytes_read); // Use multi-byte send
-                total_sent += bytes_read;
-                // uprintf("CDC DUMP: Sent %ld bytes for '%s' (Total: %lu/%lu)\n", bytes_read, info.name, total_sent, file_size); // Verbose Debug
-                // Add tiny sleep if virtser_send blocks or host struggles?
-                 chThdSleepMilliseconds(1); // Maybe helps prevent buffer overflows? EXPERIMENT
-            }
-
-            if (bytes_read < 0) {
-                 uprintf("CDC DUMP ERR: Failed reading content from '%s': %ld\n", info.name, bytes_read);
-            }
-            // uprintf("CDC DUMP: Finished sending '%s'. Total sent: %lu\n", info.name, total_sent); // Debug
-
-            lfs_file_close(&lfs, &file); // Close the file
-        }
-    } // End while(true) loop for directory reading
-
-    // Close the directory handle
-    lfs_dir_close(&lfs, &dir);
-    uprintf("CDC DUMP: Closed root directory.\n");
-
-    // Send termination signal (empty filename: just a null byte)
-    uprintf("CDC DUMP: Sending termination signal (null byte).\n");
-    virtser_send((uint8_t*)"\0", 1);
-    // virtser_flush(); // Flush if available/necessary
-
-    // Return success via HID immediately after *starting* the process.
-    // The actual transfer happens asynchronously over CDC.
-    return module_ret_success;
-}
-
 static module_raw_hid_parse_t* parse_packet_funcs[] = {
     parse_ls,
     parse_cd,
@@ -1210,8 +1108,7 @@ static module_raw_hid_parse_t* parse_packet_funcs[] = {
     parse_write_display,
     parse_set_time,
     parse_ping,
-    parse_ls_next,
-    parse_dump_files_cdc,
+    parse_ls_next, // Add the new function to handle "next page" requests
 };
 
 static bool anim_init = false;
