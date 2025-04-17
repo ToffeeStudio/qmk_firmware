@@ -669,13 +669,21 @@ static int parse_ls_all(uint8_t *data, uint8_t length) {
     int err;
     int files_sent = 0;
 
+    // Buffer for potentially modified filename (.araw -> .raw)
+    // LFS_NAME_MAX is usually defined in lfs.h or platform includes
+    #ifndef LFS_NAME_MAX
+    #define LFS_NAME_MAX 64 // Provide a sensible default if not defined
+    // #warning "LFS_NAME_MAX not defined, using default 64" // Optional warning
+    #endif
+    char filename_buffer[LFS_NAME_MAX + 1]; // +1 for null terminator
+
     uprintf("LFS_ALL: Opening root directory '/'\n");
-    err = lfs_dir_open(&lfs, &dir, "/");
+    err = lfs_dir_open(&lfs, &dir, "/"); // Open root directory explicitly
     if (err < 0) {
         uprintf("LFS_ALL: Error opening root directory: %d\n", err);
         uprintf("LFS_ALL: Sending termination signal (error case).\n");
-        virtser_send('\0');
-        return module_ret_invalid_command;
+        virtser_send('\0'); // Send termination signal (empty filename)
+        return module_ret_invalid_command; // Return HID error
     }
 
     uprintf("LFS_ALL: Reading directory entries...\n");
@@ -683,88 +691,156 @@ static int parse_ls_all(uint8_t *data, uint8_t length) {
         int res = lfs_dir_read(&lfs, &dir, &info);
         if (res < 0) {
             uprintf("LFS_ALL: Error reading directory entry: %d\n", res);
-            break;
+            break; // Exit loop on read error
         }
+
         if (res == 0) {
             uprintf("LFS_ALL: End of directory reached.\n");
-            break;
+            break; // End of directory
         }
+
+        // Skip directories
         if (info.type == LFS_TYPE_DIR) {
             continue;
         }
 
+        // Process regular files
         if (info.type == LFS_TYPE_REG) {
             const char *dot_raw = strstr(info.name, ".raw");
             const char *dot_araw = strstr(info.name, ".araw");
-            bool ends_with_raw = dot_raw != NULL && dot_raw == info.name + strlen(info.name) - 4;
-            bool ends_with_araw = dot_araw != NULL && dot_araw == info.name + strlen(info.name) - 5;
+            size_t name_len = strlen(info.name);
 
+            bool ends_with_raw = dot_raw != NULL && dot_raw == info.name + name_len - 4;
+            bool ends_with_araw = dot_araw != NULL && dot_araw == info.name + name_len - 5;
+
+            // Check if it's a target file type
             if (ends_with_raw || ends_with_araw) {
-                uprintf("LFS_ALL: Found matching file: '%s', Size: %lu\n", info.name, (unsigned long)info.size);
-                chThdSleepMilliseconds(100);
 
-                // 1. Send Filename
-                virtser_send_string(info.name);
-                // uprintf("LFS_ALL: Filename sent.\n"); // Can comment out if logs get too noisy
+                bool is_araw = ends_with_araw;
+                const char *filename_to_send = info.name; // Default to original name
+                uint32_t size_to_send = (uint32_t)info.size; // Default to original size
 
-                // 2. Send Size
-                // uprintf("LFS_ALL: Preparing to send size: 0x%08lX (%lu)\n", (unsigned long)info.size, (unsigned long)info.size); // Optional debug
-                virtser_send_u32_le((uint32_t)info.size);
-                // uprintf("LFS_ALL: Size sent.\n"); // Can comment out
+                // --- Logic specific to .araw files ---
+                if (is_araw) {
+                    uprintf("LFS_ALL: Processing .araw file: %s\n", info.name);
+                    // Check if file is large enough for at least one frame
+                    if (info.size < SINGLE_FRAME_SIZE) {
+                        uprintf("LFS_ALL: WARN: '%s' is smaller (%lu bytes) than one frame (%d bytes). Skipping.\n",
+                                info.name, (unsigned long)info.size, SINGLE_FRAME_SIZE);
+                        continue; // Skip this file entirely
+                    }
 
-                // --- 3. Send Data ---
+                    // Create the modified filename (.raw) in the buffer
+                    // Ensure buffer is large enough (checked by LFS_NAME_MAX implicitly)
+                    strcpy(filename_buffer, info.name);
+                    // Find the last dot safely
+                    char *last_dot = strrchr(filename_buffer, '.');
+                    if (last_dot != NULL && strcmp(last_dot, ".araw") == 0) {
+                        // Overwrite extension safely
+                        *(last_dot + 1) = 'r';
+                        *(last_dot + 2) = 'a';
+                        *(last_dot + 3) = 'w';
+                        *(last_dot + 4) = '\0'; // Null-terminate after .raw
+                        filename_to_send = filename_buffer; // Point to the modified name in the buffer
+                        uprintf("LFS_ALL: Reporting as: %s\n", filename_to_send);
+                    } else {
+                        // This case should ideally not happen if ends_with_araw was true
+                        uprintf("LFS_ALL: WARN: Could not modify filename extension for %s. Using original.\n", info.name);
+                        filename_to_send = info.name; // Fallback to original name
+                    }
+
+                    // Set size to report/send as a single frame
+                    size_to_send = SINGLE_FRAME_SIZE;
+                    uprintf("LFS_ALL: Reporting size as single frame: %lu\n", (unsigned long)size_to_send);
+                } else {
+                     // Standard .raw file processing
+                     uprintf("LFS_ALL: Processing .raw file: %s, Size: %lu\n", info.name, (unsigned long)info.size);
+                     // filename_to_send and size_to_send are already correct from defaults
+                }
+                // --- End .araw specific logic ---
+
+                // --- Send Header ---
+                chThdSleepMilliseconds(20); // Short delay before header
+                uprintf("LFS_ALL: Sending header: Name='%s', Size=%lu\n", filename_to_send, (unsigned long)size_to_send);
+                virtser_send_string(filename_to_send); // Send original or modified name
+                virtser_send_u32_le(size_to_send);     // Send original or single frame size
+
+                // --- Send Data ---
                 lfs_file_t file;
-                uprintf("LFS_ALL: Opening file '%s' for reading...\n", info.name);
-                err = lfs_file_open(&lfs, &file, info.name, LFS_O_RDONLY);
+                uprintf("LFS_ALL: Opening original file '%s' for reading...\n", info.name);
+                err = lfs_file_open(&lfs, &file, info.name, LFS_O_RDONLY); // Always open the original file
 
                 if (err < 0) {
-                    uprintf("LFS_ALL: ERROR opening file '%s': %d\n", info.name, err);
-                    uprintf("LFS_ALL: Skipping data send for this file due to open error.\n");
+                    uprintf("LFS_ALL: ERROR opening file '%s': %d. Skipping data send.\n", info.name, err);
                 } else {
-                    uprintf("LFS_ALL: File opened. Sending %lu bytes...\n", (unsigned long)info.size);
+                    uprintf("LFS_ALL: File opened. Sending %lu bytes...\n", (unsigned long)size_to_send);
                     lfs_ssize_t bytes_read;
                     lfs_size_t total_bytes_sent = 0;
                     uint32_t loop_counter = 0; // Counter for progress print
-                    while ((bytes_read = lfs_file_read(&lfs, &file, cdc_read_buffer, CDC_READ_BUFFER_SIZE)) > 0) {
-                        virtser_send_block(cdc_read_buffer, bytes_read);
-                        total_bytes_sent += bytes_read;
-                        loop_counter++;
-                        // Optional: Print progress every N chunks to avoid spamming
-                        if (loop_counter % 100 == 0) { // Print every 100 * 256 bytes approx
-                             uprintf("... sent %lu / %lu bytes\n", (unsigned long)total_bytes_sent, (unsigned long)info.size);
+
+                    // Read loop - stops when EOF is reached OR when enough bytes for size_to_send are sent
+                    while (total_bytes_sent < size_to_send && (bytes_read = lfs_file_read(&lfs, &file, cdc_read_buffer, CDC_READ_BUFFER_SIZE)) > 0) {
+
+                        // Determine how many bytes from this read chunk to actually send
+                        lfs_size_t bytes_in_chunk_to_send = bytes_read;
+                        // If sending the full chunk would exceed the target size (relevant for .araw)
+                        if (total_bytes_sent + bytes_read > size_to_send) {
+                            bytes_in_chunk_to_send = size_to_send - total_bytes_sent;
+                            // uprintf("LFS_ALL: Adjusting last chunk size to %lu bytes\n", (unsigned long)bytes_in_chunk_to_send); // Optional debug
                         }
-                        // Optional: Add small sleep? Test without first.
-                        // chThdSleepMilliseconds(1);
-                    }
 
+                        // Send the required portion of the chunk
+                        virtser_send_block(cdc_read_buffer, bytes_in_chunk_to_send);
+                        total_bytes_sent += bytes_in_chunk_to_send;
+
+                        // Optional: Print progress every N chunks to avoid spamming console
+                        loop_counter++;
+                        if (loop_counter % 100 == 0 && size_to_send > 0) { // Print approx every 100 * 256 bytes
+                             uprintf("... sent %lu / %lu bytes (%lu%%)\n",
+                                     (unsigned long)total_bytes_sent, (unsigned long)size_to_send,
+                                     (unsigned long)(total_bytes_sent * 100 / size_to_send));
+                        }
+
+                        // If we've sent the target number of bytes, exit the read loop
+                        if (total_bytes_sent >= size_to_send) {
+                            break; // Exit while loop explicitly
+                        }
+                    } // End while lfs_file_read
+
+                    // Check if lfs_file_read ended with an error
                     if (bytes_read < 0) {
-                        uprintf("LFS_ALL: ERROR reading from file '%s': %ld\n", info.name, bytes_read);
+                        uprintf("LFS_ALL: ERROR reading from file '%s' during transfer: %ld\n", info.name, bytes_read);
                     }
-                    uprintf("LFS_ALL: Finished sending data for '%s'. Total %lu bytes.\n", info.name, (unsigned long)total_bytes_sent);
+                    uprintf("LFS_ALL: Finished sending data for '%s'. Total %lu bytes sent.\n", filename_to_send, (unsigned long)total_bytes_sent);
 
+                    // Close the file handle
                     err = lfs_file_close(&lfs, &file);
                     if (err < 0) {
                         uprintf("LFS_ALL: ERROR closing file '%s': %d\n", info.name, err);
-                    } else {
-                         uprintf("LFS_ALL: File closed.\n");
-                    }
+                    } // else { uprintf("LFS_ALL: File closed.\n"); } // Can uncomment for verbose logs
                 }
                 // --- End Send Data ---
 
                 files_sent++;
-                chThdSleepMilliseconds(50); // Keep delay between files
-            }
-        }
-    } // end while
+                chThdSleepMilliseconds(50); // Delay between files seems helpful
+            } // End if (file is .raw or .araw)
+        } // End if (file is LFS_TYPE_REG)
+    } // end while true (directory read loop)
 
+    // Close the directory handle
     err = lfs_dir_close(&lfs, &dir);
-    // uprintf("LFS_ALL: Directory closed (Error: %d).\n", err); // Optional
+    if (err < 0) {
+         uprintf("LFS_ALL: Error closing directory: %d\n", err);
+    } else {
+         uprintf("LFS_ALL: Directory closed.\n");
+    }
 
+    // Send Termination Signal (empty filename: just a single null byte)
     uprintf("LFS_ALL: Sending termination signal (end of list).\n");
     virtser_send('\0');
 
     uprintf("LFS_ALL: Finished. Sent %d files (headers + data).\n", files_sent);
-    return module_ret_success;
+    return module_ret_success; // Indicate success to HID host
 }
 
 // Add this helper function to flush any remaining data
