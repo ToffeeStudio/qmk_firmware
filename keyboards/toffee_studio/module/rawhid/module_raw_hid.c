@@ -17,6 +17,8 @@ static size_t current_write_pointer = 0;
 #define FRAME_WIDTH 128
 #define FRAME_HEIGHT 128
 #define FRAME_SIZE ((FRAME_WIDTH * FRAME_HEIGHT) * LV_COLOR_DEPTH / 8)
+#define BYTES_PER_PIXEL 2
+#define SINGLE_FRAME_SIZE (FRAME_WIDTH * FRAME_HEIGHT * BYTES_PER_PIXEL)
 #define FPS 12
 #define FRAME_INTERVAL_MS (1000 / FPS)
 
