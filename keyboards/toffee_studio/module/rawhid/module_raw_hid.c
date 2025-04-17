@@ -654,7 +654,7 @@ static int parse_ls_all(uint8_t *data, uint8_t length) {
 
     uprintf("CMD: parse_ls_all received. Starting CDC file dump...\n");
     // Give the host OS a moment to potentially enumerate/prepare the CDC port
-    chThdSleepMilliseconds(500);
+    chThdSleepMilliseconds(1000);
 
     lfs_dir_t dir;
     struct lfs_info info;
@@ -706,13 +706,13 @@ static int parse_ls_all(uint8_t *data, uint8_t length) {
                 // 1. Send Filename (null-terminated)
                 uprintf("LFS_ALL: Sending filename...\n");
                 virtser_send_string(info.name);
-                 uprintf("LFS_ALL: Filename sent.\n");
+                uprintf("LFS_ALL: Filename sent.\n");
 
-                 // Small delay between filename and size? Maybe not needed.
-                 // chThdSleepMilliseconds(10);
+                chThdSleepMilliseconds(10);
+                uprintf("LFS_ALL: Preparing to send size: 0x%08lX (%lu)\n", (unsigned long)info.size, (unsigned long)info.size);
 
                 // 2. Send Size (4 bytes, Little Endian)
-                 uprintf("LFS_ALL: Sending size (%lu)...\n", (unsigned long)info.size);
+                uprintf("LFS_ALL: Sending size (%lu)...\n", (unsigned long)info.size);
                 virtser_send_u32_le((uint32_t)info.size);
                 uprintf("LFS_ALL: Size sent.\n");
 
