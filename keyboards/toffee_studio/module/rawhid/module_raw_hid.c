@@ -628,6 +628,9 @@ static int parse_write(uint8_t *data, uint8_t length) {
     return module_ret_success;
 }
 
+#define CDC_READ_BUFFER_SIZE 256 // Size of buffer to read from flash at a time
+static uint8_t cdc_read_buffer[CDC_READ_BUFFER_SIZE];
+
 static void virtser_send_u32_le(uint32_t value) {
     uint8_t bytes[4];
     bytes[0] = (value >> 0) & 0xFF;
@@ -648,28 +651,31 @@ static void virtser_send_string(const char *str) {
     virtser_send('\0'); // Send the null terminator
 }
 
+static void virtser_send_block(const uint8_t *buffer, size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        virtser_send(buffer[i]);
+    }
+}
+
 static int parse_ls_all(uint8_t *data, uint8_t length) {
     (void)data; // Unused
     (void)length; // Unused
 
     uprintf("CMD: parse_ls_all received. Starting CDC file dump...\n");
-    // Give the host OS a moment to potentially enumerate/prepare the CDC port
-    chThdSleepMilliseconds(1000);
+    chThdSleepMilliseconds(1000); // Keep the working delay
 
     lfs_dir_t dir;
     struct lfs_info info;
     int err;
     int files_sent = 0;
 
-    // Open the root directory
-    uprintf("LFS_ALL: Opening root directory '.'\n");
-    err = lfs_dir_open(&lfs, &dir, "/"); // Open root directory explicitly
+    uprintf("LFS_ALL: Opening root directory '/'\n");
+    err = lfs_dir_open(&lfs, &dir, "/");
     if (err < 0) {
         uprintf("LFS_ALL: Error opening root directory: %d\n", err);
-        // Send termination signal even on error? Or just return? Let's terminate.
         uprintf("LFS_ALL: Sending termination signal (error case).\n");
-        virtser_send('\0'); // Send termination signal (empty filename)
-        return module_ret_invalid_command; // Return HID error
+        virtser_send('\0');
+        return module_ret_invalid_command;
     }
 
     uprintf("LFS_ALL: Reading directory entries...\n");
@@ -677,75 +683,87 @@ static int parse_ls_all(uint8_t *data, uint8_t length) {
         int res = lfs_dir_read(&lfs, &dir, &info);
         if (res < 0) {
             uprintf("LFS_ALL: Error reading directory entry: %d\n", res);
-            break; // Exit loop on read error
+            break;
         }
-
         if (res == 0) {
             uprintf("LFS_ALL: End of directory reached.\n");
-            break; // End of directory
+            break;
         }
-
-        // Skip directories and the "." and ".." entries
         if (info.type == LFS_TYPE_DIR) {
-            // uprintf("LFS_ALL: Skipping directory: %s\n", info.name); // Debug
             continue;
         }
 
-        // Check if it's a file and ends with .raw or .araw
         if (info.type == LFS_TYPE_REG) {
             const char *dot_raw = strstr(info.name, ".raw");
             const char *dot_araw = strstr(info.name, ".araw");
-
-            // Ensure it ends with the extension (check pointer position)
             bool ends_with_raw = dot_raw != NULL && dot_raw == info.name + strlen(info.name) - 4;
             bool ends_with_araw = dot_araw != NULL && dot_araw == info.name + strlen(info.name) - 5;
 
             if (ends_with_raw || ends_with_araw) {
                 uprintf("LFS_ALL: Found matching file: '%s', Size: %lu\n", info.name, (unsigned long)info.size);
 
-                // 1. Send Filename (null-terminated)
-                uprintf("LFS_ALL: Sending filename...\n");
+                // 1. Send Filename
                 virtser_send_string(info.name);
-                uprintf("LFS_ALL: Filename sent.\n");
+                // uprintf("LFS_ALL: Filename sent.\n"); // Can comment out if logs get too noisy
 
-                chThdSleepMilliseconds(10);
-                uprintf("LFS_ALL: Preparing to send size: 0x%08lX (%lu)\n", (unsigned long)info.size, (unsigned long)info.size);
-
-                // 2. Send Size (4 bytes, Little Endian)
-                uprintf("LFS_ALL: Sending size (%lu)...\n", (unsigned long)info.size);
+                // 2. Send Size
+                // uprintf("LFS_ALL: Preparing to send size: 0x%08lX (%lu)\n", (unsigned long)info.size, (unsigned long)info.size); // Optional debug
                 virtser_send_u32_le((uint32_t)info.size);
-                uprintf("LFS_ALL: Size sent.\n");
+                // uprintf("LFS_ALL: Size sent.\n"); // Can comment out
 
-                // 3. Send Data (SKIP FOR NOW)
-                uprintf("LFS_ALL: --- Skipping data send for this step ---\n");
-                // TODO: Add file open, read loop, virtser_send loop here later
+                // --- 3. Send Data ---
+                lfs_file_t file;
+                uprintf("LFS_ALL: Opening file '%s' for reading...\n", info.name);
+                err = lfs_file_open(&lfs, &file, info.name, LFS_O_RDONLY);
+
+                if (err < 0) {
+                    uprintf("LFS_ALL: ERROR opening file '%s': %d\n", info.name, err);
+                    uprintf("LFS_ALL: Skipping data send for this file due to open error.\n");
+                } else {
+                    uprintf("LFS_ALL: File opened. Sending %lu bytes...\n", (unsigned long)info.size);
+                    lfs_ssize_t bytes_read;
+                    lfs_size_t total_bytes_sent = 0;
+                    uint32_t loop_counter = 0; // Counter for progress print
+                    while ((bytes_read = lfs_file_read(&lfs, &file, cdc_read_buffer, CDC_READ_BUFFER_SIZE)) > 0) {
+                        virtser_send_block(cdc_read_buffer, bytes_read);
+                        total_bytes_sent += bytes_read;
+                        loop_counter++;
+                        // Optional: Print progress every N chunks to avoid spamming
+                        if (loop_counter % 100 == 0) { // Print every 100 * 256 bytes approx
+                             uprintf("... sent %lu / %lu bytes\n", (unsigned long)total_bytes_sent, (unsigned long)info.size);
+                        }
+                        // Optional: Add small sleep? Test without first.
+                        // chThdSleepMilliseconds(1);
+                    }
+
+                    if (bytes_read < 0) {
+                        uprintf("LFS_ALL: ERROR reading from file '%s': %ld\n", info.name, bytes_read);
+                    }
+                    uprintf("LFS_ALL: Finished sending data for '%s'. Total %lu bytes.\n", info.name, (unsigned long)total_bytes_sent);
+
+                    err = lfs_file_close(&lfs, &file);
+                    if (err < 0) {
+                        uprintf("LFS_ALL: ERROR closing file '%s': %d\n", info.name, err);
+                    } else {
+                         uprintf("LFS_ALL: File closed.\n");
+                    }
+                }
+                // --- End Send Data ---
 
                 files_sent++;
-                // Add a small delay between files to allow receiver processing?
-                chThdSleepMilliseconds(50);
-            } else {
-                // uprintf("LFS_ALL: Skipping non-matching file: %s\n", info.name); // Debug
+                chThdSleepMilliseconds(50); // Keep delay between files
             }
-        } else {
-            // uprintf("LFS_ALL: Skipping non-regular file: %s (type %d)\n", info.name, info.type); // Debug
         }
     } // end while
 
-    // Close the directory
     err = lfs_dir_close(&lfs, &dir);
-    if (err < 0) {
-        uprintf("LFS_ALL: Error closing directory: %d\n", err);
-        // Proceed to send termination signal anyway
-    } else {
-        uprintf("LFS_ALL: Directory closed.\n");
-    }
+    // uprintf("LFS_ALL: Directory closed (Error: %d).\n", err); // Optional
 
-    // Send Termination Signal (empty filename: just a single null byte)
     uprintf("LFS_ALL: Sending termination signal (end of list).\n");
     virtser_send('\0');
 
-    uprintf("LFS_ALL: Finished. Sent %d file headers.\n", files_sent);
-    return module_ret_success; // Indicate success to HID host
+    uprintf("LFS_ALL: Finished. Sent %d files (headers + data).\n", files_sent);
+    return module_ret_success;
 }
 
 // Add this helper function to flush any remaining data
