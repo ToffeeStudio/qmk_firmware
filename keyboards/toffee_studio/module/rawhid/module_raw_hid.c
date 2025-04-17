@@ -701,6 +701,7 @@ static int parse_ls_all(uint8_t *data, uint8_t length) {
 
             if (ends_with_raw || ends_with_araw) {
                 uprintf("LFS_ALL: Found matching file: '%s', Size: %lu\n", info.name, (unsigned long)info.size);
+                chThdSleepMilliseconds(100);
 
                 // 1. Send Filename
                 virtser_send_string(info.name);
