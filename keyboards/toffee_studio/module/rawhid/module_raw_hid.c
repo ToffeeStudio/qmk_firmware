@@ -654,7 +654,7 @@ static int parse_ls_all(uint8_t *data, uint8_t length) {
 
     uprintf("CMD: parse_ls_all received. Starting CDC file dump...\n");
     // Give the host OS a moment to potentially enumerate/prepare the CDC port
-    chThdSleepMilliseconds(500);
+    chThdSleepMilliseconds(1000);
 
     lfs_dir_t dir;
     struct lfs_info info;
