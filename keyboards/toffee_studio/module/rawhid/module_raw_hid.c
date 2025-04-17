@@ -636,7 +636,7 @@ static int parse_ls_all(uint8_t *data, uint8_t length) {
         virtser_send((uint8_t)(*ptr)); // Send the byte pointed to by ptr
         ptr++;                        // Move the pointer to the next character
     }
-    return module_ret_success
+    return module_ret_success;
 }
 
 // Add this helper function to flush any remaining data
