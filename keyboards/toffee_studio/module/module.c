@@ -26,7 +26,6 @@
 #include "rawhid/module_raw_hid.h" // Your custom Raw HID parser header
 #endif // VIA_ENABLE
 
-#include "platforms/chibios/gpio.h" // For direct GPIO manipulation (setPinOutputPushPull, writePinHigh, GPx defines)
 #include "virtser.h"                // For virtser_recv, virtser_send
 
 // --- Include the header defining the global `lfs` object ---
