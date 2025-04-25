@@ -1,5 +1,6 @@
 // --- Core QMK Includes ---
 #include "quantum.h" // Includes core QMK functionality, ChibiOS, config files etc.
+#include "gpio.h"
 #include "print.h"   // For uprintf
 
 // --- Feature Includes ---
