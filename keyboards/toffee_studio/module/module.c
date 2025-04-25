@@ -379,11 +379,11 @@ __attribute__((weak)) void ui_init(void) {
 #endif // LITTLEFS_ENABLE check for LVGL FS
 
     // --- Call draw_gradient AFTER LVGL is attached ---
-    if (lvgl_attached) {
-        draw_gradient(); // Call the function to generate and display the gradient
-    } else {
-        uprintf("Skipping gradient draw because LVGL failed to attach.\n");
-    }
+    // if (lvgl_attached) {
+    //     draw_gradient(); // Call the function to generate and display the gradient
+    // } else {
+    //     uprintf("Skipping gradient draw because LVGL failed to attach.\n");
+    // }
 }
 #endif // QUANTUM_PAINTER_ENABLE check for ui_init
 
