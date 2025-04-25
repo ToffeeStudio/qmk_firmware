@@ -99,14 +99,6 @@ static uint8_t *return_buf;
 static int parse_ls(uint8_t *data, uint8_t length) {
     uprintf("List files (First Page)\n");
 
-    chThdSleepMilliseconds(1000);
-    const char *message_to_send = "LS PARSED\r\n";
-    const char *ptr = message_to_send; // Create a pointer to the start of the string
-    while (*ptr != '\0') {
-        virtser_send((uint8_t)(*ptr)); // Send the byte pointed to by ptr
-        ptr++;                        // Move the pointer to the next character
-    }
-
     // Close any previously open directory listing
     if (paged_ls_dir_open) {
         uprintf("Closing previously open paged directory handle.\n");
