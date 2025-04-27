@@ -1,6 +1,5 @@
 // --- Core QMK Includes ---
 #include "quantum.h" // Includes core QMK functionality, ChibiOS, config files etc.
-#include "gpio.h"
 #include "print.h"   // For uprintf
 
 // --- Feature Includes ---
@@ -446,11 +445,8 @@ void keyboard_post_init_kb(void) {
 #ifdef QUANTUM_PAINTER_ENABLE
     // 3) Initialize your display hardware and QP/LVGL
     uprintf("Initializing display hardware...\n");
-    // DEPRECATED
-    // setPinOutputPushPull(OLED_BL_PIN); // GP0
-    // writePinHigh(OLED_BL_PIN);         // Turn backlight on
-    gpio_set_pin_output(OLED_BL_PIN);
-    gpio_write_pin_high(OLED_BL_PIN);
+    setPinOutputPushPull(OLED_BL_PIN); // GP0
+    writePinHigh(OLED_BL_PIN);         // Turn backlight on
     ui_init();                         // Initialize QP/LVGL etc. which calls draw_gradient
     uprintf("Display initialized.\n");
 #endif // QUANTUM_PAINTER_ENABLE
