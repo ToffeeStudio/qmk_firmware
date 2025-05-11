@@ -24,7 +24,7 @@
 
 // RGB LED Configuration
 #define WS2812_DI_PIN GP13
-#define RGBLED_NUM 144
+#define RGBLED_NUM 13
 
 
 #undef USBSTR_CDC_NAME
