@@ -9,20 +9,8 @@
         "pid": "0x626D",
         "device_version": "0.0.1"
     },
-    "lighting": "qmk_rgblight",
-    "rgblight": {
-        "animations": {
-            "breathing": true,
-            "rainbow_mood": true,
-            "rainbow_swirl": true,
-            "snake": true,
-            "knight": true,
-            "christmas": true,
-            "static_gradient": true,
-            "alternating": true
-        }
-    },
     "features": {
+        "rgb_matrix": true,
         "bootmagic": true,
         "command": true,
         "console": true,
