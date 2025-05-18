@@ -8,7 +8,6 @@
 #include <stdbool.h>
 #include <string.h> // For memset, strlen etc. <--- Added/Ensured this include
 
-#ifdef QUANTUM_PAINTER_ENABLE
 #include "qp.h"               // Quantum Painter core
 #include "qp_lvgl.h"          // Quantum Painter LVGL integration
 #include "lvgl.h"             // LVGL library itself
@@ -16,16 +15,11 @@
 // Include pre-compiled graphics resources if you have/use them elsewhere
 // #include "graphics/thintel15.qff.c"
 // #include "graphics/Crimson_Light.c"
-#endif // QUANTUM_PAINTER_ENABLE
 
-#ifdef LITTLEFS_ENABLE
 #include "lfs.h"          // LittleFS core
 #include "file_system.h"  // QMK helpers for LFS (rp2040_mount_lfs etc.)
-#endif // LITTLEFS_ENABLE
 
-#ifdef VIA_ENABLE // Include Raw HID header only if VIA is enabled (as it's called from via command)
 #include "rawhid/module_raw_hid.h" // Your custom Raw HID parser header
-#endif // VIA_ENABLE
 
 #include "virtser.h"                // For virtser_recv, virtser_send
 
@@ -65,8 +59,6 @@ led_config_t g_led_config = {
 // =========================================================================
 // CDC Receive Logic (Filename + Size Header + Direct LFS Write)
 // =========================================================================
-
-#if defined(VIRTSER_ENABLE) && defined(LITTLEFS_ENABLE) // Ensure Virtser (CDC) and LFS are enabled
 
 // --- Configuration ---
 #define MAX_FILENAME_LEN 64 // Maximum allowed filename length (including null terminator)
@@ -302,14 +294,12 @@ void virtser_recv(const uint8_t ch) {
     }
 }
 
-#endif // VIRTSER_ENABLE && LITTLEFS_ENABLE check for CDC receive logic
 
 
 // =========================================================================
 // Dynamic Gradient Drawing
 // =========================================================================
 
-#ifdef QUANTUM_PAINTER_ENABLE // Only define if painter is enabled
 
 //------------------------------------------------------------------------------
 // Helper function to generate a colored gradient in RGB565 format.
@@ -357,20 +347,17 @@ static void draw_gradient(void) {
 }
 //------------------------------------------------------------------------------
 
-#endif // QUANTUM_PAINTER_ENABLE check for gradient drawing
 
 // =========================================================================
 // Initialization and Other Callbacks
 // =========================================================================
 
-#ifdef VIA_ENABLE // Only define board_init etc. if VIA (or maybe just base QMK) needs them
 
 void board_init(void) {
     // Keep this minimal if keyboard_post_init_kb handles major init
     uprintf("board_init() called.\n");
 }
 
-#ifdef QUANTUM_PAINTER_ENABLE // ui_init only needed if Painter enabled
 // Define QP/LVGL related static variables only if painter is enabled
 static painter_device_t oled;
 
@@ -383,7 +370,6 @@ __attribute__((weak)) void ui_init(void) {
 
     // --- Attach LVGL first ---
     bool lvgl_attached = false;
-#ifdef LITTLEFS_ENABLE
     volatile lv_fs_drv_t *result = NULL; // Initialize to NULL
     if (qp_lvgl_attach(oled)) {
         lvgl_attached = true; // Mark as attached
@@ -397,7 +383,6 @@ __attribute__((weak)) void ui_init(void) {
     } else {
         uprintf("Failed to attach LVGL to painter.\n");
     }
-#else
     // Attach LVGL even if LFS is disabled
     if (qp_lvgl_attach(oled)) {
         lvgl_attached = true;
@@ -405,7 +390,6 @@ __attribute__((weak)) void ui_init(void) {
     } else {
         uprintf("Failed to attach LVGL to painter.\n");
     }
-#endif // LITTLEFS_ENABLE check for LVGL FS
 
     // --- Call draw_gradient AFTER LVGL is attached ---
     // if (lvgl_attached) {
@@ -414,13 +398,11 @@ __attribute__((weak)) void ui_init(void) {
     //     uprintf("Skipping gradient draw because LVGL failed to attach.\n");
     // }
 }
-#endif // QUANTUM_PAINTER_ENABLE check for ui_init
 
 // keyboard_post_init_kb is a good place for LFS mount and final setup
 void keyboard_post_init_kb(void) {
     uprintf("keyboard_post_init_kb called.\n");
 
-#ifdef LITTLEFS_ENABLE
     // 1) Mount LFS here:
     uprintf("Mounting LFS...\n");
     int err = rp2040_mount_lfs(&lfs);
@@ -446,14 +428,8 @@ void keyboard_post_init_kb(void) {
     if(used_blocks >= 0) {
         uprintf("LFS used blocks at boot: %ld\n", used_blocks);
         // Use literal value for reservation KB from rules.mk if PICO_FLASH_SIZE_BYTES is standard
-        #ifndef FLASH_RESERVATION_KB
         #define FLASH_RESERVATION_KB 1024 // Default if not in rules.mk
         #warning "FLASH_RESERVATION_KB not defined in rules.mk, using default 1024"
-        #endif
-        #ifndef PICO_FLASH_SIZE_BYTES
-        #define PICO_FLASH_SIZE_BYTES (2 * 1024 * 1024) // Default Pico size if not defined
-        #warning "PICO_FLASH_SIZE_BYTES not defined, using default 2MB"
-        #endif
         // Calculate total LFS size: Total Flash - Bootloader (assume standard size?) - Code/Firmware (hard to know exactly) - Reservation
         // Simplification: Assume LFS partition starts after reservation
         // WARNING: This calculation is a rough estimate!
@@ -470,22 +446,17 @@ void keyboard_post_init_kb(void) {
     } else {
          uprintf("Error getting LFS size: %ld\n", used_blocks);
     }
-#endif // LITTLEFS_ENABLE check
 
-#ifdef QUANTUM_PAINTER_ENABLE
     // 3) Initialize your display hardware and QP/LVGL
     uprintf("Initializing display hardware...\n");
     setPinOutputPushPull(0); // GP0
     writePinHigh(0);         // Turn backlight on
     ui_init();                         // Initialize QP/LVGL etc. which calls draw_gradient
     uprintf("Display initialized.\n");
-#endif // QUANTUM_PAINTER_ENABLE
 
     // --- Initialize CDC Receive State ---
-    #if defined(VIRTSER_ENABLE) && defined(LITTLEFS_ENABLE) // <--- Use the new CDC logic condition
     uprintf("Initializing CDC Receive State...\n");
     reset_cdc_state(); // <--- Use the reset function to ensure clean start
-    #endif
 
     // 4) Call the default post-init user function if it exists
     keyboard_post_init_user(); // Weakly defined, safe to call
@@ -495,13 +466,9 @@ void keyboard_post_init_kb(void) {
 // This function handles Raw HID commands coming *from Via*
 void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
     // uprintf("via_custom_value_command_kb called, length %d\n", length);
-    #ifdef LITTLEFS_ENABLE // Raw HID parser likely needs LFS too
         int err = module_raw_hid_parse_packet(data, length);
         if (err < 0) {
             // uprintf("Error parsing Raw HID packet via VIA: %d\n", err);
         }
-    #else
         // uprintf("via_custom_value_command_kb: LFS disabled, skipping Raw HID parse.\n");
-    #endif
 }
-#endif //VIA_ENABLE
