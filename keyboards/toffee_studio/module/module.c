@@ -403,6 +403,11 @@ __attribute__((weak)) void ui_init(void) {
 void keyboard_post_init_kb(void) {
     uprintf("keyboard_post_init_kb called.\n");
 
+    // Testing, try and get rgb_matrix working
+    uprintf("RGB Signs of life test activating...\n");
+    rgb_matrix_init();
+    rgb_matrix_set_color(0, 255, 0, 0);
+
     // 1) Mount LFS here:
     uprintf("Mounting LFS...\n");
     int err = rp2040_mount_lfs(&lfs);
