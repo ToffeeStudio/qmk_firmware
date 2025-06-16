@@ -15,7 +15,8 @@ app = FastAPI()
 
 @app.get("/compile-and-get-firmware")
 def compile_and_get_firmware():
-    subprocess.run(COMPILE_COMMAND, shell=True, check=True)
+    subprocess.run("git pull", shell=True, check=True, cwd=QMK_FIRMWARE_DIR)
+    subprocess.run(COMPILE_COMMAND, shell=True, check=True, cwd=QMK_FIRMWARE_DIR)
     return FileResponse(path=FIRMWARE_FILE_PATH, media_type='application/octet-stream')
 
 if __name__ == "__main__":

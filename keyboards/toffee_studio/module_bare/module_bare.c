@@ -1,6 +1,7 @@
 #include "quantum.h"
 #include "print.h"   // For uprintf
 #include "ch.h"
+#include "rgb_matrix.h"
 
 led_config_t g_led_config = {
     // The .matrix_co map can be left empty for this test.
