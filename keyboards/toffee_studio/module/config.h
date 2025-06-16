@@ -23,8 +23,13 @@
 #define QP_LVGL_TASK_PERIOD 40
 
 // RGB LED Configuration
-#define WS2812_DI_PIN GP13
-#define RGBLED_NUM 144
+// #define WS2812_DI_PIN GP13
+// #define RGBLED_NUM 13
+
+// RGB MATRIX Configuration
+// #define RGB_MATRIX_LED_COUNT 13
+// #define RGB_MATRIX_DRIVER_PIN GP13
+// #define WS2812_DRIVER = vendor
 
 
 #undef USBSTR_CDC_NAME

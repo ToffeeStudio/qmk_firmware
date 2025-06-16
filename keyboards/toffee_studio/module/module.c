@@ -366,6 +366,13 @@ __attribute__((weak)) void ui_init(void) {
     // }
 }
 
+// RGB MATRIX TESTING ONLY
+void keyboard_post_init_user(void) {
+    rgb_matrix_enable_noeeprom();
+    rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
+    rgb_matrix_sethsv_noeeprom(HSV_BLUE);
+}
+
 // keyboard_post_init_kb is a good place for LFS mount and final setup
 void keyboard_post_init_kb(void) {
     uprintf("keyboard_post_init_kb called.\n");
