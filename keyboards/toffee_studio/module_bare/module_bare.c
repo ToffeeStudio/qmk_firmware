@@ -3,7 +3,7 @@
 #include "ch.h"
 #include "rgb_matrix.h"
 
-const led_config_t g_led_config = {
+led_config_t g_led_config = {
     /* Key-matrix → LED index
      * 9 rows × 8 cols  (COL2ROW diode dir, see info.json)
      */
@@ -37,6 +37,16 @@ const led_config_t g_led_config = {
         LED_FLAG_UNDERGLOW, LED_FLAG_UNDERGLOW
     }
 };
+
+bool rgb_matrix_indicators_user(void) {
+    for (uint8_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+        if (HAS_FLAGS(g_led_config.flags[i], LED_FLAG_UNDERGLOW))
+            rgb_matrix_set_color(i, 0, 0, 255);        // blue strip
+        else
+            rgb_matrix_set_color(i, 255, 0, 0);        // red keys
+    }
+    return false;
+}
 
 void keyboard_post_init_kb(void) {
     chThdSleepMilliseconds(3000);
