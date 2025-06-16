@@ -1,5 +1,6 @@
 #include "quantum.h"
 #include "print.h"   // For uprintf
+#include "ch.h"
 
 led_config_t g_led_config = {
     // The .matrix_co map can be left empty for this test.
@@ -15,7 +16,7 @@ led_config_t g_led_config = {
 
     // Define a default flag for each of your 13 LEDs.
     {
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
+        LED_FLAG_UNDERGLOW, LED_FLAG_UNDERGLOW, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
         LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
         LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
         LED_FLAG_KEYLIGHT
@@ -23,5 +24,6 @@ led_config_t g_led_config = {
 };
 
 void keyboard_post_init_kb(void) {
-    uprintf("keyboard_post_init_kb called.\n");
+    chThdSleepMilliseconds(3000);
+    uprintf("CALLED HERE\r\n");
 }
