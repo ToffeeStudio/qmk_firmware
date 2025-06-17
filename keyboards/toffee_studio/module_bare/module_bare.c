@@ -38,18 +38,31 @@ led_config_t g_led_config = {
     }
 };
 
-// bool rgb_matrix_indicators_user(void) {
-//     for (uint8_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
-//         if (HAS_FLAGS(g_led_config.flags[i], LED_FLAG_UNDERGLOW))
-//             rgb_matrix_set_color(i, 0, 0, 255);        // blue strip
-//         else
-//             rgb_matrix_set_color(i, 255, 0, 0);        // red keys
-//     }
-//     return false;
-// }
+/* --- simple breathing helper ------------------------------------------ */
+static uint8_t breath_step = 0;          // 0‥255, wraps automatically
+
+static uint8_t breathe_wave(uint8_t t) { // triangle-wave 0‥255
+    return t < 128 ? t * 2 : (255 - t) * 2;
+}
+/* ---------------------------------------------------------------------- */
+
+bool rgb_matrix_indicators_user(void) {
+    uint8_t v = breathe_wave(breath_step);   // brightness for this frame
+    breath_step++;                           // advance for next frame
+
+    for (uint8_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+        if (HAS_FLAGS(g_led_config.flags[i], LED_FLAG_UNDERGLOW)) {
+            // blue underglow with breathing brightness
+            rgb_matrix_set_color(i, 0, 0, v);
+        } else {
+            // constant red key LEDs
+            rgb_matrix_set_color(i, 255, 0, 0);
+        }
+    }
+    return false;    // allow other indicator logic if present
+}
 
 void keyboard_post_init_kb(void) {
     chThdSleepMilliseconds(3000);
-    rgb_matrix_set_flags(LED_FLAG_KEYLIGHT);
     uprintf("CALLED HERE\r\n");
 }
