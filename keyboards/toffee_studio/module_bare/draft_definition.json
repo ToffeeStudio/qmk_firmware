@@ -18,5 +18,6 @@
     ]
   },
   "firmwareVersion": 0,
-  "keycodes": ["qmk_lighting"]
+  "keycodes": ["qmk_lighting"],
+  "menus": ["qmk_rgb_matrix"]
 }

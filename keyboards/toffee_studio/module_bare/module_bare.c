@@ -38,17 +38,18 @@ led_config_t g_led_config = {
     }
 };
 
-bool rgb_matrix_indicators_user(void) {
-    for (uint8_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
-        if (HAS_FLAGS(g_led_config.flags[i], LED_FLAG_UNDERGLOW))
-            rgb_matrix_set_color(i, 0, 0, 255);        // blue strip
-        else
-            rgb_matrix_set_color(i, 255, 0, 0);        // red keys
-    }
-    return false;
-}
+// bool rgb_matrix_indicators_user(void) {
+//     for (uint8_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+//         if (HAS_FLAGS(g_led_config.flags[i], LED_FLAG_UNDERGLOW))
+//             rgb_matrix_set_color(i, 0, 0, 255);        // blue strip
+//         else
+//             rgb_matrix_set_color(i, 255, 0, 0);        // red keys
+//     }
+//     return false;
+// }
 
 void keyboard_post_init_kb(void) {
     chThdSleepMilliseconds(3000);
+    rgb_matrix_set_flags(LED_FLAG_KEYLIGHT);
     uprintf("CALLED HERE\r\n");
 }
