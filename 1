@@ -1,0 +1,73 @@
+#include "quantum.h"
+#include "print.h"   // For uprintf
+#include "ch.h"
+#include "rgb_matrix.h"
+
+led_config_t g_led_config = {
+    /* Key-matrix → LED index
+     * 9 rows × 8 cols  (COL2ROW diode dir, see info.json)
+     */
+    {
+        {  0,  1, NO_LED, NO_LED, NO_LED,  2, NO_LED, NO_LED }, // row 0
+        {  3,  4, NO_LED, NO_LED, NO_LED,  5, NO_LED, NO_LED }, // row 1
+        {  6,  7, NO_LED, NO_LED, NO_LED,  8, NO_LED, NO_LED }, // row 2
+        {  9, 10, NO_LED, NO_LED, NO_LED, 11, NO_LED, NO_LED }, // row 3
+        { 12, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED },
+        { NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED },
+        { NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED },
+        { NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED },
+        { NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED },
+    },
+
+    /* Physical XY positions (13 entries) */
+    {
+        {  0,  0},   // LED 0  (row0 col0)
+        { 20,  0},   // LED 1
+        { 40,  0},   // LED 2
+        { 60,  0},   // LED 3
+        { 80,  0},   // LED 4
+        {100,  0},   // LED 5
+        {120,  0},   // LED 6
+        {140,  0},   // LED 7
+        {160,  0},   // LED 8
+        {180,  0},   // LED 9
+        {200,  0},   // LED10
+        {220,  0},   // LED11
+        {240,  0},   // LED12
+    },
+
+    /* Flags – keylight vs underglow, one per LED */
+    {
+        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
+        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
+        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
+        LED_FLAG_UNDERGLOW, LED_FLAG_UNDERGLOW,
+        LED_FLAG_UNDERGLOW, LED_FLAG_UNDERGLOW
+    }
+};
+
+/* --- simple breathing helper ------------------------------------------ */
+static uint8_t breath_step = 0;          // 0‥255, wraps automatically
+
+static uint8_t breathe_wave(uint8_t t) { // triangle-wave 0‥255
+    return t < 128 ? t * 2 : (255 - t) * 2;
+}
+/* ---------------------------------------------------------------------- */
+
+bool rgb_matrix_indicators_user(void) {
+    uint8_t v = breathe_wave(breath_step);   // brightness for this frame
+    breath_step++;                           // advance for next frame
+
+    for (uint8_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+        if (HAS_FLAGS(g_led_config.flags[i], LED_FLAG_UNDERGLOW)) {
+            // blue underglow with breathing brightness
+            rgb_matrix_set_color(i, 0, 0, v);
+        }
+    }
+    return false;    // allow other indicator logic if present
+}
+
+void keyboard_post_init_kb(void) {
+    chThdSleepMilliseconds(3000);
+    uprintf("CALLED HERE\r\n");
+}
