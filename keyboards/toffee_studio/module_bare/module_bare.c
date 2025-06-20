@@ -53,27 +53,25 @@ led_config_t g_led_config = {
 
     /* Flags (90 total LEDs) */
     {
-        // Underglow (22 LEDs)
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        // Keylights (68 LEDs)
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT,
-        LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT, LED_FLAG_KEYLIGHT
+        // Underglow indices: 1, 3, 5, 8, 9, 11, 12, 14, 16, 32, 33, 48, 50, 66-74
+        LED_FLAG_KEYLIGHT,    LED_FLAG_UNDERGLOW,   LED_FLAG_KEYLIGHT,    LED_FLAG_UNDERGLOW,   LED_FLAG_KEYLIGHT,    // 0-4
+        LED_FLAG_UNDERGLOW,   LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_UNDERGLOW,   LED_FLAG_UNDERGLOW,   // 5-9
+        LED_FLAG_KEYLIGHT,    LED_FLAG_UNDERGLOW,   LED_FLAG_UNDERGLOW,   LED_FLAG_KEYLIGHT,    LED_FLAG_UNDERGLOW,   // 10-14
+        LED_FLAG_KEYLIGHT,    LED_FLAG_UNDERGLOW,   LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    // 15-19
+        LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    // 20-24
+        LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    // 25-29
+        LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_UNDERGLOW,   LED_FLAG_UNDERGLOW,   LED_FLAG_KEYLIGHT,    // 30-34
+        LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    // 35-39
+        LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    // 40-44
+        LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_UNDERGLOW,   LED_FLAG_KEYLIGHT,    // 45-49
+        LED_FLAG_UNDERGLOW,   LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    // 50-54
+        LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    // 55-59
+        LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    // 60-64
+        LED_FLAG_KEYLIGHT,    LED_FLAG_UNDERGLOW,   LED_FLAG_UNDERGLOW,   LED_FLAG_UNDERGLOW,   LED_FLAG_UNDERGLOW,   // 65-69
+        LED_FLAG_UNDERGLOW,   LED_FLAG_UNDERGLOW,   LED_FLAG_UNDERGLOW,   LED_FLAG_UNDERGLOW,   LED_FLAG_UNDERGLOW,   // 70-74
+        LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    // 75-79
+        LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    // 80-84
+        LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT     // 85-89
     }
 };
 
@@ -95,28 +93,28 @@ bool rgb_matrix_indicators_user(void) {
             rgb_matrix_set_color(i, 0, 0, v);
         }
     }
-    rgb_matrix_set_color(1, 0, 0, 140);
-    rgb_matrix_set_color(3, 0, 0, 140);
-    rgb_matrix_set_color(5, 0, 0, 140);
-    rgb_matrix_set_color(8, 0, 0, 140);
-    rgb_matrix_set_color(9, 0, 0, 140);
-    rgb_matrix_set_color(11, 0, 0, 140);
-    rgb_matrix_set_color(12, 0, 0, 140);
-    rgb_matrix_set_color(14, 0, 0, 140);
-    rgb_matrix_set_color(16, 0, 0, 140);
-    rgb_matrix_set_color(32, 0, 0, 140);
-    rgb_matrix_set_color(33, 0, 0, 140);
-    rgb_matrix_set_color(48, 0, 0, 140);
-    rgb_matrix_set_color(50, 0, 0, 140);
-    rgb_matrix_set_color(66, 0, 0, 140);
-    rgb_matrix_set_color(67, 0, 0, 140);
-    rgb_matrix_set_color(68, 0, 0, 140);
-    rgb_matrix_set_color(69, 0, 0, 140);
-    rgb_matrix_set_color(70, 0, 0, 140);
-    rgb_matrix_set_color(71, 0, 0, 140);
-    rgb_matrix_set_color(72, 0, 0, 140);
-    rgb_matrix_set_color(73, 0, 0, 140);
-    rgb_matrix_set_color(74, 0, 0, 140);
+    // rgb_matrix_set_color(1, 0, 0, 140);
+    // rgb_matrix_set_color(3, 0, 0, 140);
+    // rgb_matrix_set_color(5, 0, 0, 140);
+    // rgb_matrix_set_color(8, 0, 0, 140);
+    // rgb_matrix_set_color(9, 0, 0, 140);
+    // rgb_matrix_set_color(11, 0, 0, 140);
+    // rgb_matrix_set_color(12, 0, 0, 140);
+    // rgb_matrix_set_color(14, 0, 0, 140);
+    // rgb_matrix_set_color(16, 0, 0, 140);
+    // rgb_matrix_set_color(32, 0, 0, 140);
+    // rgb_matrix_set_color(33, 0, 0, 140);
+    // rgb_matrix_set_color(48, 0, 0, 140);
+    // rgb_matrix_set_color(50, 0, 0, 140);
+    // rgb_matrix_set_color(66, 0, 0, 140);
+    // rgb_matrix_set_color(67, 0, 0, 140);
+    // rgb_matrix_set_color(68, 0, 0, 140);
+    // rgb_matrix_set_color(69, 0, 0, 140);
+    // rgb_matrix_set_color(70, 0, 0, 140);
+    // rgb_matrix_set_color(71, 0, 0, 140);
+    // rgb_matrix_set_color(72, 0, 0, 140);
+    // rgb_matrix_set_color(73, 0, 0, 140);
+    // rgb_matrix_set_color(74, 0, 0, 140);
     return false;
 }
 
