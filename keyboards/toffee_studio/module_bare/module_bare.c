@@ -35,18 +35,18 @@ led_config_t g_led_config = {
      */
     {
         // This is a generic placeholder and will need to be adjusted for the real layout.
-        { 22, 23, 24, 25, 26, 27, 28, 29 }, // row 0 (8 keys) -> LEDs 22-29
-        { 30, 31, 32, 33, 34, 35, 36, 37 }, // row 1 (8 keys) -> LEDs 30-37
-        { 38, 39, 40, 41, 42, 43, 44, 45 }, // row 2 (8 keys) -> LEDs 38-45
-        { 46, 47, 48, 49, 50, 51, 52, 53 }, // row 3 (8 keys) -> LEDs 46-53
-        { 54, 55, 56, 57, 58, 59, 60, 61 }, // row 4 (8 keys) -> LEDs 54-61
-        { 62, 63, 64, 65, 66, 67, 68, 69 }, // row 5 (8 keys) -> LEDs 62-69
-        { 70, 71, 72, 73, 74, 75, 76, 77 }, // row 6 (8 keys) -> LEDs 70-77
-        { 78, 79, 80, 81, 82, 83, 84, 85 }, // row 7 (8 keys) -> LEDs 78-85
-        { 86, 87, 88, 89, NO_LED, NO_LED, NO_LED, NO_LED }  // row 8 (4 keys) -> LEDs 86-89
+        { NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED },
+        { NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED },
+        { NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED },
+        { NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED },
+        { NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED },
+        { NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED },
+        { NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED },
+        { NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED },
+        { NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED, NO_LED }
     },
 
-    /* Physical XY positions (90 total LEDs) */
+    /* Physical XY positions (89 total LEDs) */
     {
         // This array will be filled at runtime by generate_led_positions()
         {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0},
@@ -57,10 +57,10 @@ led_config_t g_led_config = {
         {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0},
         {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0},
         {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0},
-        {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}
+        {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}, {0,0}
     },
 
-    /* Flags (90 total LEDs) */
+    /* Flags (89 total LEDs) */
     {
         // Underglow indices: 1, 3, 5, 8, 9, 11, 12, 14, 16, 32, 33, 48, 50, 66-74
         LED_FLAG_KEYLIGHT,    LED_FLAG_UNDERGLOW,   LED_FLAG_KEYLIGHT,    LED_FLAG_UNDERGLOW,   LED_FLAG_KEYLIGHT,    // 0-4
@@ -80,7 +80,7 @@ led_config_t g_led_config = {
         LED_FLAG_UNDERGLOW,   LED_FLAG_UNDERGLOW,   LED_FLAG_UNDERGLOW,   LED_FLAG_UNDERGLOW,   LED_FLAG_UNDERGLOW,   // 70-74
         LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    // 75-79
         LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    // 80-84
-        LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT     // 85-89
+        LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT
     }
 };
 
@@ -110,29 +110,31 @@ const led_point_t led_physical_pos[RGB_MATRIX_LED_COUNT] = {
     {255, 255}
 };
 
-typedef struct { uint8_t row; uint8_t col; } logical_pos_t;
-const logical_post_t key_logical_map[KEYLIGHT_COUNT] = {
-//    `~`     `1`     `2`    `3`     `4`      `5`     `6`     `7`     `8`     `9`     `0`     `-`     `=`   `Bksp`   `Del`
-    (0, 0), (1, 0), (0, 5), (1, 5), (0, 4), (1, 4), (0, 3), (1, 3), (0, 2), (1, 2), (0, 1), (1, 1), (0, 6), (1, 6), (0, 7)
-//   `Tab`    `Q`     `W`     `E`     `R`     `T`     `Y`     U`      `I`     `O`     `P`     `[`     `]`     `\`    `Del`
-    (2, 0), (3, 0), (2, 1), (3, 1), (2, 2), (3, 2), (2, 3), (3, 3), (2, 4), (3, 4), (2, 5), (3, 5), (2, 6), (3, 6), (2, 7)
-//   Caps`    `A`     `S`     `D`     `F`     `G`     `H`     `J`     `K`     `L`     `;`     `'`   `Enter` `Home`
-    (4, 0), (5, 0), (4, 1), (5, 1), (4, 2), (5, 2), (4, 3), (5, 3), (4, 4), (5, 4), (4, 5), (5, 5), (4, 6), (4, 7)
-// `LShift`        `<`       `Z`     `X`      `C`     `V`     `B`     `N`    `M`      `,`     `.`     `/`   `RShift`   `Up`    `End`
-    (7, 0),       (6, 0)    (6, 1), (7, 1), (6, 2), (7, 2), (6, 3), (7, 3), (7, 4), (6, 4), (7, 5), (6, 5), (6, 6),    (7, 6),  (6, 7)
-// `Ctrl`       `Win`     `Alt`     `Space?`    `RAlt`    `MO(1)`    `Left`     `Down`    `Right`
-    (8, 0),    (8, 1),   (8, 2),     (8, 3),    (8, 4),   (8, 5),    (8, 6),    (5, 6),    (7, 7)
-
-
-
-
-
-}
-
 
 void generate_led_positions(void) {
     for(int i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
         g_led_config.point[led_physical_map[i]] = led_physical_pos[i];
+    }
+}
+
+typedef struct { uint8_t row; uint8_t col; uint8_t led_index; } logical_pos_t;
+const logical_pos_t key_logical_map[KEYLIGHT_COUNT] = {
+//    `~`      `1`       `2`      `3`     `4`      `5`       `6`      `7`      `8`     `9`      `0`       `-`     `=`     `Bksp`   `Del`
+    {0,0,75},{1,0,76},{0,5,77},{1,5,78},{0,4,79},{1,4,80},{0,3,81},{1,3,82},{0,2,83},{1,2,84},{0,1,85},{1,1,86},{0,6,87},{1,6,88},{0,7,88},
+//   `Tab`     `Q`       `W`      `E`     `R`      `T`       `Y`      `U`      `I`     `O`      `P`       `[`     `]`       `\`    `Del`
+    {2,0,51},{3,0,52},{2,1,53},{3,1,54},{2,2,55},{3,2,56},{2,3,57},{3,3,58},{2,4,59},{3,4,60},{2,5,61},{3,5,62},{2,6,63},{3,6,64},{2,7,65},
+//  `Caps`      `A`      `S`      `D`     `F`      `G`       `H`      `J`      `K`     `L`      `;`       `'`    `Enter`  `Home`
+    {4,0,49},{5,0,46},{4,1,45},{5,1,44},{4,2,43},{5,2,42},{4,3,41},{5,3,40},{4,4,39},{5,4,38},{4,5,37},{5,5,36},{4,6,35},{4,7,34},
+//   `LShift`    `<`      `Z`     `X`       `C`      `V`      `B`      `N`     `M`      `,`       `.`      `/`   `RShift`   `Up`   `End`
+    {7,0,18}, {6,0,18},{6,1,19},{7,1,20},{6,2,21},{7,2,22},{6,3,23},{7,3,24},{7,4,25},{6,4,26},{7,5,27},{6,5,28},{6,6,29},{7,6,30},{6,7,31},
+// `Ctrl`       `Win`     `Alt`          `Space?`       `RAlt`     `MO{1}`      `Left`  `Down` `Right`
+    {8,0,17},  {8,1,15},  {8,2,13},      {8,3,10},      {8,4,7},   {8,5,6},    {8,6,4},{5,6,2},{7,7,0}
+};
+
+void generate_matrix_to_led_map(void) {
+    for(int i = 0; i < KEYLIGHT_COUNT; i++) {
+        logical_pos_t key = key_logical_map[i];
+        g_led_config.matrix_co[key.row][key.col] = key.led_index;
     }
 }
 
@@ -167,6 +169,7 @@ bool rgb_matrix_indicators_user(void) {
 
 void keyboard_post_init_kb(void) {
     generate_led_positions();
+    generate_matrix_to_led_map();
     chThdSleepMilliseconds(3000);
     uprintf("TURNED ON\r\n");
     uprintf("--- Verifying generated LED positions (Index: {X, Y}) ---\n");
