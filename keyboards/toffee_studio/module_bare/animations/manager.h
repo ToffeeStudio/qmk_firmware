@@ -1,11 +1,12 @@
 #pragma once
 #include "animation.h"
 
-enum underglow_animation_ids {
+typedef enum {
     ANIM_ID_BREATHING = 0,
     ANIM_ID_CYCLE_LEFT_RIGHT,
     ANIM_ID_BAND_SAT_LEFT_RIGHT,
-};
+    ANIM_ID_HUE_BREATHING,
+} underglow_animation_ids;
 
 // The single, global configuration for our underglow system
 extern animation_config_t g_underglow_config;

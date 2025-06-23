@@ -17,4 +17,5 @@ RAW_ENABLE = yes
 SRC += animations/manager.c \
 	   animations/anim_breathing.c \
        animations/anim_cycle_left_right.c \
-       animations/anim_band_sat_left_right.c
+       animations/anim_band_sat_left_right.c \
+	   animations/anim_hue_breathing.c

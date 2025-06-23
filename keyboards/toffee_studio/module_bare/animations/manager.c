@@ -8,6 +8,7 @@
 #include "anim_breathing.h"
 #include "anim_cycle_left_right.h"
 #include "anim_band_sat_left_right.h"
+#include "anim_hue_breathing.h"
 // #include "anim_solid.h"
 // #include "anim_rainbow_wave.h"
 
@@ -23,6 +24,7 @@ animation_t* underglow_animations[] = {
     &anim_breathing,
     &anim_cycle_left_right,
     &anim_band_sat_left_right,
+    &anim_hue_breathing,
     // &anim_solid,
     // &anim_rainbow_wave,
 };
