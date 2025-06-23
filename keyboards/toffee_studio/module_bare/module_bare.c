@@ -3,9 +3,11 @@
 #include "ch.h"
 #include "rgb_matrix.h"
 #include "rgb_matrix_types.h"   // for led_point_t and led_config_t
+#include "animations/manager.h"   // underglow_manager_* APIs
 #define ID_SET_LED_RED 0x70
 
 static bool custom_led_state[RGB_MATRIX_LED_COUNT] = {false};
+uint8_t g_current_underglow_anim_id = ANIM_ID_BAND_SAT_LEFT_RIGHT;
 
 void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
     // We are looking for a packet with our custom command.
@@ -83,7 +85,6 @@ led_config_t g_led_config = {
         LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT,    LED_FLAG_KEYLIGHT
     }
 };
-
 // The indices of keys, where the layout of this matrix corresponds to the physical position of these LEDs in real life.
 const uint8_t led_physical_map[RGB_MATRIX_LED_COUNT] = {
     // KEYLIGHT LEDs (relevant)
@@ -92,9 +93,12 @@ const uint8_t led_physical_map[RGB_MATRIX_LED_COUNT] = {
     49, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36,   35,   34, // Third row of LEDs
       18,    19, 20, 21, 22, 23, 24, 25, 26, 27, 28,  29,   30, 31, // Fourth row of LEDs
     17,  15,  13,                10,              7,  6,   4, 2, 0, // Fifth row
+
     // UNDERGLOW LEDs
-    1, 3, 5, 8, 9, 11, 12, 14, 16, 32, 33, 48, 50,
-    66, 67, 68, 69, 70, 71, 72, 73, 74
+    74, 73, 72, 71, 70, 69, 68, 67, 66,
+    50,                            33,
+    48,                            32,
+    16, 14, 12, 11, 9, 8, 5, 3, 1
 };
 
 const led_point_t led_physical_pos[RGB_MATRIX_LED_COUNT] = {
@@ -104,10 +108,10 @@ const led_point_t led_physical_pos[RGB_MATRIX_LED_COUNT] = {
     {  24, 150}, {  52, 150}, {  68, 150}, {  84, 150}, { 100, 150}, { 116, 150}, { 132, 150}, { 148, 150}, { 164, 150}, { 180, 150}, { 196, 150}, { 216, 150}, { 236, 150}, { 252, 150},
     {   8, 200}, {  28, 200}, {  52, 200}, { 124, 200}, { 192, 200}, { 208, 200}, { 228, 200}, { 240, 200}, { 252, 200},
     // Useless below
-    {255, 255}, {255, 255}, {255, 255}, {255, 255}, {255, 255}, {255, 255}, {255, 255},
-    {255, 255}, {255, 255}, {255, 255}, {255, 255}, {255, 255}, {255, 255}, {255, 255},
-    {255, 255}, {255, 255}, {255, 255}, {255, 255}, {255, 255}, {255, 255}, {255, 255},
-    {255, 255}
+    {10, 8},   {25, 8},   {50, 8},   {80, 8},   {115, 8},   {150, 8},   {180, 8},   {225, 8},   {240, 8},
+    {10, 80},                                                                                     {240, 80},
+    {10, 156},                                                                                     {240, 156},
+    {10, 190}, {25, 190}, {50, 190}, {80, 190}, {115, 190}, {150, 190}, {180, 190}, {225, 190}, {240, 190}
 };
 
 
@@ -138,29 +142,20 @@ void generate_matrix_to_led_map(void) {
     }
 }
 
-/* --- simple breathing helper ------------------------------------------ */
-static uint8_t breath_step = 0;          // 0‥255, wraps automatically
-
-static uint8_t breathe_wave(uint8_t t) { // triangle-wave 0‥255
-    return t < 128 ? t * 2 : (255 - t) * 2;
-}
-/* ---------------------------------------------------------------------- */
-
 bool rgb_matrix_indicators_user(void) {
-    uint8_t v = breathe_wave(breath_step);   // brightness for this frame
-    breath_step++;                           // advance for next frame
 
-    for (uint8_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
-        if (HAS_FLAGS(g_led_config.flags[i], LED_FLAG_UNDERGLOW)) {
-            // blue underglow with breathing brightness
-            rgb_matrix_set_color(i, 0, 0, v);
-        }
-    }
+    // for (uint8_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+    //     if (HAS_FLAGS(g_led_config.flags[i], LED_FLAG_UNDERGLOW)) {
+    //         // blue underglow with breathing brightness
+    //         rgb_matrix_set_color(i, 50, 50, 50);
+    //     }
+    // }
+    underglow_manager_task();
 
     // OVERRIDE CODE
     for (uint8_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
         if (custom_led_state[i]) {
-            rgb_matrix_set_color(i, 255, 0, 0); // Set to RED
+            rgb_matrix_set_color(i, 255, 0, 0);
         }
     }
 
@@ -170,8 +165,11 @@ bool rgb_matrix_indicators_user(void) {
 void keyboard_post_init_kb(void) {
     generate_led_positions();
     generate_matrix_to_led_map();
+    underglow_manager_init();
     chThdSleepMilliseconds(3000);
     uprintf("TURNED ON\r\n");
+    uprintf("--- Turning on animation ---\n");
+    underglow_manager_set_anim(g_current_underglow_anim_id);
     uprintf("--- Verifying generated LED positions (Index: {X, Y}) ---\n");
     for (int i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
         // Print each LED's hardware index and its generated (x, y) coordinates
