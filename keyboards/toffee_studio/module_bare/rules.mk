@@ -22,4 +22,6 @@ SRC += animations/manager.c \
        animations/anim_band_sat_up_down.c \
 	   animations/anim_hue_breathing.c \
        animations/anim_solid.c \
-       animations/anim_rainbow_vortex.c
+       animations/anim_rainbow_vortex.c \
+       animations/anim_vortex.c \
+       animations/anim_comet_tail.c

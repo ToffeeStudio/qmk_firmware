@@ -10,6 +10,8 @@ typedef enum {
     ANIM_ID_BAND_SAT_UP_DOWN,
     ANIM_ID_HUE_BREATHING,
     ANIM_ID_RAINBOW_VORTEX,
+    ANIM_ID_VORTEX,
+    ANIM_ID_COMET_TAIL,
 } underglow_animation_ids;
 
 // The single, global configuration for our underglow system
@@ -20,3 +22,5 @@ void underglow_manager_init(void);
 void underglow_manager_task(void);
 void underglow_manager_next_anim(void);
 void underglow_manager_set_anim(uint8_t anim_id);
+void underglow_manager_set_speed(uint8_t speed);
+void underglow_manager_set_color_hsv(uint8_t h, uint8_t s, uint8_t v);

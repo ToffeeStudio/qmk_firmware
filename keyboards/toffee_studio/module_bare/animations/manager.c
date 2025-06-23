@@ -13,6 +13,8 @@
 #include "anim_hue_breathing.h"
 #include "anim_solid.h"
 #include "anim_rainbow_vortex.h"
+#include "anim_vortex.h"
+#include "anim_comet_tail.h"
 // #include "anim_rainbow_wave.h"
 
 
@@ -32,6 +34,8 @@ animation_t* underglow_animations[] = {
     &anim_band_sat_up_down,
     &anim_hue_breathing,
     &anim_rainbow_vortex,
+    &anim_vortex,
+    &anim_comet_tail,
     // &anim_rainbow_wave,
 };
 
@@ -119,4 +123,24 @@ void underglow_manager_set_anim(uint8_t anim_id) {
     if (g_underglow_config.active_animation->init) {
         g_underglow_config.active_animation->init(g_underglow_config.active_animation->state);
     }
+}
+
+/**
+ * @brief Sets the global animation speed.
+ * @param speed The new speed value (0-255).
+ */
+void underglow_manager_set_speed(uint8_t speed) {
+    g_underglow_config.speed = speed;
+}
+
+/**
+ * @brief Sets the global animation color from HSV values.
+ * @param h Hue (0-255)
+ * @param s Saturation (0-255)
+ * @param v Value/Brightness (0-255)
+ */
+void underglow_manager_set_color_hsv(uint8_t h, uint8_t s, uint8_t v) {
+    g_underglow_config.color.h = h;
+    g_underglow_config.color.s = s;
+    g_underglow_config.color.v = v;
 }

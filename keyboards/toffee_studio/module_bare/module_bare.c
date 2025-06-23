@@ -5,26 +5,51 @@
 #include "rgb_matrix_types.h"   // for led_point_t and led_config_t
 #include "animations/manager.h"   // underglow_manager_* APIs
 #define ID_SET_LED_RED 0x70
+#define ID_SET_ANIMATION 0x71
+#define ID_SET_SPEED 0x72
+#define ID_SET_COLOR_HSV 0x73
 
 static bool custom_led_state[RGB_MATRIX_LED_COUNT] = {false};
-uint8_t g_current_underglow_anim_id = ANIM_ID_RAINBOW_VORTEX;
+uint8_t g_current_underglow_anim_id = ANIM_ID_SOLID;
 
 void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
     // We are looking for a packet with our custom command.
-    // Packet format from Python script:
     // data[0]: Magic (0x09)
-    // data[1]: Command ID (0x70)
+    // data[1]: Command ID
     // data[2-5]: Packet ID (unused)
-    // data[6]: LED index (0-89)
-    //
-    if (length >= 7 && data[0] == 0x09 && data[1] == ID_SET_LED_RED) {
-        uint8_t led_index = data[6];
-
-        // Validate the index to prevent out-of-bounds access
-        if (led_index < RGB_MATRIX_LED_COUNT) {
-            uprintf("RAW HID: Activating LED index %u\n", led_index);
-            custom_led_state[led_index] = true;
-
+    // data[6...]: Payload
+    if (length >= 7 && data[0] == 0x09) {
+        switch (data[1]) {
+            case ID_SET_LED_RED: {
+                uint8_t led_index = data[6];
+                if (led_index < RGB_MATRIX_LED_COUNT) {
+                    uprintf("RAW HID: Activating LED index %u\n", led_index);
+                    custom_led_state[led_index] = true;
+                }
+                break;
+            }
+            case ID_SET_ANIMATION: {
+                uint8_t anim_id = data[6];
+                uprintf("RAW HID: Setting animation to ID %u\n", anim_id);
+                underglow_manager_set_anim(anim_id);
+                break;
+            }
+            case ID_SET_SPEED: {
+                uint8_t speed = data[6];
+                uprintf("RAW HID: Setting speed to %u\n", speed);
+                underglow_manager_set_speed(speed);
+                break;
+            }
+            case ID_SET_COLOR_HSV: {
+                if (length >= 9) { // Need at least 3 bytes for H, S, V
+                    uint8_t h = data[6];
+                    uint8_t s = data[7];
+                    uint8_t v = data[8];
+                    uprintf("RAW HID: Setting color to HSV(%u, %u, %u)\n", h, s, v);
+                    underglow_manager_set_color_hsv(h, s, v);
+                }
+                break;
+            }
         }
     }
 }
@@ -166,7 +191,7 @@ void keyboard_post_init_kb(void) {
     generate_led_positions();
     generate_matrix_to_led_map();
     underglow_manager_init();
-    chThdSleepMilliseconds(3000);
+    chThdSleepMilliseconds(100);
     uprintf("TURNED ON\r\n");
     uprintf("--- Turning on animation ---\n");
     underglow_manager_set_anim(g_current_underglow_anim_id);
