@@ -7,7 +7,7 @@
 #define ID_SET_LED_RED 0x70
 
 static bool custom_led_state[RGB_MATRIX_LED_COUNT] = {false};
-uint8_t g_current_underglow_anim_id = ANIM_ID_HUE_BREATHING;
+uint8_t g_current_underglow_anim_id = ANIM_ID_RAINBOW_VORTEX;
 
 void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
     // We are looking for a packet with our custom command.

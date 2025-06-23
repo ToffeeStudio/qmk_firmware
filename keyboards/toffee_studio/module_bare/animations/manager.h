@@ -2,10 +2,14 @@
 #include "animation.h"
 
 typedef enum {
-    ANIM_ID_BREATHING = 0,
+    ANIM_ID_SOLID = 0,
+    ANIM_ID_BREATHING,
     ANIM_ID_CYCLE_LEFT_RIGHT,
+    ANIM_ID_CYCLE_UP_DOWN,
     ANIM_ID_BAND_SAT_LEFT_RIGHT,
+    ANIM_ID_BAND_SAT_UP_DOWN,
     ANIM_ID_HUE_BREATHING,
+    ANIM_ID_RAINBOW_VORTEX,
 } underglow_animation_ids;
 
 // The single, global configuration for our underglow system

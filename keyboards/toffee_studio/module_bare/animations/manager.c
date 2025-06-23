@@ -7,9 +7,12 @@
 // As you create new animations, you must include their header files.
 #include "anim_breathing.h"
 #include "anim_cycle_left_right.h"
+#include "anim_cycle_up_down.h"
 #include "anim_band_sat_left_right.h"
+#include "anim_band_sat_up_down.h"
 #include "anim_hue_breathing.h"
-// #include "anim_solid.h"
+#include "anim_solid.h"
+#include "anim_rainbow_vortex.h"
 // #include "anim_rainbow_wave.h"
 
 
@@ -21,11 +24,14 @@ animation_config_t g_underglow_config;
 // Add a pointer to each new animation's public struct here.
 // The order in this array determines the cycle order.
 animation_t* underglow_animations[] = {
+    &anim_solid,
     &anim_breathing,
     &anim_cycle_left_right,
+    &anim_cycle_up_down,
     &anim_band_sat_left_right,
+    &anim_band_sat_up_down,
     &anim_hue_breathing,
-    // &anim_solid,
+    &anim_rainbow_vortex,
     // &anim_rainbow_wave,
 };
 
