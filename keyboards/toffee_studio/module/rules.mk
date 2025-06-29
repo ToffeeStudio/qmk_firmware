@@ -9,8 +9,10 @@ QUANTUM_PAINTER_DRIVERS += gc9107_spi
 QUANTUM_PAINTER_LVGL_INTEGRATION = yes
 
 SRC += rawhid/module_raw_hid.c
+SRC += display/animation.c
 
 VPATH += keyboards/toffee_studio/module/rawhid
+VPATH += keyboards/toffee_studio/module/display
 
 PICO_FLASH_SIZE_BYTES = 16*1024*1024
 FLASH_RESERVATION_KB = 1024

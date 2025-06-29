@@ -6,6 +6,7 @@
 #include "lfs.h"
 #include "module.h"
 #include "module_raw_hid.h"
+#include "display/animation.h"
 #include "lvgl.h"
 
 #define CHUNK_SIZE 256
@@ -14,58 +15,10 @@ static size_t current_write_pointer = 0;
 
 #define DIRECTORY_MAX 64
 #define MAX_PATH_LENGTH 256
-#define FRAME_WIDTH 128
-#define FRAME_HEIGHT 128
-#define FRAME_SIZE ((FRAME_WIDTH * FRAME_HEIGHT) * LV_COLOR_DEPTH / 8)
-#define BYTES_PER_PIXEL 2
-#define SINGLE_FRAME_SIZE (FRAME_WIDTH * FRAME_HEIGHT * BYTES_PER_PIXEL)
-#define FPS 12
-#define FRAME_INTERVAL_MS (1000 / FPS)
 
 // Static variables for paged directory listings
 static lfs_dir_t paged_ls_dir;
 static bool paged_ls_dir_open = false;
-
-// Double buffered image data
-static uint8_t frame_buffers[2][FRAME_SIZE];
-
-// Double buffered LVGL image descriptors
-static lv_img_dsc_t images[2] = {
-    {
-        .header.always_zero = 0,
-        .header.w = FRAME_WIDTH,
-        .header.h = FRAME_HEIGHT,
-        .data_size = FRAME_SIZE,
-        .header.cf = LV_IMG_CF_TRUE_COLOR,
-        .data = frame_buffers[0],
-    },
-    {
-        .header.always_zero = 0,
-        .header.w = FRAME_WIDTH,
-        .header.h = FRAME_HEIGHT,
-        .data_size = FRAME_SIZE,
-        .header.cf = LV_IMG_CF_TRUE_COLOR,
-        .data = frame_buffers[1],
-    }
-};
-
-// Animation state with double buffering
-typedef struct {
-    lfs_file_t file;
-    lv_obj_t *img;              // Single LVGL image object we'll update
-    uint32_t frame_count;
-    uint32_t current_frame;
-    uint8_t current_buffer;     // Index of buffer currently being displayed
-    uint8_t next_buffer;        // Index of buffer being loaded
-    bool buffer_ready;          // Indicates if next buffer is ready
-    lv_timer_t *lv_timer;
-    thread_t *loader_thread;    // Store thread reference for cleanup
-    bool is_playing;
-    bool should_stop;           // Flag to signal thread termination
-    mutex_t state_mutex;        // Protect shared state
-} animation_state_t;
-
-static animation_state_t anim_state = {0};
 
 lfs_file_t current_file;
 char path[MAX_PATH_LENGTH];
@@ -927,272 +880,6 @@ static int parse_ping(uint8_t *data, uint8_t length) {
     return module_ret_success;
 }
 
-// Forward declarations
-static void cleanup_animation(void);
-static THD_FUNCTION(FrameLoader, arg);
-static void frame_timer_callback(lv_timer_t *timer);
-
-static void init_animation_state(void) {
-    chMtxObjectInit(&anim_state.state_mutex);
-    anim_state.should_stop = false;
-    anim_state.is_playing = false;
-    anim_state.img = NULL;
-    anim_state.loader_thread = NULL;
-}
-
-static void cleanup_animation(void) {
-    chMtxLock(&anim_state.state_mutex);
-
-    if (anim_state.is_playing) {
-        // Signal thread to stop
-        anim_state.should_stop = true;
-
-        // Delete LVGL timer if exists
-        if (anim_state.lv_timer) {
-            lv_timer_del(anim_state.lv_timer);
-            anim_state.lv_timer = NULL;
-        }
-
-        // Ensure the loader thread terminates cleanly
-        if (anim_state.loader_thread) {
-            while (1) {
-                chSysLock();
-                if (anim_state.loader_thread == NULL) {
-                    chSysUnlock();
-                    break;
-                }
-                chSysUnlock();
-                chThdSleepMilliseconds(10);
-            }
-        }
-
-        // Close file
-        lfs_file_close(&lfs, &anim_state.file);
-
-        // Cleanup LVGL object
-        if (anim_state.img) {
-            lv_obj_del(anim_state.img);
-            anim_state.img = NULL;
-        }
-
-        anim_state.is_playing = false;
-    }
-
-    chMtxUnlock(&anim_state.state_mutex);
-}
-
-// Background frame loading thread
-static THD_WORKING_AREA(waFrameLoader, 1024);
-static THD_FUNCTION(FrameLoader, arg) {
-    (void)arg;
-
-    while (!anim_state.should_stop) {
-        chMtxLock(&anim_state.state_mutex);
-
-        if (!anim_state.is_playing) {
-            chMtxUnlock(&anim_state.state_mutex);
-            chThdSleepMilliseconds(10);
-            continue;
-        }
-
-        if (!anim_state.buffer_ready) {
-            // Calculate next frame's file offset
-            lfs_off_t frame_pos = anim_state.current_frame * (lfs_off_t)FRAME_SIZE;
-
-            // Seek & read
-            lfs_file_seek(&lfs, &anim_state.file, frame_pos, LFS_SEEK_SET);
-            lfs_ssize_t bytes_read = lfs_file_read(&lfs, &anim_state.file,
-                                                  frame_buffers[anim_state.next_buffer],
-                                                  FRAME_SIZE);
-
-            if (bytes_read < 0) {
-                // Serious LFS error
-                uprintf("Error reading frame %ld: %ld\n",
-                        (long)anim_state.current_frame, (long)bytes_read);
-                // Stop or handle the error
-                anim_state.should_stop = true;
-            } else if (bytes_read < FRAME_SIZE) {
-                // We got a partial frame
-                memset(frame_buffers[anim_state.next_buffer] + bytes_read,
-                       0,
-                       FRAME_SIZE - bytes_read);
-                anim_state.buffer_ready = true;
-                // We can keep going, or decide to stop if we do not want partial frames
-            } else {
-                // Normal full read
-                anim_state.buffer_ready = true;
-            }
-        }
-
-        chMtxUnlock(&anim_state.state_mutex);
-        // Sleep for some fraction of the frame interval
-        chThdSleepMilliseconds(FRAME_INTERVAL_MS / 4);
-    }
-    // Thread is exiting; mark it as terminated
-    chSysLock();
-    anim_state.loader_thread = NULL;
-    chSysUnlock();
-}
-
-static void frame_timer_callback(lv_timer_t *timer) {
-    (void) timer;
-    chMtxLock(&anim_state.state_mutex);
-
-    if (!anim_state.is_playing || !anim_state.buffer_ready) {
-        chMtxUnlock(&anim_state.state_mutex);
-        return;
-    }
-
-    // Update LVGL image source to next buffer
-    lv_img_set_src(anim_state.img, &images[anim_state.next_buffer]);
-
-    // Force a screen update
-    lv_obj_invalidate(anim_state.img);
-
-    // Swap buffer indices
-    uint8_t temp = anim_state.current_buffer;
-    anim_state.current_buffer = anim_state.next_buffer;
-    anim_state.next_buffer = temp;
-
-    anim_state.buffer_ready = false;
-    anim_state.current_frame = (anim_state.current_frame + 1) % anim_state.frame_count;
-
-    chMtxUnlock(&anim_state.state_mutex);
-}
-
-static int start_animation(const char *path) {
-    // *** ADD DEBUG PRINT AND DELAY HERE ***
-    uprintf("start_animation: Received path: '%s'\n", path);
-    uprintf("start_animation: Adding short delay before lfs_stat...\n");
-    chThdSleepMilliseconds(50);
-
-    // Get file size for frame count
-    struct lfs_info info;
-    uprintf("start_animation: Calling lfs_stat for '%s'...\n", path); // Print right before call
-    int err = lfs_stat(&lfs, path, &info);
-    if (err < 0) {
-        uprintf("start_animation: lfs_stat failed for '%s' with error %d (LFS_ERR_NOENT = -2)\n", path, err);
-        return err; // Return the LFS error code
-    }
-    uprintf("start_animation: lfs_stat successful. Size: %lu\n", (unsigned long)info.size);
-
-
-    // Initialize animation state (Ensure this doesn't re-open the file if already open, but cleanup should handle it)
-    anim_state.frame_count = info.size / FRAME_SIZE;
-    if (anim_state.frame_count == 0 && info.size > 0) {
-        uprintf("start_animation: Warning - file size %lu is less than one frame (%d)?\n", (unsigned long)info.size, FRAME_SIZE);
-        // Decide how to handle: maybe treat as 1 frame? or error out?
-        // For now, let it proceed, might just display garbage or nothing.
-    } else if (info.size % FRAME_SIZE != 0) {
-         uprintf("start_animation: Warning - file size %lu is not an exact multiple of frame size %d.\n", (unsigned long)info.size, FRAME_SIZE);
-         // Playback might be truncated or behave unexpectedly at the end.
-    }
-     uprintf("start_animation: Calculated frame count: %lu\n", anim_state.frame_count);
-
-    anim_state.current_frame = 0;
-    anim_state.current_buffer = 0;
-    anim_state.next_buffer = 1;
-    anim_state.buffer_ready = false;
-    anim_state.should_stop = false; // Ensure stop flag is clear
-
-    // Open file for animation
-    uprintf("start_animation: Attempting to open file '%s' for reading...\n", path);
-    err = lfs_file_open(&lfs, &anim_state.file, path, LFS_O_RDONLY);
-    if (err < 0) {
-        uprintf("start_animation: lfs_file_open failed for '%s' with error %d\n", path, err);
-        // Clean up any partially set state? (Might not be necessary if cleanup_animation handles it)
-        return err; // Return the LFS error code
-    }
-    uprintf("start_animation: File '%s' opened successfully for reading.\n", path);
-
-    // Create LVGL image object if needed (should be done only once ideally)
-    // Consider moving img creation outside start_animation if possible,
-    // or ensure cleanup_animation reliably deletes it.
-    if (!anim_state.img) {
-        uprintf("start_animation: Creating lv_img object.\n");
-        anim_state.img = lv_img_create(lv_scr_act());
-        if (!anim_state.img) {
-             uprintf("start_animation: ERROR - Failed to create lv_img object!\n");
-             lfs_file_close(&lfs, &anim_state.file); // Close the file we just opened
-             return -1; // Indicate generic error
-        }
-         lv_obj_align(anim_state.img, LV_ALIGN_CENTER, 0, 0); // Center it once
-    } else {
-         uprintf("start_animation: Reusing existing lv_img object.\n");
-         // Ensure it's visible/on top if other things were drawn
-         lv_obj_clear_flag(anim_state.img, LV_OBJ_FLAG_HIDDEN);
-         lv_obj_move_foreground(anim_state.img);
-    }
-
-
-    // Set initial image (first buffer) - Load the first frame immediately?
-    // The current logic relies on the loader thread and timer, let's stick with that for now.
-    // Need to ensure the first frame gets loaded promptly.
-    // Maybe pre-load the *first* frame here synchronously?
-    uprintf("start_animation: Pre-loading first frame into buffer 0...\n");
-    lfs_file_seek(&lfs, &anim_state.file, 0, LFS_SEEK_SET); // Go to start
-    lfs_ssize_t bytes_read = lfs_file_read(&lfs, &anim_state.file, frame_buffers[0], FRAME_SIZE);
-    if (bytes_read < FRAME_SIZE) {
-         uprintf("start_animation: Warning - read only %ld bytes for first frame.\n", bytes_read);
-         // Zero out the rest if needed
-         if (bytes_read > 0) {
-            memset(frame_buffers[0] + bytes_read, 0, FRAME_SIZE - bytes_read);
-         } else if (bytes_read < 0) {
-             uprintf("start_animation: ERROR reading first frame: %ld\n", bytes_read);
-             lfs_file_close(&lfs, &anim_state.file);
-             // Optionally delete lv_img if created here? cleanup_animation should handle it.
-             return bytes_read;
-         }
-    }
-    lv_img_set_src(anim_state.img, &images[0]); // Set src to buffer 0
-    lv_obj_invalidate(anim_state.img); // Force redraw
-    uprintf("start_animation: First frame loaded and displayed.\n");
-
-
-    anim_state.is_playing = true; // Mark as playing *after* essential setup
-
-    // Start background loader thread (if not already running from a previous attempt?)
-    // cleanup_animation should ensure the old one is stopped.
-    if (!anim_state.loader_thread) {
-        uprintf("start_animation: Creating FrameLoader thread...\n");
-        anim_state.loader_thread = chThdCreateStatic(waFrameLoader, sizeof(waFrameLoader),
-                                                    NORMALPRIO + 1, FrameLoader, NULL);
-        if(!anim_state.loader_thread) {
-             uprintf("start_animation: ERROR - Failed to create FrameLoader thread!\n");
-             anim_state.is_playing = false;
-             lfs_file_close(&lfs, &anim_state.file);
-             // cleanup?
-             return -1;
-        }
-    } else {
-         uprintf("start_animation: FrameLoader thread might already exist?\n"); // Should not happen if cleanup works
-    }
-
-
-    // Start frame timer (if not already running?)
-    // cleanup_animation should ensure the old one is stopped.
-    if (!anim_state.lv_timer) {
-         uprintf("start_animation: Creating LVGL timer...\n");
-         anim_state.lv_timer = lv_timer_create(frame_timer_callback, FRAME_INTERVAL_MS, NULL);
-         if (!anim_state.lv_timer) {
-              uprintf("start_animation: ERROR - Failed to create LVGL timer!\n");
-              anim_state.is_playing = false;
-              lfs_file_close(&lfs, &anim_state.file);
-              // Need to potentially stop thread if created
-              anim_state.should_stop = true; // Signal thread
-              // cleanup?
-              return -1;
-         }
-    } else {
-         uprintf("start_animation: LVGL timer might already exist?\n"); // Should not happen if cleanup works
-         lv_timer_reset(anim_state.lv_timer); // Reset existing timer?
-         lv_timer_resume(anim_state.lv_timer);
-    }
-
-    uprintf("start_animation: Animation setup complete.\n");
-    return module_ret_success;
-}
-
 static int parse_choose_image(uint8_t *data, uint8_t length) {
     uprintf("Choose image\n");
 
@@ -1202,7 +889,7 @@ static int parse_choose_image(uint8_t *data, uint8_t length) {
     }
 
     // Clean up any existing animation first
-    cleanup_animation();
+    animation_cleanup();
 
     uint8_t *path_data = data + sizeof(struct packet_header);
     size_t max_path_length = length - sizeof(struct packet_header);
@@ -1225,7 +912,7 @@ static int parse_choose_image(uint8_t *data, uint8_t length) {
 
     if (is_anim) {
         uprintf("Animated image\n");
-        return start_animation(path);
+        return animation_start(path);
     }
 
     // Handle static images
@@ -1236,7 +923,7 @@ static int parse_choose_image(uint8_t *data, uint8_t length) {
         return err;
     }
 
-    // Read into first buffer
+    // Read into the first buffer, which is now accessed via the extern declaration in animation.h
     lfs_ssize_t bytes_read = lfs_file_read(&lfs, &file, frame_buffers[0], FRAME_SIZE);
     if (bytes_read < 0) {
         uprintf("Error reading image file: %ld\n", bytes_read);
@@ -1335,15 +1022,9 @@ static module_raw_hid_parse_t* parse_packet_funcs[] = {
     parse_ls_all,
 };
 
-static bool anim_init = false;
 int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
     int err;
     return_buf = data;
-
-    if (!anim_init) {
-        init_animation_state();
-        anim_init = true;
-    }
 
     uprintf("Received packet. Parsing command.\r\n");
 

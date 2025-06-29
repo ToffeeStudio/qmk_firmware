@@ -1,4 +1,5 @@
 // --- Core QMK Includes ---
+#include "display/animation.h"
 #include "quantum.h" // Includes core QMK functionality, ChibiOS, config files etc.
 #include "gpio.h"
 #include "print.h"   // For uprintf
@@ -459,6 +460,8 @@ void keyboard_post_init_kb(void) {
     uprintf("Initializing CDC Receive State...\n");
     reset_cdc_state(); // <--- Use the reset function to ensure clean start
     #endif
+
+    animation_init();
 
     // 4) Call the default post-init user function if it exists
     keyboard_post_init_user(); // Weakly defined, safe to call
