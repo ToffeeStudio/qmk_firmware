@@ -12,6 +12,28 @@
 static bool custom_led_state[RGB_MATRIX_LED_COUNT] = {false};
 uint8_t g_current_underglow_anim_id = ANIM_ID_SOLID;
 
+// ----------------------- FOR TESTING ONLY -----------------------------
+#define ID_SET_LEFT_RGB 0x74
+#define ID_SET_RIGHT_RGB 0x75
+
+static bool left_override_active = false;
+static RGB left_override_color = {0, 0, 0};
+static bool right_override_active = false;
+static RGB right_override_color = {0, 0, 0};
+
+const uint8_t left_leds[19] = {
+    51, 52, 53, 54, 55, 56, 57,
+    49, 47, 46, 45, 44, 43, 42,
+    18, 19, 20, 21, 22
+};
+const uint8_t right_leds[19] = {
+    59, 60, 61, 62, 63, 64, 65,
+    40, 39, 38, 37, 36, 35, 34,
+    24, 25, 26, 27, 28
+};
+// ----------------------------------------------------------------------
+
+
 void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
     // We are looking for a packet with our custom command.
     // data[0]: Magic (0x09)
@@ -50,6 +72,29 @@ void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
                 }
                 break;
             }
+            case ID_SET_LEFT_RGB: {
+                if (length >= 9) { // R, G, B
+                    left_override_color.r = data[6];
+                    left_override_color.g = data[7];
+                    left_override_color.b = data[8];
+                    left_override_active = true;
+                    uprintf("RAW HID: Left side override RGB(%u, %u, %u)\n", data[6], data[7], data[8]);
+                }
+                break;
+            }
+            case ID_SET_RIGHT_RGB: {
+                if (length >= 9) { // R, G, B
+                    right_override_color.r = data[6];
+                    right_override_color.g = data[7];
+                    right_override_color.b = data[8];
+                    right_override_active = true;
+                    uprintf("RAW HID: Right side override RGB(%u, %u, %u)\n", data[6], data[7], data[8]);
+                }
+                break;
+            }
+            default:
+                uprintf("DEBUG: Unknown Command ID received: 0x%02X\n", data[1]);
+                break;
         }
     }
 }
@@ -177,6 +222,23 @@ bool rgb_matrix_indicators_user(void) {
     // }
     underglow_manager_task();
 
+    if (left_override_active) {
+        for (uint8_t i = 0; i < sizeof(left_leds); i++) {
+            uint8_t led_index = left_leds[i];
+            if (led_index < RGB_MATRIX_LED_COUNT) {
+                 rgb_matrix_set_color(led_index, left_override_color.r, left_override_color.g, left_override_color.b);
+            }
+        }
+    }
+    if (right_override_active) {
+        for (uint8_t i = 0; i < sizeof(right_leds); i++) {
+            uint8_t led_index = right_leds[i];
+            if (led_index < RGB_MATRIX_LED_COUNT) {
+                 rgb_matrix_set_color(led_index, right_override_color.r, right_override_color.g, right_override_color.b);
+            }
+        }
+    }
+
     // OVERRIDE CODE
     for (uint8_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
         if (custom_led_state[i]) {
@@ -187,20 +249,11 @@ bool rgb_matrix_indicators_user(void) {
     return false;
 }
 
+
 void keyboard_post_init_kb(void) {
     generate_led_positions();
     generate_matrix_to_led_map();
     underglow_manager_init();
     chThdSleepMilliseconds(100);
-    uprintf("TURNED ON\r\n");
-    uprintf("--- Turning on animation ---\n");
     underglow_manager_set_anim(g_current_underglow_anim_id);
-    uprintf("--- Verifying generated LED positions (Index: {X, Y}) ---\n");
-    for (int i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
-        // Print each LED's hardware index and its generated (x, y) coordinates
-        uprintf("LED %u: {%u, %u}\n", i, g_led_config.point[i].x, g_led_config.point[i].y);
-        // A tiny delay per line can help prevent overwhelming the serial buffer
-        chThdSleepMilliseconds(5);
-    }
-    uprintf("--- Verification complete. Keyboard ON. ---\n");
 }
