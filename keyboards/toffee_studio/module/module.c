@@ -1,5 +1,6 @@
 // --- Core QMK Includes ---
 #include "display/animation.h"
+#include "display/ui.h"
 #include "quantum.h" // Includes core QMK functionality, ChibiOS, config files etc.
 #include "gpio.h"
 #include "print.h"   // For uprintf
@@ -279,60 +280,6 @@ void virtser_recv(const uint8_t ch) {
 
 
 // =========================================================================
-// Dynamic Gradient Drawing
-// =========================================================================
-
-#ifdef QUANTUM_PAINTER_ENABLE // Only define if painter is enabled
-
-//------------------------------------------------------------------------------
-// Helper function to generate a colored gradient in RGB565 format.
-// This function creates a 128x128 gradient and displays it via LVGL.
-//------------------------------------------------------------------------------
-static void draw_gradient(void) {
-    uprintf("Drawing dynamic gradient...\n");
-    const int width = 128;
-    const int height = 128;
-    // Allocate buffer in static RAM (32KB) - too big for stack
-    static uint16_t gradient_buffer[128 * 128];
-
-    // Populate buffer with gradient data
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            uint8_t r5 = (x * 31) / (width - 1);
-            uint8_t g6 = ((x + y) * 63) / (width + height - 2);
-            uint8_t b5 = (y * 31) / (height - 1);
-            // Store as native uint16_t (LVGL/driver handles byte order if needed)
-            gradient_buffer[y * width + x] = (r5 << 11) | (g6 << 5) | b5;
-        }
-    }
-    uprintf("Gradient buffer populated.\n");
-
-    // --- Setup LVGL Image Descriptor (must also be static) ---
-    static lv_img_dsc_t gradient_img_dsc;
-    gradient_img_dsc.header.always_zero = 0;
-    gradient_img_dsc.header.w = width;
-    gradient_img_dsc.header.h = height;
-    gradient_img_dsc.data_size = width * height * sizeof(uint16_t);
-    // Assuming LV_COLOR_DEPTH is 16. Check lv_conf.h if issues.
-    gradient_img_dsc.header.cf = LV_IMG_CF_TRUE_COLOR;
-    gradient_img_dsc.data = (const uint8_t *)gradient_buffer;
-
-    // --- Create LVGL Image Widget ---
-    lv_obj_t *img_widget = lv_img_create(lv_scr_act()); // Get the active screen
-    if (img_widget) {
-        uprintf("Setting gradient image source...\n");
-        lv_img_set_src(img_widget, &gradient_img_dsc); // Point widget to static descriptor
-        lv_obj_align(img_widget, LV_ALIGN_CENTER, 0, 0); // Center it
-        uprintf("Gradient image displayed.\n");
-    } else {
-        uprintf("ERROR: Failed to create LVGL image widget for gradient!\n");
-    }
-}
-//------------------------------------------------------------------------------
-
-#endif // QUANTUM_PAINTER_ENABLE check for gradient drawing
-
-// =========================================================================
 // Initialization and Other Callbacks
 // =========================================================================
 
@@ -342,52 +289,6 @@ void board_init(void) {
     // Keep this minimal if keyboard_post_init_kb handles major init
     uprintf("board_init() called.\n");
 }
-
-#ifdef QUANTUM_PAINTER_ENABLE // ui_init only needed if Painter enabled
-// Define QP/LVGL related static variables only if painter is enabled
-static painter_device_t oled;
-
-__attribute__((weak)) void ui_init(void) {
-    uprintf("ui_init() called.\n"); // Added print
-    // Ensure GPIO pins are defined (GP0, GP1 should be available via platform headers)
-    oled = qp_gc9107_make_spi_device(128, 128, 0xFF, OLED_DC_PIN, 0xFF, 8, 0);
-    qp_init(oled, QP_ROTATION_180);
-    qp_power(oled, true); // Turn on display
-
-    // --- Attach LVGL first ---
-    bool lvgl_attached = false;
-#ifdef LITTLEFS_ENABLE
-    volatile lv_fs_drv_t *result = NULL; // Initialize to NULL
-    if (qp_lvgl_attach(oled)) {
-        lvgl_attached = true; // Mark as attached
-        uprintf("Attempting to attach LFS to LVGL...\n");
-        result = lv_fs_littlefs_set_driver(LV_FS_LITTLEFS_LETTER, &lfs); // Assign LFS driver to LVGL
-        if (result == NULL) {
-            uprintf("Error attaching LFS to LVGL\n");
-        } else {
-             uprintf("LVGL attached to LFS driver successfully (Drive %c:).\n", LV_FS_LITTLEFS_LETTER);
-        }
-    } else {
-        uprintf("Failed to attach LVGL to painter.\n");
-    }
-#else
-    // Attach LVGL even if LFS is disabled
-    if (qp_lvgl_attach(oled)) {
-        lvgl_attached = true;
-         uprintf("LVGL attached (no LFS).\n");
-    } else {
-        uprintf("Failed to attach LVGL to painter.\n");
-    }
-#endif // LITTLEFS_ENABLE check for LVGL FS
-
-    // --- Call draw_gradient AFTER LVGL is attached ---
-    // if (lvgl_attached) {
-    //     draw_gradient(); // Call the function to generate and display the gradient
-    // } else {
-    //     uprintf("Skipping gradient draw because LVGL failed to attach.\n");
-    // }
-}
-#endif // QUANTUM_PAINTER_ENABLE check for ui_init
 
 // keyboard_post_init_kb is a good place for LFS mount and final setup
 void keyboard_post_init_kb(void) {

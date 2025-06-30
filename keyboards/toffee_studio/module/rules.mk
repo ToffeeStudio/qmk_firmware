@@ -10,6 +10,7 @@ QUANTUM_PAINTER_LVGL_INTEGRATION = yes
 
 SRC += rawhid/module_raw_hid.c
 SRC += display/animation.c
+SRC += display/ui.c
 
 VPATH += keyboards/toffee_studio/module/rawhid
 VPATH += keyboards/toffee_studio/module/display

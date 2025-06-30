@@ -7,6 +7,7 @@
 #include "module.h"
 #include "module_raw_hid.h"
 #include "display/animation.h"
+#include "display/ui.h"
 #include "lvgl.h"
 
 #define CHUNK_SIZE 256
@@ -915,29 +916,8 @@ static int parse_choose_image(uint8_t *data, uint8_t length) {
         return animation_start(path);
     }
 
-    // Handle static images
-    lfs_file_t file;
-    int err = lfs_file_open(&lfs, &file, path, LFS_O_RDONLY);
-    if (err < 0) {
-        uprintf("Error opening image file: %d\n", err);
-        return err;
-    }
-
-    // Read into the first buffer, which is now accessed via the extern declaration in animation.h
-    lfs_ssize_t bytes_read = lfs_file_read(&lfs, &file, frame_buffers[0], FRAME_SIZE);
-    if (bytes_read < 0) {
-        uprintf("Error reading image file: %ld\n", bytes_read);
-        lfs_file_close(&lfs, &file);
-        return bytes_read;
-    }
-
-    lfs_file_close(&lfs, &file);
-
-    // Create and display static image
-    lv_obj_t *img = lv_img_create(lv_scr_act());
-    lv_img_set_src(img, &images[0]);
-
-    return module_ret_success;
+    // Handle static images by calling the new UI function
+    return ui_display_static_image(path);
 }
 
 static int parse_write_display(uint8_t *data, uint8_t length) {
