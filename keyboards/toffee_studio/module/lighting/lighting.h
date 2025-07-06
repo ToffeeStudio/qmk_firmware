@@ -12,4 +12,3 @@ enum custom_keycodes {
 
 void lighting_init(void);
 void lighting_task(void);
-void lighting_handle_hid_command(uint8_t *data, uint8_t length);

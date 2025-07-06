@@ -137,13 +137,9 @@ void keyboard_post_init_kb(void) {
 void via_custom_value_command_kb(uint8_t *data, uint8_t length) {
     uprintf("via_custom_value_command_kb called, length %d\n", length);
 
-    // LIGHTING COMMANDS
-    lighting_handle_hid_command(data, length);
-
-    // FILE SYSTEM AND OTHER COMMANDS
+    // All custom commands are now handled by the unified parser
     int hid_err = module_raw_hid_parse_packet(data, length);
     if (hid_err < 0) {
         uprintf("Error parsing Raw HID packet via VIA: %d\n", hid_err);
     }
-    // uprintf("via_custom_value_command_kb: LFS disabled, skipping Raw HID parse.\n");
 }

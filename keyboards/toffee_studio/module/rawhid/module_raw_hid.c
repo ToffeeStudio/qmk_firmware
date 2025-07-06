@@ -8,6 +8,7 @@
 #include "module_raw_hid.h"
 #include "display/animation.h"
 #include "display/ui.h"
+#include "animations/manager.h"
 #include "lvgl.h"
 
 #define CHUNK_SIZE 256
@@ -976,34 +977,45 @@ static int parse_set_time(uint8_t *data, uint8_t length) {
     return module_ret_success;
 }
 
+static int parse_set_animation(uint8_t *data, uint8_t length) {
+    if (length < 7) {
+        return module_ret_invalid_command;
+    }
+    uint8_t anim_id = data[6];
+    uprintf("RAW HID: Setting animation to ID %u\n", anim_id);
+    underglow_manager_set_anim(anim_id);
+    return module_ret_success;
+}
+
+static int parse_set_speed(uint8_t *data, uint8_t length) {
+    if (length < 7) {
+        return module_ret_invalid_command;
+    }
+    uint8_t speed = data[6];
+    uprintf("RAW HID: Setting speed to %u\n", speed);
+    underglow_manager_set_speed(speed);
+    return module_ret_success;
+}
+
+static int parse_set_color_hsv(uint8_t *data, uint8_t length) {
+    if (length < 9) { // HSV needs 3 bytes
+        return module_ret_invalid_command;
+    }
+    uint8_t h = data[6];
+    uint8_t s = data[7];
+    uint8_t v = data[8];
+    uprintf("RAW HID: Setting color to HSV(%u, %u, %u)\n", h, s, v);
+    underglow_manager_set_color_hsv(h, s, v);
+    return module_ret_success;
+}
+
 static int parse_placeholder(uint8_t *data, uint8_t length) {
     uprintf("Unimplemented command received.\n");
     return module_ret_invalid_command; // Or another appropriate error
 }
 
-static module_raw_hid_parse_t* parse_packet_funcs[] = {
-    parse_ls,
-    parse_cd,
-    parse_pwd,
-    parse_rm,
-    parse_mkdir,
-    parse_touch,
-    parse_cat,
-    parse_open,
-    parse_write,
-    parse_close,
-    parse_format_filesystem,
-    parse_flash_remaining,
-    parse_choose_image,
-    parse_write_display,
-    parse_set_time,
-    parse_placeholder,
-    parse_ls_next,
-    parse_ls_all,
-};
-
 int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
-    int err;
+    int err = module_ret_invalid_command; // Default to error
     return_buf = data;
 
     uprintf("Received packet. Parsing command.\r\n");
@@ -1016,7 +1028,7 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
     // Manually parse header
     uint8_t magic_number = data[0];
     uint8_t command_id = data[1];
-//    uint32_t packet_id = *(uint32_t *)(data + 2);
+    //    uint32_t packet_id = *(uint32_t *)(data + 2);
 
     uprintf("Buffer contents: ");
     for (int i = 0; i < length; i++) {
@@ -1029,24 +1041,83 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
         return -1;
     }
 
-    command_id -= id_module_cmd_base;
-    uprintf("Command ID: %d\n", command_id);
+    uprintf("Command ID: 0x%02X\n", command_id);
 
-    if (command_id >= (sizeof(parse_packet_funcs) / sizeof(parse_packet_funcs[0]))) {
-        uprintf("Invalid command ID\n");
-        return -1;
+    switch (command_id) {
+        case id_module_cmd_ls:
+            err = parse_ls(data, length);
+            break;
+        case id_module_cmd_cd:
+            err = parse_cd(data, length);
+            break;
+        case id_module_cmd_pwd:
+            err = parse_pwd(data, length);
+            break;
+        case id_module_cmd_rm:
+            err = parse_rm(data, length);
+            break;
+        case id_module_cmd_mkdir:
+            err = parse_mkdir(data, length);
+            break;
+        case id_module_cmd_touch:
+            err = parse_touch(data, length);
+            break;
+        case id_module_cmd_cat:
+            err = parse_cat(data, length);
+            break;
+        case id_module_cmd_open:
+            err = parse_open(data, length);
+            break;
+        case id_module_cmd_write:
+            err = parse_write(data, length);
+            break;
+        case id_module_cmd_close:
+            err = parse_close(data, length);
+            break;
+        case id_module_cmd_format_filesystem:
+            err = parse_format_filesystem(data, length);
+            break;
+        case id_module_cmd_flash_remaining:
+            err = parse_flash_remaining(data, length);
+            break;
+        case id_module_cmd_choose_image:
+            err = parse_choose_image(data, length);
+            break;
+        case id_module_cmd_write_display:
+            err = parse_write_display(data, length);
+            break;
+        case id_module_cmd_set_time:
+            err = parse_set_time(data, length);
+            break;
+        case id_module_cmd_ls_next:
+            err = parse_ls_next(data, length);
+            break;
+        case id_module_cmd_lsall:
+            err = parse_ls_all(data, length);
+            break;
+        case id_lighting_set_animation:
+            err = parse_set_animation(data, length);
+            break;
+        case id_lighting_set_speed:
+            err = parse_set_speed(data, length);
+            break;
+        case id_lighting_set_color_hsv:
+            err = parse_set_color_hsv(data, length);
+            break;
+        default:
+            uprintf("Invalid command ID\n");
+            err = -1;
+            break;
     }
 
-    // Call the appropriate parsing function
-    err = parse_packet_funcs[command_id](data, length);
     if (err < 0) {
         uprintf("Error parsing packet: %d\n", err);
         return_buf[0] = err;
     } else {
         // DON'T override the return code if the function already set it!
         // Only set the success code if no other code was set
-        if (return_buf[0] != module_ret_more_entries) {
-            return_buf[0] = module_ret_success;
+        if (err != module_ret_more_entries) {
+            return_buf[0] = err;
         }
     }
 

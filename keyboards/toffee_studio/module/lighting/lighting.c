@@ -4,10 +4,6 @@
 #include "animations/manager.h"
 #include "lighting.h"
 
-// Define command IDs locally for the HID handler
-#define ID_SET_ANIMATION 0x71
-#define ID_SET_SPEED 0x72
-#define ID_SET_COLOR_HSV 0x73
 
 // NOT QMK-specific
 #define KEYLIGHT_COUNT 68
@@ -119,34 +115,4 @@ bool lighting_process_user_command(uint16_t keycode, keyrecord_t *record) {
         }
     }
     return true; // Keycode not handled, continue processing
-}
-
-void lighting_handle_hid_command(uint8_t *data, uint8_t length) {
-    if (length < 7 || data[0] != 0x09) {
-        return; // Not a valid command for us
-    }
-    switch (data[1]) {
-        case ID_SET_ANIMATION: {
-            uint8_t anim_id = data[6];
-            uprintf("RAW HID: Setting animation to ID %u\n", anim_id);
-            underglow_manager_set_anim(anim_id);
-            break;
-        }
-        case ID_SET_SPEED: {
-            uint8_t speed = data[6];
-            uprintf("RAW HID: Setting speed to %u\n", speed);
-            underglow_manager_set_speed(speed);
-            break;
-        }
-        case ID_SET_COLOR_HSV: {
-            if (length >= 9) { // Need at least 3 bytes for H, S, V
-                uint8_t h = data[6];
-                uint8_t s = data[7];
-                uint8_t v = data[8];
-                uprintf("RAW HID: Setting color to HSV(%u, %u, %u)\n", h, s, v);
-                underglow_manager_set_color_hsv(h, s, v);
-            }
-            break;
-        }
-    }
 }

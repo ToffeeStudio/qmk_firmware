@@ -23,6 +23,11 @@ enum module_command_id {
     id_module_cmd_set_time          = 0x5E,
     id_module_cmd_ls_next           = 0x60,
     id_module_cmd_lsall             = 0x61,
+    // Custom Lighting Control
+    id_lighting_set_animation       = 0x71,
+    id_lighting_set_speed           = 0x72,
+    id_lighting_set_color_hsv       = 0x73,
+
     id_module_cmd_end               = 0xFF,
 };
 
