@@ -1122,9 +1122,6 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
         case id_lighting_set_speed:
             err = parse_set_speed(data, length);
             break;
-        case id_lighting_set_color_hsv:
-            err = parse_set_color_hsv(data, length);
-            break;
         case id_lighting_set_brightness:
             err = parse_set_brightness(data, length);
             break;
