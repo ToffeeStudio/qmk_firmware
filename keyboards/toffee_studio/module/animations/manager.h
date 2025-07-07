@@ -14,10 +14,8 @@ typedef enum {
     ANIM_ID_COMET_TAIL,
 } underglow_animation_ids;
 
-// The single, global configuration for our underglow system
 extern animation_config_t g_underglow_config;
 
-// Public functions
 void underglow_manager_init(void);
 void underglow_manager_task(void);
 void underglow_manager_next_anim(void);
