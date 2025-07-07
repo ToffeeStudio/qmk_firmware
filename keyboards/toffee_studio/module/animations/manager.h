@@ -24,3 +24,5 @@ void underglow_manager_next_anim(void);
 void underglow_manager_set_anim(uint8_t anim_id);
 void underglow_manager_set_speed(uint8_t speed);
 void underglow_manager_set_color_hsv(uint8_t h, uint8_t s, uint8_t v);
+void underglow_manager_set_brightness(uint8_t brightness);
+void underglow_manager_set_color_hs(uint8_t h, uint8_t s);

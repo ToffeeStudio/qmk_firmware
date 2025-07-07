@@ -1009,6 +1009,27 @@ static int parse_set_color_hsv(uint8_t *data, uint8_t length) {
     return module_ret_success;
 }
 
+static int parse_set_brightness(uint8_t *data, uint8_t length) {
+    if (length < 7) { // Header (6) + Brightness (1)
+        return module_ret_invalid_command;
+    }
+    uint8_t brightness = data[6];
+    uprintf("RAW HID: Setting brightness to %u\n", brightness);
+    underglow_manager_set_brightness(brightness); // New function we will add to the manager
+    return module_ret_success;
+}
+
+static int parse_set_color_hs(uint8_t *data, uint8_t length) {
+    if (length < 8) { // Header (6) + Hue (1) + Sat (1)
+        return module_ret_invalid_command;
+    }
+    uint8_t h = data[6];
+    uint8_t s = data[7];
+    uprintf("RAW HID: Setting color to HS(%u, %u)\n", h, s);
+    underglow_manager_set_color_hs(h, s); // New function we will add to the manager
+    return module_ret_success;
+}
+
 static int parse_placeholder(uint8_t *data, uint8_t length) {
     uprintf("Unimplemented command received.\n");
     return module_ret_invalid_command; // Or another appropriate error
@@ -1103,6 +1124,12 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
             break;
         case id_lighting_set_color_hsv:
             err = parse_set_color_hsv(data, length);
+            break;
+        case id_lighting_set_brightness:
+            err = parse_set_brightness(data, length);
+            break;
+        case id_lighting_set_color_hs:
+            err = parse_set_color_hs(data, length);
             break;
         default:
             uprintf("Invalid command ID\n");

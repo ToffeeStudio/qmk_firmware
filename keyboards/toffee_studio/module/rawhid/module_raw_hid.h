@@ -26,7 +26,9 @@ enum module_command_id {
     // Custom Lighting Control
     id_lighting_set_animation       = 0x71,
     id_lighting_set_speed           = 0x72,
-    id_lighting_set_color_hsv       = 0x73,
+    // id_lighting_set_color_hsv       = 0x73, DEPRECATED
+    id_lighting_set_brightness      = 0x74,
+    id_lighting_set_color_hs        = 0x75,
 
     id_module_cmd_end               = 0xFF,
 };

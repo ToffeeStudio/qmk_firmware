@@ -140,7 +140,27 @@ void underglow_manager_set_speed(uint8_t speed) {
  * @param v Value/Brightness (0-255)
  */
 void underglow_manager_set_color_hsv(uint8_t h, uint8_t s, uint8_t v) {
+    underglow_manager_set_color_hs(h, s);
+    underglow_manager_set_brightness(v);
+}
+
+/**
+ * @brief Sets the global animation brightness (master dimmer).
+ * @param brightness The new brightness value (0-255).
+ */
+void underglow_manager_set_brightness(uint8_t brightness) {
+    g_underglow_config.brightness = brightness;
+}
+
+/**
+ * @brief Sets the global animation color from HS values.
+ *        The V (value) component is always set to 255 (max) to represent
+ *        a pure color that can then be dimmed by the master brightness.
+ * @param h Hue (0-255)
+ * @param s Saturation (0-255)
+ */
+void underglow_manager_set_color_hs(uint8_t h, uint8_t s) {
     g_underglow_config.color.h = h;
     g_underglow_config.color.s = s;
-    g_underglow_config.color.v = v;
+    g_underglow_config.color.v = 255; // Always use full value for the base color
 }

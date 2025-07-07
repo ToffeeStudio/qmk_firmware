@@ -20,10 +20,11 @@ ID_FORMAT_FS = 0x5A
 ID_PLAY_IMAGE = 0x5C
 ID_LS_NEXT = 0x60
 
-# Lighting Commands
+# --- NEW SEPARATED LIGHTING COMMANDS ---
 ID_SET_ANIMATION = 0x71
 ID_SET_SPEED = 0x72
-ID_SET_COLOR_HSV = 0x73
+ID_SET_BRIGHTNESS = 0x74
+ID_SET_COLOR_HS = 0x75
 
 # Return Codes from Device
 RET_SUCCESS = 0x00
@@ -153,7 +154,8 @@ if __name__ == "__main__":
     # Lighting arguments
     lighting_group = parser.add_argument_group('Lighting Control')
     lighting_group.add_argument("--anim", type=int, help="Set lighting animation ID (0-9).")
-    lighting_group.add_argument("--rgb", type=str, help="Set lighting color as R,G,B (e.g., '255,0,128').")
+    lighting_group.add_argument("--rgb", type=str, help="Set lighting color as R,G,B (e.g., '255,0,128'). Sets both color and brightness.")
+    lighting_group.add_argument("--brightness", type=int, help="Set lighting brightness (0-255) independently.")
     lighting_group.add_argument("--speed", type=int, help="Set lighting animation speed (0-255).")
 
     # Filesystem arguments
@@ -213,13 +215,36 @@ if __name__ == "__main__":
                 raise ValueError("RGB values must be between 0 and 255.")
 
             h, s, v = rgb_to_hsv(r, g, b)
-            print(f"Setting color to RGB({r},{g},{b}) -> HSV({h},{s},{v})")
-            if not send_command(device_path, ID_SET_COLOR_HSV, [h, s, v]):
+            print(f"Setting color from RGB({r},{g},{b}) -> HSV({h},{s},{v})")
+
+            # Send Color (HS) command
+            print(f"  - Sending color (HS): {h}, {s}")
+            if not send_command(device_path, ID_SET_COLOR_HS, [h, s]):
+                 sys.exit(1)
+            time.sleep(0.05) # Small delay between commands
+
+            # Send Brightness (V) command
+            print(f"  - Sending brightness (V): {v}")
+            if not send_command(device_path, ID_SET_BRIGHTNESS, [v]):
                  sys.exit(1)
             time.sleep(0.05)
 
         except ValueError as e:
             print(f"Error: Invalid RGB format. {e}", file=sys.stderr)
+            sys.exit(1)
+
+    if args.brightness is not None:
+        try:
+            if not (0 <= args.brightness <= 255):
+                raise ValueError("Brightness must be between 0 and 255.")
+
+            print(f"Setting brightness to {args.brightness}")
+            if not send_command(device_path, ID_SET_BRIGHTNESS, [args.brightness]):
+                sys.exit(1)
+            time.sleep(0.05)
+
+        except ValueError as e:
+            print(f"Error: Invalid brightness value. {e}", file=sys.stderr)
             sys.exit(1)
 
     if args.speed is not None:
