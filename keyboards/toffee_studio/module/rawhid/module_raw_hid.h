@@ -29,6 +29,7 @@ enum module_command_id {
     // id_lighting_set_color_hsv       = 0x73, DEPRECATED
     id_lighting_set_brightness      = 0x74,
     id_lighting_set_color_hs        = 0x75,
+    id_lighting_get_state           = 0x76,
 
     id_module_cmd_end               = 0xFF,
 };

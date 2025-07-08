@@ -1030,6 +1030,18 @@ static int parse_set_color_hs(uint8_t *data, uint8_t length) {
     return module_ret_success;
 }
 
+static int parse_get_lighting_state(uint8_t *data, uint8_t length) {
+    uprintf("CMD: Get Underglow State\n");
+    uint8_t *response_payload = return_buf + 1; // Start after the return code byte
+    response_payload[0] = g_underglow_config.current_animation_id;
+    response_payload[1] = g_underglow_config.speed;
+    response_payload[2] = g_underglow_config.brightness;
+    response_payload[3] = g_underglow_config.color.h;
+    response_payload[4] = g_underglow_config.color.s;
+    // The rest of the buffer is zeroed by the host, so no need to clear it. The first byte of the buffer (return_buf[0]) will be set to success by the caller.
+    return module_ret_success;
+}
+
 static int parse_placeholder(uint8_t *data, uint8_t length) {
     uprintf("Unimplemented command received.\n");
     return module_ret_invalid_command; // Or another appropriate error
@@ -1127,6 +1139,9 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
             break;
         case id_lighting_set_color_hs:
             err = parse_set_color_hs(data, length);
+            break;
+        case id_lighting_get_state:
+            err = parse_get_lighting_state(data, length);
             break;
         default:
             uprintf("Invalid command ID\n");
