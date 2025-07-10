@@ -1032,6 +1032,13 @@ static int parse_set_color_hs(uint8_t *data, uint8_t length) {
 
 static int parse_get_lighting_state(uint8_t *data, uint8_t length) {
     uprintf("CMD: Get Underglow State\n");
+    uprintf("  - Config State: anim=%u, speed=%u, bright=%u, hue=%u, sat=%u\n",
+        g_underglow_config.current_animation_id,
+        g_underglow_config.speed,
+        g_underglow_config.brightness,
+        g_underglow_config.color.h,
+        g_underglow_config.color.s
+    );
     uint8_t *response_payload = return_buf + 1; // Start after the return code byte
     response_payload[0] = g_underglow_config.current_animation_id;
     response_payload[1] = g_underglow_config.speed;
