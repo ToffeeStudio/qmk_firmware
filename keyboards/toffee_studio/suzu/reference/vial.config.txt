@@ -1,0 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
+
+#pragma once
+
+#define VIAL_KEYBOARD_UID {0x44, 0x4B, 0x21, 0x86, 0xB1, 0x12, 0x61, 0xD1}
+
+/* CONSIDER ADDING AN UNLOCK COMBO. SEE DOCUMENTATION. */
+#define VIAL_INSECURE
