@@ -19,6 +19,10 @@
 #define OLED_DC_PIN GP1
 #define OLED_BL_PIN GP0
 
+// WPM Configuration
+#define WPM_SAMPLE_SECONDS 1
+#define WPM_SAMPLE_PERIODS 10
+
 // LVGL Configuration
 #define QP_LVGL_TASK_PERIOD 40
 

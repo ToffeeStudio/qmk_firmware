@@ -9,6 +9,7 @@ QUANTUM_PAINTER_DRIVERS += gc9107_spi
 QUANTUM_PAINTER_LVGL_INTEGRATION = yes
 
 SRC += rawhid/module_raw_hid.c \
+	   display/wpm_indicator.c \
        display/animation.c \
        display/ui.c \
        display/cdc_handler.c \
@@ -40,3 +41,4 @@ WS2812_DRIVER = vendor
 VIRTSER_ENABLE = yes
 CDC_ENABLE = yes
 EXTRA_USB_INTERFACES = yes
+WPM_ENABLE = yes

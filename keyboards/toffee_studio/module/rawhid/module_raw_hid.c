@@ -884,6 +884,7 @@ static int parse_ping(uint8_t *data, uint8_t length) {
 
 static int parse_choose_image(uint8_t *data, uint8_t length) {
     uprintf("Choose image\n");
+    wpm_indicator_deactivate();
 
     if (length <= sizeof(struct packet_header)) {
         uprintf("Insufficient data length\n");
@@ -1049,6 +1050,26 @@ static int parse_get_lighting_state(uint8_t *data, uint8_t length) {
     return module_ret_success;
 }
 
+static int parse_set_wpm_anim(uint8_t *data, uint8_t length) {
+    if (length < 7) { return module_ret_invalid_command; }
+    // Payload starts at data[6] (after magic, cmd, packet_id)
+    char* path = (char*)&data[6];
+    // Ensure null termination within payload boundary
+    data[length] = '\0';
+    uprintf("RAW HID: Setting WPM anim to '%s'\n", path);
+    wpm_indicator_set_anim(path);
+    return module_ret_success;
+}
+
+static int parse_set_wpm_config(uint8_t *data, uint8_t length) {
+    if (length < 8) { return module_ret_invalid_command; } // Needs 2 bytes payload
+    uint8_t min_wpm = data[6];
+    uint8_t max_wpm = data[7];
+    uprintf("RAW HID: Setting WPM range to %u-%u\n", min_wpm, max_wpm);
+    wpm_indicator_set_config(min_wpm, max_wpm);
+    return module_ret_success;
+}
+
 static int parse_placeholder(uint8_t *data, uint8_t length) {
     uprintf("Unimplemented command received.\n");
     return module_ret_invalid_command; // Or another appropriate error
@@ -1149,6 +1170,12 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
             break;
         case id_lighting_get_state:
             err = parse_get_lighting_state(data, length);
+            break;
+        case id_wpm_set_anim:
+            err = parse_set_wpm_anim(data, length);
+            break;
+        case id_wpm_set_config:
+            err = parse_set_wpm_config(data, length);
             break;
         default:
             uprintf("Invalid command ID\n");

@@ -3,6 +3,7 @@
 #include "display/ui.h"
 #include "display/cdc_handler.h"
 #include "lighting/lighting.h"
+#include "display/wpm_indicator.h"
 #include "quantum.h" // Includes core QMK functionality, ChibiOS, config files etc.
 #include "rgb_matrix.h"
 #include "gpio.h"
@@ -51,6 +52,14 @@ void board_init(void) {
 bool rgb_matrix_indicators_user(void) {
     lighting_task();
     return false; // Return false to prevent QMK from running its own animations.
+}
+
+void matrix_scan_user(void) {
+    static uint32_t wpm_timer = 0;
+    if (timer_elapsed32(wpm_timer) > 25) {
+        wpm_timer = timer_read32();
+        wpm_indicator_task();
+    }
 }
 
 void keyboard_post_init_kb(void) {
@@ -119,6 +128,8 @@ void keyboard_post_init_kb(void) {
     ui_init();                         // Initialize QP/LVGL etc. which calls draw_gradient
     uprintf("Display initialized.\n");
 #endif // QUANTUM_PAINTER_ENABLE
+
+wpm_indicator_init();
 
     // --- Initialize CDC Receive State ---
     #if defined(VIRTSER_ENABLE) && defined(LITTLEFS_ENABLE) // <--- Use the new CDC logic condition
