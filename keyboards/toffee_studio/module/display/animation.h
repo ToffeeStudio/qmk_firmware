@@ -23,5 +23,6 @@ extern lv_img_dsc_t images[2];
 void animation_init(void);
 void animation_cleanup(void);
 int animation_start(const char *path);
+void animation_timer_set_period(uint32_t period_ms);
 
 #endif // ANIMATION_H

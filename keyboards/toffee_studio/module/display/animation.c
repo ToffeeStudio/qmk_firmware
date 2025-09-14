@@ -211,3 +211,10 @@ int animation_start(const char *path) {
     }
     return 0;
 }
+
+void animation_timer_set_period(uint32_t period_ms) {
+    if (anim_state.lv_timer) {
+        lv_timer_set_period(anim_state.lv_timer, period_ms);
+        lv_timer_reset(anim_state.lv_timer); // Apply the new period immediately
+    }
+}

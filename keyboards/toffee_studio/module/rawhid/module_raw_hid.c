@@ -8,6 +8,7 @@
 #include "module_raw_hid.h"
 #include "display/animation.h"
 #include "display/ui.h"
+#include "display/wpm_indicator.h"
 #include "animations/manager.h"
 #include "lvgl.h"
 
@@ -1051,22 +1052,23 @@ static int parse_get_lighting_state(uint8_t *data, uint8_t length) {
 }
 
 static int parse_set_wpm_anim(uint8_t *data, uint8_t length) {
-    if (length < 7) { return module_ret_invalid_command; }
-    // Payload starts at data[6] (after magic, cmd, packet_id)
-    char* path = (char*)&data[6];
+    if (length < 8) { return module_ret_invalid_command; } // mode (1) + null-term char (1)
+    wpm_mode_t mode = (wpm_mode_t)data[6];
+    char* path = (char*)&data[7];
     // Ensure null termination within payload boundary
     data[length] = '\0';
-    uprintf("RAW HID: Setting WPM anim to '%s'\n", path);
-    wpm_indicator_set_anim(path);
+    uprintf("RAW HID: Setting WPM anim to '%s', mode %d\n", path, mode);
+    wpm_indicator_set_anim(path, mode);
     return module_ret_success;
 }
 
 static int parse_set_wpm_config(uint8_t *data, uint8_t length) {
-    if (length < 8) { return module_ret_invalid_command; } // Needs 2 bytes payload
+    if (length < 9) { return module_ret_invalid_command; } // Needs 3 bytes payload
     uint8_t min_wpm = data[6];
     uint8_t max_wpm = data[7];
-    uprintf("RAW HID: Setting WPM range to %u-%u\n", min_wpm, max_wpm);
-    wpm_indicator_set_config(min_wpm, max_wpm);
+    uint8_t max_fps = data[8];
+    uprintf("RAW HID: Setting WPM config to %u-%u WPM, max %u FPS\n", min_wpm, max_wpm, max_fps);
+    wpm_indicator_set_config(min_wpm, max_wpm, max_fps);
     return module_ret_success;
 }
 
