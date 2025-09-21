@@ -41,6 +41,89 @@
 
 
 // =========================================================================
+//           PERSISTENCE PROOF OF CONCEPT (POC) -- START
+// =========================================================================
+
+// 1. Define the simple data structure we want to save and load.
+typedef struct {
+    uint32_t boot_count;
+    char     message[64];
+} poc_data_t;
+
+// 2. This is the main function for our test.
+void run_persistence_poc(void) {
+    const char* poc_filepath = "/poc_test.bin";
+    poc_data_t data_to_test;
+    int lfs_err;
+
+    uprintf("\n--- Running Persistence POC ---\n");
+
+    // 3. Attempt to open the test file for reading.
+    lfs_file_t file;
+    lfs_err = lfs_file_open(&lfs, &file, poc_filepath, LFS_O_RDONLY);
+
+    if (lfs_err < 0) {
+        // 4. FILE NOT FOUND (FIRST RUN): The file doesn't exist.
+        uprintf("POC: File '%s' not found. This must be the first run.\n", poc_filepath);
+        uprintf("POC: Creating file with default values.\n");
+
+        // Create the default data.
+        data_to_test.boot_count = 1;
+        snprintf(data_to_test.message, sizeof(data_to_test.message), "Hello from Flash! This is the first boot.");
+
+    } else {
+        // 5. FILE FOUND (SUBSEQUENT RUNS): The file exists.
+        uprintf("POC: File '%s' found. Loading existing data.\n", poc_filepath);
+
+        // Read the data from the file into our struct.
+        lfs_ssize_t bytes_read = lfs_file_read(&lfs, &file, &data_to_test, sizeof(poc_data_t));
+        lfs_file_close(&lfs, &file); // Close the file after reading.
+
+        if (bytes_read == sizeof(poc_data_t)) {
+            // Print the values we just loaded.
+            uprintf("POC: >> LOADED Boot Count: %lu\n", data_to_test.boot_count);
+            uprintf("POC: >> LOADED Message: '%s'\n", data_to_test.message);
+
+            // Now, modify the data for the *next* boot.
+            data_to_test.boot_count++; // Increment the counter.
+            snprintf(data_to_test.message, sizeof(data_to_test.message), "This is boot number %lu.", data_to_test.boot_count);
+
+        } else {
+            uprintf("POC: ERROR! Read %ld bytes, but expected %u. Using defaults.\n", bytes_read, sizeof(poc_data_t));
+            // In case of a corrupted file, reset to defaults.
+            data_to_test.boot_count = 1;
+            snprintf(data_to_test.message, sizeof(data_to_test.message), "File was corrupt, starting over.");
+        }
+    }
+
+    // 6. SAVE THE DATA: Whether it's the first run or a subsequent run,
+    // we now save the (potentially modified) data back to the file.
+    uprintf("POC: Saving data for next boot...\n");
+    uprintf("POC: << SAVING Boot Count: %lu\n", data_to_test.boot_count);
+    uprintf("POC: << SAVING Message: '%s'\n", data_to_test.message);
+
+    // Open the file in write mode. LFS_O_TRUNC clears the file before writing.
+    lfs_err = lfs_file_open(&lfs, &file, poc_filepath, LFS_O_WRONLY | LFS_O_CREAT | LFS_O_TRUNC);
+    if (lfs_err < 0) {
+        uprintf("POC: FATAL! Failed to open file for writing. Error: %d\n", lfs_err);
+    } else {
+        lfs_ssize_t bytes_written = lfs_file_write(&lfs, &file, &data_to_test, sizeof(poc_data_t));
+        lfs_file_close(&lfs, &file); // Always close the file.
+
+        if (bytes_written != sizeof(poc_data_t)) {
+            uprintf("POC: FATAL! Failed to write all data. Wrote %ld bytes.\n", bytes_written);
+        } else {
+            uprintf("POC: Save successful.\n");
+        }
+    }
+    uprintf("--- Persistence POC Finished ---\n\n");
+}
+// =========================================================================
+//           PERSISTENCE PROOF OF CONCEPT (POC) -- END
+// =========================================================================
+
+
+// =========================================================================
 // Initialization and Other Callbacks
 // =========================================================================
 
@@ -86,7 +169,8 @@ void keyboard_post_init_kb(void) {
               }
          }
     } else {
-         uprintf("LFS mounted successfully.\n");
+        uprintf("LFS mounted successfully.\n");
+        run_persistence_poc();
     }
 
     // 2) Optional debug prints for space:
