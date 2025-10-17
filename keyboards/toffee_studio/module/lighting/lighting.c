@@ -98,8 +98,6 @@ void lighting_init(void) {
     generate_led_positions();
     generate_matrix_to_led_map();
     underglow_manager_init();
-    chThdSleepMilliseconds(100);
-    underglow_manager_set_anim(0); // Default to solid color
 }
 
 void lighting_task(void) {

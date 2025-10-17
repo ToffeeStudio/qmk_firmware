@@ -11,6 +11,8 @@
 #include "display/wpm_indicator.h"
 #include "animations/manager.h"
 #include "lvgl.h"
+#include "persistence.h"
+#include "bootloader.h"
 
 #define CHUNK_SIZE 256
 static uint8_t file_buffer[CHUNK_SIZE];
@@ -912,15 +914,24 @@ static int parse_choose_image(uint8_t *data, uint8_t length) {
     memcpy(path, path_data, path_length);
     path[path_length] = '\0';
 
+    int result = -1;
+
     bool is_anim = path_length > 5 && strncmp(path + (path_length - 5), ".araw", 5) == 0;
 
     if (is_anim) {
         uprintf("Animated image\n");
-        return animation_start(path);
+        result = animation_start(path);
+    }
+    else {
+        result = ui_display_static_image(path);
+    }
+
+    if (result == 0) {
+        save_display_state(path);
     }
 
     // Handle static images by calling the new UI function
-    return ui_display_static_image(path);
+    return result;
 }
 
 static int parse_write_display(uint8_t *data, uint8_t length) {
@@ -1077,6 +1088,17 @@ static int parse_placeholder(uint8_t *data, uint8_t length) {
     return module_ret_invalid_command; // Or another appropriate error
 }
 
+static int parse_jump_bootloader(uint8_t *data, uint8_t length) {
+    (void)data; (void)length;
+    uprintf("RAW HID: Jumping to bootloader.\n");
+    // Optional: clean up subsystems that touch peripherals
+    animation_cleanup();
+    wpm_indicator_deactivate();
+    // This call does not return; USB disconnects immediately.
+    bootloader_jump();
+    return module_ret_success; // Not reached
+}
+
 int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
     int err = module_ret_invalid_command; // Default to error
     return_buf = data;
@@ -1178,6 +1200,9 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
             break;
         case id_wpm_set_config:
             err = parse_set_wpm_config(data, length);
+            break;
+        case id_system_bootloader:
+            err = parse_jump_bootloader(data, length);
             break;
         default:
             uprintf("Invalid command ID\n");

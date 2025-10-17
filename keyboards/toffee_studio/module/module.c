@@ -33,6 +33,7 @@
 #ifdef VIA_ENABLE // Include Raw HID header only if VIA is enabled (as it's called from via command)
 #include "rawhid/module_raw_hid.h" // Your custom Raw HID parser header
 #endif // VIA_ENABLE
+#include "persistence.h"
 
 #include "virtser.h"                // For virtser_recv, virtser_send
 
@@ -66,9 +67,6 @@ void keyboard_post_init_kb(void) {
     chThdSleepMilliseconds(3000);
     uprintf("keyboard_post_init_kb called.\n");
 
-    lighting_init();
-
-#ifdef LITTLEFS_ENABLE
     // 1) Mount LFS here:
     uprintf("Mounting LFS...\n");
     int err = rp2040_mount_lfs(&lfs);
@@ -118,7 +116,8 @@ void keyboard_post_init_kb(void) {
     } else {
          uprintf("Error getting LFS size: %ld\n", used_blocks);
     }
-#endif // LITTLEFS_ENABLE check
+
+    lighting_init();
 
 #ifdef QUANTUM_PAINTER_ENABLE
     // 3) Initialize your display hardware and QP/LVGL
@@ -129,7 +128,8 @@ void keyboard_post_init_kb(void) {
     uprintf("Display initialized.\n");
 #endif // QUANTUM_PAINTER_ENABLE
 
-wpm_indicator_init();
+    wpm_indicator_init();
+    animation_init();
 
     // --- Initialize CDC Receive State ---
     #if defined(VIRTSER_ENABLE) && defined(LITTLEFS_ENABLE) // <--- Use the new CDC logic condition
@@ -137,7 +137,8 @@ wpm_indicator_init();
     cdc_handler_init(); // <--- Use the reset function to ensure clean start
     #endif
 
-    animation_init();
+    load_display_state();
+    load_underglow_config();
 
     // 4) Call the default post-init user function if it exists
     keyboard_post_init_user(); // Weakly defined, safe to call

@@ -32,7 +32,7 @@ enum module_command_id {
     id_lighting_get_state           = 0x76,
     id_wpm_set_anim                 = 0x77,
     id_wpm_set_config               = 0x78,
-
+    id_system_bootloader            = 0x79,
     id_module_cmd_end               = 0xFF,
 };
 

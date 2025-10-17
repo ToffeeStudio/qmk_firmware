@@ -9,6 +9,7 @@ QUANTUM_PAINTER_DRIVERS += gc9107_spi
 QUANTUM_PAINTER_LVGL_INTEGRATION = yes
 
 SRC += rawhid/module_raw_hid.c \
+	   persistence.c \
 	   display/wpm_indicator.c \
        display/animation.c \
        display/ui.c \
