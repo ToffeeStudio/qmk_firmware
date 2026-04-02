@@ -138,11 +138,19 @@ bool rgb_matrix_indicators_user(void) {
     return false; // Return false to prevent QMK from running its own animations.
 }
 
+static uint32_t screen_reinit_timer = 0;
+static bool screen_reinit_pending = false;
+
 void matrix_scan_user(void) {
     static uint32_t wpm_timer = 0;
     if (timer_elapsed32(wpm_timer) > 25) {
         wpm_timer = timer_read32();
         wpm_indicator_task();
+    }
+
+    if (screen_reinit_pending && timer_elapsed32(screen_reinit_timer) > 30000) {
+        screen_reinit_pending = false;
+        ui_reinit_display();
     }
 }
 
@@ -209,6 +217,8 @@ void keyboard_post_init_kb(void) {
     setPinOutputPushPull(0); // GP0
     writePinHigh(0);         // Turn backlight on
     ui_init();                         // Initialize QP/LVGL etc. which calls draw_gradient
+    screen_reinit_timer = timer_read32();
+    screen_reinit_pending = true;
     uprintf("Display initialized.\n");
 #endif // QUANTUM_PAINTER_ENABLE
 

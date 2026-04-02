@@ -52,6 +52,13 @@ void ui_init(void) {
     }
 }
 
+void ui_reinit_display(void) {
+    uprintf("[DISPLAY RE-INIT]: ui_reinit_display() called.\n");
+    qp_init(oled, QP_ROTATION_180);
+    qp_power(oled, true);
+    lv_obj_invalidate(lv_scr_act());
+}
+
 void ui_display_gradient(void) {
     uprintf("Drawing dynamic gradient...\n");
     const int width = 128;
