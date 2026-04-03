@@ -105,7 +105,6 @@ void underglow_manager_next_anim(void) {
     if (g_underglow_config.active_animation->init) {
         g_underglow_config.active_animation->init(g_underglow_config.active_animation->state);
     }
-    save_underglow_config();
 }
 
 /**
@@ -125,7 +124,6 @@ void underglow_manager_set_anim(uint8_t anim_id) {
     if (g_underglow_config.active_animation->init) {
         g_underglow_config.active_animation->init(g_underglow_config.active_animation->state);
     }
-    save_underglow_config();
 }
 
 /**
@@ -134,7 +132,6 @@ void underglow_manager_set_anim(uint8_t anim_id) {
  */
 void underglow_manager_set_speed(uint8_t speed) {
     g_underglow_config.speed = speed;
-    save_underglow_config();
 }
 
 /**
@@ -146,7 +143,6 @@ void underglow_manager_set_speed(uint8_t speed) {
 void underglow_manager_set_color_hsv(uint8_t h, uint8_t s, uint8_t v) {
     underglow_manager_set_color_hs(h, s);
     underglow_manager_set_brightness(v);
-    save_underglow_config();
 }
 
 /**
@@ -155,7 +151,6 @@ void underglow_manager_set_color_hsv(uint8_t h, uint8_t s, uint8_t v) {
  */
 void underglow_manager_set_brightness(uint8_t brightness) {
     g_underglow_config.brightness = brightness;
-    save_underglow_config();
 }
 
 /**
@@ -169,5 +164,8 @@ void underglow_manager_set_color_hs(uint8_t h, uint8_t s) {
     g_underglow_config.color.h = h;
     g_underglow_config.color.s = s;
     g_underglow_config.color.v = 255; // Always use full value for the base color
+}
+
+void underglow_manager_save(void) {
     save_underglow_config();
 }

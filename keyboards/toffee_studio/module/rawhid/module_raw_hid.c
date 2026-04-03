@@ -1062,6 +1062,14 @@ static int parse_get_lighting_state(uint8_t *data, uint8_t length) {
     return module_ret_success;
 }
 
+static int parse_save_lighting_state(uint8_t *data, uint8_t length) {
+    (void)data;
+    (void)length;
+    uprintf("CMD: Save Underglow State\n");
+    underglow_manager_save();
+    return module_ret_success;
+}
+
 static int parse_set_wpm_anim(uint8_t *data, uint8_t length) {
     if (length < 8) { return module_ret_invalid_command; } // mode (1) + null-term char (1)
     wpm_mode_t mode = (wpm_mode_t)data[6];
@@ -1194,6 +1202,9 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
             break;
         case id_lighting_get_state:
             err = parse_get_lighting_state(data, length);
+            break;
+        case id_lighting_save:
+            err = parse_save_lighting_state(data, length);
             break;
         case id_wpm_set_anim:
             err = parse_set_wpm_anim(data, length);

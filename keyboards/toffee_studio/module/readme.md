@@ -4,6 +4,25 @@
 
 *A short description of the keyboard/project*
 
+## Host-side tooling
+
+The actual host-side control code for this keyboard currently lives outside this QMK repo at `~/Desktop/projects/api_test`.
+The directory name is misleading, but this is the real host-side project for the Toffee Studio module workflow.
+
+Useful entrypoints in that host-side repo:
+
+* `main.py`: primary host CLI for Raw HID-based commands, including filesystem operations, display/image writes, WPM configuration, and bootloader requests
+* `receive_cdc.py`: receives CDC-side file transfers from the keyboard and writes them to disk
+* `find_cdc.py`: helper for locating the keyboard's CDC interface by VID/PID/product string
+* `README.md`: minimal local setup and example invocation notes for the host tooling
+
+At a high level, the host tooling currently uses two transport paths:
+
+* Raw HID for command-and-control style operations
+* USB CDC for streaming file/data transfers
+
+If you are debugging host/firmware interaction for this keyboard, check `~/Desktop/projects/api_test` first rather than assuming the host-side code lives in this QMK tree.
+
 * Keyboard Maintainer: [Kelly Helmut Lord](https://github.com/Kelly Helmut Lord)
 * Hardware Supported: *The PCBs, controllers supported*
 * Hardware Availability: *Links to where you can find this hardware*
