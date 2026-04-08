@@ -2,7 +2,10 @@
 #include "lfs.h"
 #include "lvgl.h"
 #include "qp.h"
+#include "qp_comms.h"
 #include "qp_gc9107.h"
+#include "qp_gc9107_opcodes.h"
+#include "qp_gc9xxx_opcodes.h"
 #include "qp_lvgl.h"
 #include "module.h" // For the global lfs object
 #include "display/ui.h"
@@ -10,6 +13,62 @@
 
 // Define QP/LVGL related static variables
 static painter_device_t oled;
+
+#define GC9107_CMD_NORMAL_DISPLAY_ON 0x13
+#define GC9107_SLEEP_OUT_DELAY_MS 250
+#define GC9107_DISPLAY_ON_DELAY_MS 80
+
+bool qp_gc9107_init(painter_device_t device, painter_rotation_t rotation) {
+    const uint8_t gc9107_init_sequence[] = {
+        GC9XXX_SET_INTER_REG_ENABLE1, 5, 0,
+        GC9XXX_SET_INTER_REG_ENABLE2, 5, 0,
+        GC9107_SET_FUNCTION_CTL1, 0, 1, GC9107_ALLOW_SET_VGH_VGL_CLK,
+        GC9107_SET_FUNCTION_CTL2, 0, 1, GC9107_ALLOW_SET_VGH | GC9107_ALLOW_SET_VGL,
+        GC9107_SET_FUNCTION_CTL3, 0, 1, GC9107_ALLOW_SET_GAMMA1 | GC9107_ALLOW_SET_GAMMA2,
+        GC9107_SET_FUNCTION_CTL6, 0, 1, GC9107_ALLOW_SET_COMPLEMENT_RGB | 0x08 | GC9107_ALLOW_SET_FRAMERATE,
+        GC9107_SET_COMPLEMENT_RGB, 0, 1, GC9107_COMPLEMENT_WITH_LSB,
+        GC9107_SET_VGH, 0, 1, 0x23,
+        GC9107_SET_VGL, 0, 1, 0x47,
+        GC9107_SET_VGH_VGL_CLK, 0, 1, 0x99,
+        0xAB, 0, 1, 0x0E,
+        GC9107_SET_FRAME_RATE, 0, 1, 0x19,
+        GC9XXX_SET_PIXEL_FORMAT, 0, 1, GC9107_PIXEL_FORMAT_16_BPP_IFPF,
+        GC9XXX_SET_GAMMA1, 0, 14, 0x05, 0x1D, 0x51, 0x2F, 0x85, 0x2A, 0x11, 0x62, 0x00, 0x07, 0x07, 0x0F, 0x08, 0x1F,
+        GC9XXX_SET_GAMMA2, 0, 14, 0x2E, 0x41, 0x62, 0x56, 0xA5, 0x3A, 0x3F, 0x60, 0x0F, 0x07, 0x0A, 0x18, 0x18, 0x1D,
+        GC9XXX_CMD_SLEEP_OFF, GC9107_SLEEP_OUT_DELAY_MS, 0,
+        GC9107_CMD_NORMAL_DISPLAY_ON, 0, 0,
+        GC9XXX_CMD_DISPLAY_ON, GC9107_DISPLAY_ON_DELAY_MS, 0,
+    };
+
+    qp_comms_bulk_command_sequence(device, gc9107_init_sequence, sizeof(gc9107_init_sequence));
+
+    const uint8_t madctl[] = {
+        [QP_ROTATION_0]   = GC9XXX_MADCTL_BGR,
+        [QP_ROTATION_90]  = GC9XXX_MADCTL_BGR | GC9XXX_MADCTL_MX | GC9XXX_MADCTL_MV,
+        [QP_ROTATION_180] = GC9XXX_MADCTL_BGR | GC9XXX_MADCTL_MX | GC9XXX_MADCTL_MY,
+        [QP_ROTATION_270] = GC9XXX_MADCTL_BGR | GC9XXX_MADCTL_MV | GC9XXX_MADCTL_MY,
+    };
+    qp_comms_command_databyte(device, GC9XXX_SET_MEM_ACS_CTL, madctl[rotation]);
+
+    return true;
+}
+
+void ui_retry_wake_tail(void) {
+    uprintf("[DISPLAY WAKE RETRY]: sending 11h -> 13h -> 29h tail.\n");
+    if (!qp_comms_start(oled)) {
+        uprintf("[DISPLAY WAKE RETRY]: failed to start comms.\n");
+        return;
+    }
+
+    qp_comms_command(oled, GC9XXX_CMD_SLEEP_OFF);
+    wait_ms(GC9107_SLEEP_OUT_DELAY_MS);
+    qp_comms_command(oled, GC9107_CMD_NORMAL_DISPLAY_ON);
+    qp_comms_command(oled, GC9XXX_CMD_DISPLAY_ON);
+    wait_ms(GC9107_DISPLAY_ON_DELAY_MS);
+    qp_comms_stop(oled);
+
+    lv_obj_invalidate(lv_scr_act());
+}
 
 void ui_init(void) {
     uprintf("ui_init() called.\n"); // Added print

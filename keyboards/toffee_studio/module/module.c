@@ -138,8 +138,15 @@ bool rgb_matrix_indicators_user(void) {
     return false; // Return false to prevent QMK from running its own animations.
 }
 
-static uint32_t screen_reinit_timer = 0;
-static bool screen_reinit_pending = false;
+typedef enum {
+    SCREEN_RECOVERY_IDLE = 0,
+    SCREEN_RECOVERY_WAKE_RETRY,
+    SCREEN_RECOVERY_FULL_REINIT,
+    SCREEN_RECOVERY_DONE,
+} screen_recovery_phase_t;
+
+static uint32_t screen_recovery_timer = 0;
+static screen_recovery_phase_t screen_recovery_phase = SCREEN_RECOVERY_IDLE;
 
 void matrix_scan_user(void) {
     static uint32_t wpm_timer = 0;
@@ -148,9 +155,15 @@ void matrix_scan_user(void) {
         wpm_indicator_task();
     }
 
-    if (screen_reinit_pending && timer_elapsed32(screen_reinit_timer) > 30000) {
-        screen_reinit_pending = false;
+    if (screen_recovery_phase == SCREEN_RECOVERY_WAKE_RETRY && timer_elapsed32(screen_recovery_timer) > 1000) {
+        ui_retry_wake_tail();
+        screen_recovery_timer = timer_read32();
+        screen_recovery_phase = SCREEN_RECOVERY_FULL_REINIT;
+    }
+
+    if (screen_recovery_phase == SCREEN_RECOVERY_FULL_REINIT && timer_elapsed32(screen_recovery_timer) > 4000) {
         ui_reinit_display();
+        screen_recovery_phase = SCREEN_RECOVERY_DONE;
     }
 }
 
@@ -217,8 +230,8 @@ void keyboard_post_init_kb(void) {
     setPinOutputPushPull(0); // GP0
     writePinHigh(0);         // Turn backlight on
     ui_init();                         // Initialize QP/LVGL etc. which calls draw_gradient
-    screen_reinit_timer = timer_read32();
-    screen_reinit_pending = true;
+    screen_recovery_timer = timer_read32();
+    screen_recovery_phase = SCREEN_RECOVERY_WAKE_RETRY;
     uprintf("Display initialized.\n");
 #endif // QUANTUM_PAINTER_ENABLE
 
