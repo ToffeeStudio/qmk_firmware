@@ -34,6 +34,7 @@ enum module_command_id {
     id_wpm_set_config               = 0x78,
     id_system_bootloader            = 0x79,
     id_lighting_save                = 0x7A,
+    id_lighting_set_led_brightness  = 0x7B,
     id_module_cmd_end               = 0xFF,
 };
 

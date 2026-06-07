@@ -10,6 +10,7 @@
 #include "display/ui.h"
 #include "display/wpm_indicator.h"
 #include "animations/manager.h"
+#include "lighting/lighting.h"
 #include "lvgl.h"
 #include "persistence.h"
 #include "bootloader.h"
@@ -1032,6 +1033,17 @@ static int parse_set_brightness(uint8_t *data, uint8_t length) {
     return module_ret_success;
 }
 
+static int parse_set_led_brightness(uint8_t *data, uint8_t length) {
+    if (length < 8) { // Header (6) + LED index (1) + Brightness (1)
+        return module_ret_invalid_command;
+    }
+    uint8_t led_index  = data[6];
+    uint8_t brightness = data[7];
+    uprintf("RAW HID: Setting front LED %u brightness to %u\n", led_index, brightness);
+    keylight_set_brightness(led_index, brightness);
+    return module_ret_success;
+}
+
 static int parse_set_color_hs(uint8_t *data, uint8_t length) {
     if (length < 8) { // Header (6) + Hue (1) + Sat (1)
         return module_ret_invalid_command;
@@ -1205,6 +1217,9 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
             break;
         case id_lighting_save:
             err = parse_save_lighting_state(data, length);
+            break;
+        case id_lighting_set_led_brightness:
+            err = parse_set_led_brightness(data, length);
             break;
         case id_wpm_set_anim:
             err = parse_set_wpm_anim(data, length);

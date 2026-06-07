@@ -3,6 +3,15 @@
 #include "rgb_matrix_types.h"   // for led_point_t and led_config_t
 #include "animations/manager.h"
 #include "lighting.h"
+#include <lib/lib8tion/lib8tion.h>   // for scale8()
+
+// The driver's working color buffer, holding the colors the active effect
+// rendered this frame. We read it back to dim individual front LEDs.
+extern rgb_led_t rgb_matrix_ws2812_array[RGB_MATRIX_LED_COUNT];
+
+// Per-front-LED brightness override (0-255), applied on top of the active
+// effect. 255 = unchanged, 0 = off. Lets a single key's LED be dimmed/off.
+static uint8_t g_keylight_brightness[RGB_MATRIX_LED_COUNT];
 
 
 // NOT QMK-specific
@@ -94,7 +103,32 @@ static void generate_matrix_to_led_map(void) {
     }
 }
 
+void keylight_set_brightness(uint16_t led_index, uint8_t brightness) {
+    if (led_index >= RGB_MATRIX_LED_COUNT) {
+        return;
+    }
+    g_keylight_brightness[led_index] = brightness;
+}
+
+// Scale down any front LED that has a brightness override set. Runs inside the
+// rgb_matrix indicators callback, after the active effect has rendered.
+static void keylight_apply_overrides(void) {
+    for (uint16_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+        if (g_keylight_brightness[i] == 255) {
+            continue; // full brightness, leave the effect's color untouched
+        }
+        rgb_led_t c = rgb_matrix_ws2812_array[i];
+        rgb_matrix_set_color(i,
+            scale8(c.r, g_keylight_brightness[i]),
+            scale8(c.g, g_keylight_brightness[i]),
+            scale8(c.b, g_keylight_brightness[i]));
+    }
+}
+
 void lighting_init(void) {
+    for (uint16_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+        g_keylight_brightness[i] = 255; // full brightness by default
+    }
     generate_led_positions();
     generate_matrix_to_led_map();
     underglow_manager_init();
@@ -102,6 +136,7 @@ void lighting_init(void) {
 
 void lighting_task(void) {
     underglow_manager_task();
+    keylight_apply_overrides();
 }
 
 bool lighting_process_user_command(uint16_t keycode, keyrecord_t *record) {

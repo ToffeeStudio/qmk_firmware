@@ -12,3 +12,4 @@ enum custom_keycodes {
 
 void lighting_init(void);
 void lighting_task(void);
+void keylight_set_brightness(uint16_t led_index, uint8_t brightness);
