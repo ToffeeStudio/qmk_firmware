@@ -130,8 +130,9 @@ Build with the normal command above. Leave the UF2 in the QMK root. Close the
 configurator and identify the intended Module by physical USB location. The
 updater now requires `--usb-location`; it can distinguish two application-mode
 Modules, but requires exactly one RP2 bootloader before copying. Never choose
-the first matching Module. The examples below retain the older verified unit
-serial; measure the current target's bootloader serial before using them.
+the first matching Module. On 1 October 2026, transitioning exposed Module B
+to the bootloader confirmed serial `E0C9125B0D9B` at `0x01142000`. The examples
+below use that measured pair; recheck it if the board/cabling changes.
 The normal flashing operation is simply copying the `.uf2` onto the bootloader
 drive, just like Finder drag-and-drop. Run this read-only preflight first:
 

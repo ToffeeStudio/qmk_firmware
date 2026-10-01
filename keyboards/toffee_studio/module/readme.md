@@ -9,16 +9,18 @@ handover, not a live device-status feed. Read the repository's
 The current target is the **screenless RP2040 Module PCB**. The local firmware
 is on `screenless-pcb`; the paired [board configurator](../../../../board-configurator/README.md)
 is on `lighting-fix`. Starting firmware is preserved in checkpoint `471710689a`.
-New screenless front/badge/per-key integration has passed host tests and the QMK
-build; hardware deployment and camera/browser verification are next. No push.
+Independent screenless front/badge/per-key integration is committed as
+`015cf1ebed` and deployed to exposed **Module B only**. Live API, actual-app
+headless browser, cameras and saved-state reboot checks pass. No push.
 
 | Area | Latest recorded status |
 | --- | --- |
 | Rear underglow | Ten effects plus speed, brightness and colour control implemented for the 22 verified rear LEDs. Changes auto-save after one second without another adjustment; startup restores that record. |
-| Front and badge | New source supports Off plus eight front effects, saved per-key dimming for all 66 regular front LEDs, and a separate 16-LED badge with on/off, brightness and solid colour. Badge effects are deferred. Hardware verification pending. |
-| Configurator | Four menus: Underglow, Front Lighting, Per-Key LED, Badge. Protocol-v2 capabilities and matched replies are required; failures offer Retry. All wrappers share a device queue, and VIA ignores tagged custom replies. |
-| Latest flash | The unchanged underglow candidate was copied to the identified RP2 drive on 30 September. Keyboard and raw HID returned; 15-second uptime check and keymap/macro/layout comparison passed. A later read still responded at approximately 89 seconds uptime. |
-| Physical verification | **Pending for that latest underglow flash:** typing, visible rear lighting, browser control and unplug/replug persistence. USB checks alone do not prove these. |
+| Front and badge | Off plus eight front effects, saved dimming for 66 regular front LEDs and an independent 16-LED badge with on/off, brightness and solid colour. Badge effects are deferred. Cameras confirm independent front/badge/rear operation; 65 functioning front packages respond at their expected positions. |
+| Configurator | Four menus: Underglow, Front Lighting, Per-Key LED, Badge. Protocol-v2 matched replies, explicit errors and Retry. Shared custom queue; VIA ignores tagged replies and retains replies arriving before its send finishes. Headless actual-app controls, reload and rejection/Retry passed through a real-board native JavaScript HID bridge. |
+| Latest flash | Lighting-v2 UF2 copied successfully to Module B's identified RP2 drive on 1 October, followed by two same-image reboot/reflash persistence checks. All three runs passed keyboard/raw HID enumeration, 15-second uptime and VIA keymap/macro/layout verification, without a USB-reset workaround. |
+| Saved startup | Distinctive non-default front/badge/rear states and all 66 overrides survive restart. The starting lighting was then restored and verified after another restart: front solid white 18/speed 100, badge white/on 18, rear solid blue 18/speed 100, overrides 255. No arbitrary test colours remain. |
+| Physical verification | **Physical typing and actual unplug/replug confirmation remain pending.** The equals LED's formerly working manual bridge is now broken, per Ethan; its observed dark state is excluded as a hardware fault, not a new indexing/firmware regression. |
 | Recovery | The pre-change image was restored earlier, and Ethan explicitly confirmed both lights and typing. That confirmation applies to the recovery image, not the subsequent underglow candidate. Both images remain preserved outside the build directory. |
 | Earlier outage | Cause unconfirmed. A stalled macOS bootloader volume was observed and cleared by a targeted USB connection reset. Neither a firmware defect nor a transfer defect has been established as the original cause. |
 
@@ -70,15 +72,17 @@ not guarantee that a server is still running in a later session.
 
 ## Next verification and remaining work
 
-1. Confirm physical typing and rear lighting on the latest underglow build.
-2. Reconnect in the local configurator and exercise the underglow controls.
-3. After an adjustment, wait more than one second, unplug/replug, and confirm
-   both the saved lighting and typing return. Record this separately from a
-   software reboot/reflash test.
-4. Keep the earlier outage unresolved unless further evidence identifies its cause.
-5. Camera/browser/live testing of front/per-key/badge integration is in progress
-   in the [active session log](../../../../AUTORESEARCH/01-09-2026%20Light%20testing/README.md).
-   Legacy display removal, unrelated TypeScript errors and shopfront work remain separate.
+1. Obtain human unplug/replug and typing confirmation on exposed Module B;
+   a bare PCB without switches may not allow a typing test. Keep software
+   reboot/reflash evidence separate from actual power removal.
+2. Keep the equals LED at index 103. Ethan says he repaired it previously and
+   accidentally broke the repair. Do not resolder, renumber or remove it as part
+   of the lighting-software task.
+3. Keep the earlier outage unresolved unless new evidence identifies its cause.
+   Badge effect design, legacy display removal, unrelated TypeScript errors and
+   shopfront work remain separate. See the
+   [session log](../../../../AUTORESEARCH/01-09-2026%20Light%20testing/README.md)
+   for exact automated tests, original images and their limitations.
 
 ## Appendix — board identity and implementation
 
@@ -97,8 +101,9 @@ Current front/rear index tables are in [lighting/lighting.c](lighting/lighting.c
 Physical mapping evidence is local and outside this Git repository:
 [front map](/Users/ethanhan/Desktop/projects/toffee-accounting/discord_capture/led_discovery/front_map_2026-09-25.md)
 and [rear map / original coordinates](/Users/ethanhan/Desktop/projects/toffee-accounting/discord_capture/led_discovery/back_map_2026-09-26.md).
-Do not infer new LED positions from old key maps. Index 103 is the repaired
-equals-key LED; older notes describing it as unresolved are superseded.
+Do not infer new LED positions from old key maps. Index 103 is the equals LED,
+verified after its original repair on 25 September. On 1 October Ethan reported
+accidentally breaking that repair; its current dark state does not change indices.
 
 Implementation entry points:
 
@@ -119,8 +124,11 @@ The recovery directory has moved under `ARCHIVE/`; original absolute paths
 inside historical flash reports describe the location at the time of the run.
 
 - **Known-working pre-change UF2:** [pre-underglow-8c65e8ad.uf2](../../../../ARCHIVE/firmware-recovery/2026-09-30-pre-underglow/pre-underglow-8c65e8ad.uf2), 143360 bytes. SHA256 `8c65e8ad26255d3a16f7a8de709344917c0fba663cfc0ea2114e4d91031979c6`. Read-only copy of the pre-change local build, not full flash readback. **Do not overwrite or delete.**
-- **Latest underglow candidate:** [archived UF2](../../../../ARCHIVE/firmware-recovery/20260930T133548Z-f7170b48/7e3574d7a6fc0bbc3a3e070b6e7a51db9d66f675f1571859a213a6229d86961e.uf2), 168448 bytes. SHA256 `7e3574d7a6fc0bbc3a3e070b6e7a51db9d66f675f1571859a213a6229d86961e`.
-- **Latest run:** [flash-report.json](../../../../ARCHIVE/firmware-recovery/20260930T133548Z-f7170b48/flash-report.json), `stage: usb_verified`, no USB reset needed on that retry, human confirmation pending. GET underglow returned `[0, 100, 18, 170, 255]` afterward.
+- **Historical underglow-only candidate:** [archived UF2](../../../../ARCHIVE/firmware-recovery/20260930T133548Z-f7170b48/7e3574d7a6fc0bbc3a3e070b6e7a51db9d66f675f1571859a213a6229d86961e.uf2), 168448 bytes. SHA256 `7e3574d7a6fc0bbc3a3e070b6e7a51db9d66f675f1571859a213a6229d86961e`.
+- **Current lighting-v2 candidate:** [archived UF2](../../../../ARCHIVE/firmware-recovery/20261001-module-b-before-full-lighting/be2915808f3de406cbe283f96049aab3ec9b6c89a2e5d64237833bd144849845.uf2), **173056 bytes**, from `015cf1ebed`. SHA256 `be2915808f3de406cbe283f96049aab3ec9b6c89a2e5d64237833bd144849845`.
+- **First lighting-v2 deployment:** [report](../../../../ARCHIVE/firmware-recovery/20261001T124829Z-361645fb/flash-report.json). Module B's bootloader serial `E0C9125B0D9B` was measured at the same `0x01142000` connection before copying. Stage `usb_verified`; keymaps/macros/layout match the private pre-flash snapshot.
+- **Saved-state restart checks:** [public report](../../../../AUTORESEARCH/01-09-2026%20Light%20testing/reboot-live-01.json), with [distinctive-state flash](../../../../ARCHIVE/firmware-recovery/20261001T133319Z-0eda0f62/flash-report.json) and [restored-original-state flash](../../../../ARCHIVE/firmware-recovery/20261001T133358Z-d5f622b1/flash-report.json). Both stages `usb_verified`, no pre-copy USB reset, all 66 overrides and group states match after startup. Module A's VIA settings also remain unchanged. Physical power removal/typing is a separate pending check.
+- **Actual hardware and app evidence:** [470 live API checks](../../../../AUTORESEARCH/01-09-2026%20Light%20testing/live-api-01.json), [headless actual-app check](../../../../AUTORESEARCH/01-09-2026%20Light%20testing/browser-live-01.json), [8 front/back group captures](../../../../AUTORESEARCH/01-09-2026%20Light%20testing/camera-groups-01/manifest.json), [66 individual-key cases](../../../../AUTORESEARCH/01-09-2026%20Light%20testing/camera-keys-01/manifest.json), [physical-position analysis](../../../../AUTORESEARCH/01-09-2026%20Light%20testing/camera-keys-01/analysis-physical.json). 65 working front packages emit at their expected archived physical positions; 103 remains dark with its broken bridge. Numerical analysis does not certify the absence of reflected light or exact colour/brightness calibration.
 
 Earlier underglow checks (historical; not proof of the new firmware):
 
@@ -136,11 +144,11 @@ Host-only updater regression command, from the firmware root (does not flash):
 sh keyboards/toffee_studio/module/tools/test_lighting_host.sh
 ```
 
-New checkpoint checks: 12 updater tests, 16 frontend HID/map tests (1,064
+New checkpoint checks: 12 updater tests, 17 frontend HID/map tests (1,068
 assertions), QMK/Vite builds, and sanitizer-enabled production storage/group
 tests passed. These cover 10,000 saves, 256 corruptions, 4,610 power-cut cases,
 16,896 per-key levels, debounce and sequence/timer wrap. Host QMK/rear adapters
-are stubs, so live hardware/camera verification is still required. The full
+are stubs; the separate live/camera checks above supply physical evidence. The full
 frontend TypeScript check retains 11 unrelated legacy errors.
 
 ### Historical references
