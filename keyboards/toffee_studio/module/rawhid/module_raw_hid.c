@@ -11,6 +11,7 @@
 #include "display/wpm_indicator.h"
 #include "animations/manager.h"
 #include "lighting/lighting.h"
+#include "lighting/groups.h"
 #include "lvgl.h"
 #include "persistence.h"
 #include "bootloader.h"
@@ -1043,6 +1044,7 @@ static int parse_set_led_brightness(uint8_t *data, uint8_t length) {
     }
     uint8_t led_index  = data[6];
     uint8_t brightness = data[7];
+    if (!lighting_is_front_led(led_index)) return module_ret_invalid_command;
     uprintf("RAW HID: Setting front LED %u brightness to %u\n", led_index, brightness);
     keylight_set_brightness(led_index, brightness);
     return module_ret_success;
@@ -1165,6 +1167,15 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
     // Manually parse header
     uint8_t magic_number = data[0];
     uint8_t command_id = data[1];
+#ifdef MODULE_LED_DISCOVERY
+    if (length != RAW_EPSIZE) return module_ret_invalid_command;
+    // Correlation trailer is separate from existing state payloads.
+    uint8_t packet_id[4];
+    memcpy(packet_id, data + 2, sizeof(packet_id));
+    data[26] = 0xA5;
+    data[27] = command_id;
+    memcpy(data + 28, packet_id, sizeof(packet_id));
+#endif
     //    uint32_t packet_id = *(uint32_t *)(data + 2);
 
     uprintf("Buffer contents: ");
@@ -1187,6 +1198,10 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
         command_id != id_lighting_set_animation && command_id != id_lighting_set_speed &&
         command_id != id_lighting_set_brightness && command_id != id_lighting_set_color_hs &&
         command_id != id_lighting_get_state && command_id != id_lighting_save &&
+        command_id != id_lighting_set_led_brightness &&
+        command_id != id_lighting_front_get && command_id != id_lighting_front_set &&
+        command_id != id_lighting_badge_get && command_id != id_lighting_badge_set &&
+        command_id != id_lighting_led_get && command_id != id_lighting_capabilities &&
         command_id != id_system_bootloader) {
         return_buf[0] = module_ret_invalid_command;
         return module_ret_invalid_command;
@@ -1194,6 +1209,44 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
 #endif
 
     switch (command_id) {
+        case id_lighting_front_get:
+            memcpy(data + 1, &module_lighting_state.front, sizeof(front_config_t));
+            err = module_ret_success;
+            break;
+        case id_lighting_front_set: {
+            front_config_t config;
+            memcpy(&config, data + 6, sizeof(config));
+            err = lighting_set_front(&config) ? module_ret_success : module_ret_invalid_command;
+            break;
+        }
+        case id_lighting_badge_get:
+            memcpy(data + 1, &module_lighting_state.badge, sizeof(badge_config_t));
+            err = module_ret_success;
+            break;
+        case id_lighting_badge_set: {
+            badge_config_t config;
+            memcpy(&config, data + 6, sizeof(config));
+            err = lighting_set_badge(&config) ? module_ret_success : module_ret_invalid_command;
+            break;
+        }
+        case id_lighting_led_get:
+            if (!lighting_is_front_led(data[6])) {
+                err = module_ret_invalid_command;
+                break;
+            }
+            data[1] = data[6];
+            data[2] = lighting_get_led_brightness(data[6]);
+            err = module_ret_success;
+            break;
+        case id_lighting_capabilities:
+            data[1] = 2; // Versioned lighting protocol with correlated replies.
+            data[2] = 66;
+            data[3] = 22;
+            data[4] = 16;
+            data[5] = MODULE_MAPPED_LED_COUNT;
+            data[6] = MODULE_FRONT_EFFECT_COUNT;
+            err = module_ret_success;
+            break;
         case id_module_cmd_ls:
             err = parse_ls(data, length);
             break;

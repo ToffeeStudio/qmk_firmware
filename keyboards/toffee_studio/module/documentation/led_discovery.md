@@ -127,13 +127,18 @@ USB disconnects immediately; no HID acknowledgement is expected. The
 bootloader then exposes the `RPI-RP2` UF2 disk.
 
 Build with the normal command above. Leave the UF2 in the QMK root. Close the
-configurator and connect exactly one Module, with other UF2 boards disconnected.
+configurator and identify the intended Module by physical USB location. The
+updater now requires `--usb-location`; it can distinguish two application-mode
+Modules, but requires exactly one RP2 bootloader before copying. Never choose
+the first matching Module. The examples below retain the older verified unit
+serial; measure the current target's bootloader serial before using them.
 The normal flashing operation is simply copying the `.uf2` onto the bootloader
 drive, just like Finder drag-and-drop. Run this read-only preflight first:
 
 ```sh
 /Users/ethanhan/.pyenv/shims/python3 keyboards/toffee_studio/module/tools/flash_module.py toffee_studio_module_via.uf2 \
   --boot-drive /Volumes/RPI-RP2 --bootloader-serial E0C9125B0D9B \
+  --usb-location 0x01142000 \
   --recovery-dir /Users/ethanhan/Desktop/projects/toffee/ARCHIVE/firmware-recovery \
   --start-mode application --check
 ```
@@ -143,6 +148,7 @@ To perform the update, omit `--check`:
 ```sh
 /Users/ethanhan/.pyenv/shims/python3 keyboards/toffee_studio/module/tools/flash_module.py toffee_studio_module_via.uf2 \
   --boot-drive /Volumes/RPI-RP2 --bootloader-serial E0C9125B0D9B \
+  --usb-location 0x01142000 \
   --recovery-dir /Users/ethanhan/Desktop/projects/toffee/ARCHIVE/firmware-recovery \
   --start-mode application
 ```

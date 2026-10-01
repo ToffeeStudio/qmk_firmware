@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import plistlib
 from pathlib import Path
 import struct
 import subprocess
@@ -24,6 +25,7 @@ class FlashTests(unittest.TestCase):
         struct.pack_into("<I", block, 508, 0x0AB16F30)
         self.firmware.write_bytes(block)
         self.drive = Path("/Volumes/RPI-RP2")
+        self.location = 0x01142000
         self.settings = {"layers": 1, "keymap": bytes(144).hex(),
                          "macros": "0000", "layout": "00000000"}
 
@@ -56,15 +58,20 @@ class FlashTests(unittest.TestCase):
         child.stdout.close.assert_called_once()
         kill.assert_called_once()
 
+    @patch.object(flash.subprocess, "check_output")
     @patch.object(flash.usb.core, "find")
-    def test_bootloader_requires_unique_expected_serial(self, find):
+    def test_bootloader_requires_unique_expected_serial_and_connection(self, find, registry):
+        registry.return_value = plistlib.dumps({"IORegistryEntryChildren": [
+            {"idVendor": 0x2E8A, "idProduct": 3, "locationID": self.location}]})
         device = Mock(serial_number="EXPECTED")
         for devices in ([], [Mock(serial_number="WRONG")], [device, device]):
             find.return_value = devices
             with self.assertRaises(ValueError):
-                flash.bootloader("EXPECTED")
+                flash.bootloader("EXPECTED", self.location)
         find.return_value = [device]
-        self.assertIs(flash.bootloader("EXPECTED"), device)
+        self.assertIs(flash.bootloader("EXPECTED", self.location), device)
+        with self.assertRaisesRegex(ValueError, "wrong physical"):
+            flash.bootloader("EXPECTED", 0x02140000)
 
     @patch.object(flash.time, "sleep")
     @patch.object(flash, "run_bounded")
@@ -83,26 +90,26 @@ class FlashTests(unittest.TestCase):
     @patch.object(flash, "bootloader")
     def test_only_read_timeout_resets_selected_device_once(self, boot, inspect, dispose, sleep):
         inspect.side_effect = [TimeoutError("stalled"), None]
-        self.assertTrue(flash.prepare_drive(self.drive, "EXPECTED"))
+        self.assertTrue(flash.prepare_drive(self.drive, "EXPECTED", self.location))
         boot.return_value.reset.assert_called_once()
-        self.assertTrue(all(call.args == ("EXPECTED",) for call in boot.call_args_list))
+        self.assertTrue(all(call.args == ("EXPECTED", self.location) for call in boot.call_args_list))
         boot.return_value.reset.reset_mock()
         inspect.side_effect = ValueError("wrong board")
         with self.assertRaises(ValueError):
-            flash.prepare_drive(self.drive, "EXPECTED")
+            flash.prepare_drive(self.drive, "EXPECTED", self.location)
         boot.return_value.reset.assert_not_called()
         inspect.side_effect = [TimeoutError("first"), TimeoutError("again")]
         with self.assertRaises(TimeoutError):
-            flash.prepare_drive(self.drive, "EXPECTED")
+            flash.prepare_drive(self.drive, "EXPECTED", self.location)
         boot.return_value.reset.assert_called_once()
 
     @patch.object(flash.time, "sleep")
     @patch.object(flash.time, "monotonic", side_effect=[0, 0, 21])
-    @patch.object(flash.hid, "enumerate")
+    @patch.object(flash, "target_interfaces")
     def test_raw_hid_without_keyboard_is_not_success(self, enumerate_hid, monotonic, sleep):
         enumerate_hid.return_value = [{"usage_page": flash.RAW_USAGE_PAGE, "usage": flash.RAW_USAGE}]
         with self.assertRaisesRegex(ValueError, "both Module"):
-            flash.wait_for_module()
+            flash.wait_for_module(self.location)
 
     @patch.object(flash.time, "sleep")
     @patch.object(flash.usb.core, "find", return_value=[])
@@ -121,14 +128,14 @@ class FlashTests(unittest.TestCase):
 
     @patch.object(flash.sys, "platform", "darwin")
     @patch.object(flash.usb.core, "find", return_value=[])
-    @patch.object(flash, "find_module", return_value={"path": b"module"})
+    @patch.object(flash, "find_target", return_value={"path": b"module"})
     @patch.object(flash.hid, "Device")
     @patch.object(flash, "read_settings")
     @patch.object(flash, "run_bounded")
     def test_check_never_reboots_copies_or_archives(self, run, read, device, find_module, find_usb):
         read.return_value = self.settings
         recovery = self.root / "recovery"
-        flash.flash_module(self.firmware, self.drive, "EXPECTED", recovery, "application", None, True)
+        flash.flash_module(self.firmware, self.drive, "EXPECTED", self.location, recovery, "application", None, True)
         self.assertFalse(recovery.exists())
         device.return_value.__enter__.return_value.write.assert_not_called()
         run.assert_not_called()
@@ -145,13 +152,16 @@ class FlashTests(unittest.TestCase):
         snapshot = self.root / "settings.json"
         snapshot.write_text(json.dumps(self.settings))
         recovery = self.root / "recovery"
-        flash.flash_module(self.firmware, self.drive, "EXPECTED", recovery, "bootloader", snapshot, False)
+        flash.flash_module(self.firmware, self.drive, "EXPECTED", self.location, recovery, "bootloader", snapshot, False)
         archive = next(recovery.glob("*/*.uf2"))
         self.assertEqual(archive.read_bytes(), self.firmware.read_bytes())
         self.assertEqual(archive.stat().st_mode & 0o777, 0o444)
         run.assert_called_once_with(["/bin/cp", "-X", str(archive), "/Volumes/RPI-RP2/MODULE.UF2"], 30)
         report = json.loads(next(recovery.glob("*/flash-report.json")).read_text())
         self.assertEqual(report["stage"], "usb_verified")
+        self.assertEqual(report["usb_location"], "0x01142000")
+        prepare.assert_called_once_with(self.drive, "EXPECTED", self.location)
+        wait.assert_called_once_with(self.location)
         self.assertEqual(report["human_typing_and_lighting_confirmation"], "pending")
         restore.assert_called_once()
         verify.assert_called_once()
@@ -163,7 +173,7 @@ class FlashTests(unittest.TestCase):
         restore.reset_mock()
         run.side_effect = TimeoutError("copy stalled")
         with self.assertRaisesRegex(TimeoutError, "copy stalled"):
-            flash.flash_module(self.firmware, self.drive, "EXPECTED", recovery, "bootloader", snapshot, False)
+            flash.flash_module(self.firmware, self.drive, "EXPECTED", self.location, recovery, "bootloader", snapshot, False)
         run.assert_called_once()
         verify.assert_not_called()
         restore.assert_not_called()
@@ -172,6 +182,32 @@ class FlashTests(unittest.TestCase):
         self.assertEqual(failed_report["stage"], "copying_uf2")
         self.assertEqual(failed_report["error"], "copy stalled")
         self.assertEqual(next(failed_run.glob("*.uf2")).read_bytes(), self.firmware.read_bytes())
+
+    @patch.object(flash, "registry_locations")
+    @patch.object(flash.hid, "enumerate")
+    def test_two_boards_are_selected_only_by_explicit_connection(self, enumerate_hid, locations):
+        a = {"path": b"A", "usage_page": flash.RAW_USAGE_PAGE, "usage": flash.RAW_USAGE}
+        b = {"path": b"B", "usage_page": flash.RAW_USAGE_PAGE, "usage": flash.RAW_USAGE}
+        keyboard = {"path": b"BK", "usage_page": 1, "usage": 6}
+        enumerate_hid.return_value = [a, keyboard, b]
+        locations.return_value = {b"A": 0x02140000, b"B": self.location, b"BK": self.location}
+        self.assertIs(flash.find_target(self.location), b)
+        self.assertIs(flash.wait_for_module(self.location), b)
+        with self.assertRaisesRegex(ValueError, "exactly one"):
+            flash.find_target(0x12345678)
+        locations.return_value[b"A"] = self.location
+        with self.assertRaisesRegex(ValueError, "exactly one"):
+            flash.find_target(self.location)
+
+    @patch.object(flash.subprocess, "check_output")
+    def test_registry_map_normalises_only_at_the_system_boundary(self, registry):
+        tree = {"IORegistryEntryChildren": [
+            {"VendorID": flash.VID, "ProductID": flash.PID,
+             "IORegistryEntryID": 123, "LocationID": self.location},
+            {"VendorID": 1, "ProductID": 2, "IORegistryEntryID": 789, "LocationID": 7}]}
+        for root in (tree, [tree]):
+            registry.return_value = plistlib.dumps(root)
+            self.assertEqual(flash.registry_locations(), {b"DevSrvsID:123": self.location})
 
 
 if __name__ == "__main__":

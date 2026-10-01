@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import os
+import plistlib
 from pathlib import Path
 import signal
 import struct
@@ -18,7 +19,7 @@ import hid
 import usb.core
 import usb.util
 
-from led_discovery import find_module, PACKET_SIZE, PID, RAW_USAGE, RAW_USAGE_PAGE, VID
+from led_discovery import PACKET_SIZE, PID, RAW_USAGE, RAW_USAGE_PAGE, VID
 
 BOOT_COMMAND = 0x79
 
@@ -59,10 +60,47 @@ def run_bounded(command, timeout):
     return output
 
 
-def bootloader(serial):
+def registry_locations():
+    registry = plistlib.loads(subprocess.check_output(
+        ["/usr/sbin/ioreg", "-r", "-c", "IOHIDDevice", "-a", "-l"], timeout=5))
+    roots = registry if type(registry) is list else [registry]
+    locations = {}
+    def visit(node):
+        if node.get("VendorID") == VID and node.get("ProductID") == PID:
+            locations[("DevSrvsID:" + str(node["IORegistryEntryID"])).encode()] = node["LocationID"]
+        for child in node.get("IORegistryEntryChildren", []):
+            visit(child)
+    for root in roots:
+        visit(root)
+    return locations
+
+
+def target_interfaces(location):
+    locations = registry_locations()
+    return [info for info in hid.enumerate(VID, PID) if locations.get(info["path"]) == location]
+
+
+def find_target(location):
+    raw = [info for info in target_interfaces(location)
+           if info["usage_page"] == RAW_USAGE_PAGE and info["usage"] == RAW_USAGE]
+    if len(raw) != 1:
+        raise ValueError(f"Require exactly one Module raw HID interface at USB location 0x{location:08x}.")
+    return raw[0]
+
+
+def bootloader(serial, location):
     devices = list(usb.core.find(find_all=True, idVendor=0x2E8A, idProduct=0x0003))
     if len(devices) != 1 or devices[0].serial_number != serial:
         raise ValueError(f"Require exactly one RP2 bootloader, serial {serial}.")
+    registry = plistlib.loads(subprocess.check_output(["/usr/sbin/ioreg", "-p", "IOUSB", "-a", "-l"], timeout=5))
+    found = []
+    def visit(node):
+        if node.get("idVendor") == 0x2E8A and node.get("idProduct") == 3:
+            found.append(node)
+        for child in node.get("IORegistryEntryChildren", []): visit(child)
+    visit(registry)
+    if len(found) != 1 or found[0]["locationID"] != location:
+        raise ValueError("RP2 bootloader appeared at the wrong physical USB connection.")
     return devices[0]
 
 
@@ -80,18 +118,18 @@ def inspect_drive(drive):
         raise ValueError("The selected drive is not an RP2040 RPI-RP2 bootloader.")
 
 
-def prepare_drive(drive, serial):
-    bootloader(serial)
+def prepare_drive(drive, serial, location):
+    bootloader(serial, location)
     try:
         inspect_drive(drive)
         return False
     except TimeoutError:
         print("Drive read stalled; resetting this bootloader's USB connection before copying.", flush=True)
-        device = bootloader(serial)
+        device = bootloader(serial, location)
         device.reset()
         usb.util.dispose_resources(device)
         time.sleep(1)
-        bootloader(serial)
+        bootloader(serial, location)
         inspect_drive(drive)
         return True
 
@@ -144,10 +182,10 @@ def restore_settings(device, saved):
         raise ValueError("Keymap/macro/layout readback did not match the saved settings.")
 
 
-def wait_for_module():
+def wait_for_module(location):
     deadline = time.monotonic() + 20
     while time.monotonic() < deadline:
-        interfaces = hid.enumerate(VID, PID)
+        interfaces = target_interfaces(location)
         raw = [d for d in interfaces if d["usage_page"] == RAW_USAGE_PAGE and d["usage"] == RAW_USAGE]
         keyboard = [d for d in interfaces if d["usage_page"] == 1 and d["usage"] == 6]
         if len(raw) > 1:
@@ -178,7 +216,7 @@ def verify_stability(device):
             time.sleep(1)
 
 
-def flash_module(firmware, drive, serial, recovery_dir, start_mode, settings_backup, check):
+def flash_module(firmware, drive, serial, location, recovery_dir, start_mode, settings_backup, check):
     if sys.platform != "darwin" or drive.parent != Path("/Volumes"):
         raise ValueError("Provide the macOS bootloader drive directly beneath /Volumes.")
     digest = validate_uf2(firmware)
@@ -193,11 +231,11 @@ def flash_module(firmware, drive, serial, recovery_dir, start_mode, settings_bac
         if len(bytes.fromhex(saved["keymap"])) != saved["layers"] * 9 * 8 * 2 or len(bytes.fromhex(saved["layout"])) != 4:
             raise ValueError("Settings backup has invalid keymap/layout lengths.")
         bytes.fromhex(saved["macros"])
-        bootloader(serial)
+        bootloader(serial, location)
     else:
         if list(usb.core.find(find_all=True, idVendor=0x2E8A, idProduct=0x0003)):
             raise ValueError("Board is in bootloader mode; use explicit bootloader recovery mode.")
-        device_info = find_module()
+        device_info = find_target(location)
         with hid.Device(path=device_info["path"]) as device:
             saved = read_settings(device)
     if check:
@@ -221,7 +259,7 @@ def flash_module(firmware, drive, serial, recovery_dir, start_mode, settings_bac
     with os.fdopen(os.open(snapshot, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as output:
         output.write(json.dumps(saved, indent=2) + "\n")
     report = {"firmware": str(archive), "sha256": digest, "drive": str(drive),
-              "bootloader_serial": serial, "stage": "archived", "usb_reset_before_copy": False,
+              "bootloader_serial": serial, "usb_location": f"0x{location:08x}", "stage": "archived", "usb_reset_before_copy": False,
               "human_typing_and_lighting_confirmation": "pending"}
     print(f"Preserved firmware and settings in {run_dir}", flush=True)
     try:
@@ -239,13 +277,13 @@ def flash_module(firmware, drive, serial, recovery_dir, start_mode, settings_bac
             # macOS needs time to mount the newly enumerated mass-storage interface.
             time.sleep(2)
         report["stage"] = "checking_drive"
-        report["usb_reset_before_copy"] = prepare_drive(drive, serial)
-        bootloader(serial)
+        report["usb_reset_before_copy"] = prepare_drive(drive, serial, location)
+        bootloader(serial, location)
         report["stage"] = "copying_uf2"
         print(f"Copying {archive.name} to {drive / 'MODULE.UF2'}", flush=True)
         run_bounded(["/bin/cp", "-X", str(archive), str(drive / "MODULE.UF2")], 30)
         report["stage"] = "checking_keyboard"
-        device_info = wait_for_module()
+        device_info = wait_for_module(location)
         with hid.Device(path=device_info["path"]) as device:
             restore_settings(device, saved)
             verify_stability(device)
@@ -265,12 +303,13 @@ def main():
     parser.add_argument("firmware", type=Path, help="The compiled Module UF2 to deploy.")
     parser.add_argument("--boot-drive", required=True, type=Path, help="Exact mounted RP2 drive, e.g. /Volumes/RPI-RP2.")
     parser.add_argument("--bootloader-serial", required=True, help="Expected RP2 USB serial number.")
+    parser.add_argument("--usb-location", required=True, type=lambda value: int(value, 0), help="Exact physical USB location ID, e.g. 0x01142000.")
     parser.add_argument("--recovery-dir", required=True, type=Path, help="Persistent directory for immutable image copies and run reports.")
     parser.add_argument("--start-mode", required=True, choices=("application", "bootloader"))
     parser.add_argument("--settings-backup", type=Path, help="Required in bootloader mode: previously captured Module settings JSON.")
     parser.add_argument("--check", action="store_true", help="Validate the image and USB access without rebooting or flashing.")
     args = parser.parse_args()
-    flash_module(args.firmware.resolve(), args.boot_drive, args.bootloader_serial,
+    flash_module(args.firmware.resolve(), args.boot_drive, args.bootloader_serial, args.usb_location,
                  args.recovery_dir.resolve(), args.start_mode, args.settings_backup, args.check)
 
 

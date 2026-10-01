@@ -4,6 +4,8 @@
 #include "animations/manager.h"
 #include "lighting.h"
 #include "persistence.h"
+#include "groups.h"
+#include "screenless-map.h"
 #include <lib/lib8tion/lib8tion.h>   // for scale8()
 
 // The driver's working color buffer, holding the colors the active effect
@@ -234,6 +236,12 @@ static void generate_matrix_to_led_map(void) {
 }
 
 void keylight_set_brightness(uint16_t led_index, uint8_t brightness) {
+#ifdef MODULE_LED_DISCOVERY
+    module_lighting_state.overrides[led_index] = brightness;
+    lighting_groups_schedule_save();
+    lighting_enable_underglow();
+    return;
+#endif
     if (led_index >= RGB_MATRIX_LED_COUNT) {
         return;
     }
@@ -244,14 +252,19 @@ void keylight_set_brightness(uint16_t led_index, uint8_t brightness) {
 // rgb_matrix indicators callback, after the active effect has rendered.
 static void keylight_apply_overrides(void) {
     for (uint16_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
-        if (g_keylight_brightness[i] == 255) {
+        uint8_t brightness = g_keylight_brightness[i];
+#ifdef MODULE_LED_DISCOVERY
+        if (!lighting_is_front_led(i)) continue;
+        brightness = module_lighting_state.overrides[i];
+#endif
+        if (brightness == 255) {
             continue; // full brightness, leave the effect's color untouched
         }
         rgb_led_t c = rgb_matrix_ws2812_array[i];
         rgb_matrix_set_color(i,
-            scale8(c.r, g_keylight_brightness[i]),
-            scale8(c.g, g_keylight_brightness[i]),
-            scale8(c.b, g_keylight_brightness[i]));
+            scale8(c.r, brightness),
+            scale8(c.g, brightness),
+            scale8(c.b, brightness));
     }
 }
 
@@ -267,6 +280,16 @@ void lighting_init(void) {
     discovery_startup_check = false;
     memset(g_led_config.flags, 0, sizeof(g_led_config.flags));
     memset(g_led_config.point, 0, sizeof(g_led_config.point));
+    memset(g_led_config.matrix_co, NO_LED, sizeof(g_led_config.matrix_co));
+    for (uint8_t i = 0; i < ARRAY_SIZE(module_front_leds); i++) {
+        uint8_t index = module_front_leds[i].index;
+        g_led_config.flags[index] = LED_FLAG_KEYLIGHT;
+        g_led_config.point[index] = (led_point_t){module_front_leds[i].x, module_front_leds[i].y};
+    }
+    for (uint8_t i = 0; i < ARRAY_SIZE(module_badge_leds); i++)
+        g_led_config.flags[module_badge_leds[i]] = LED_FLAG_INDICATOR;
+    for (uint8_t i = 0; i < ARRAY_SIZE(module_key_map); i++)
+        g_led_config.matrix_co[module_key_map[i].row][module_key_map[i].col] = module_key_map[i].index;
     for (uint8_t i = 0; i < ARRAY_SIZE(discovery_back_leds); i++) {
         uint8_t index = discovery_back_leds[i].index;
         g_led_config.flags[index] = LED_FLAG_UNDERGLOW;
@@ -275,6 +298,7 @@ void lighting_init(void) {
     underglow_manager_init();
     underglow_manager_set_brightness(MODULE_LED_DISCOVERY_BRIGHTNESS);
     load_underglow_config();
+    lighting_groups_init();
     lighting_enable_underglow();
     uprintf("Screenless lighting: %u verified rear LEDs ready\n", (unsigned)ARRAY_SIZE(discovery_back_leds));
     return;
@@ -295,10 +319,12 @@ void lighting_enable_underglow(void) {
 
 void lighting_task(void) {
     underglow_persistence_task();
+    lighting_groups_persistence_task();
 #ifdef MODULE_LED_DISCOVERY
     if (discovery_underglow_active) {
-        rgb_matrix_set_color_all(0, 0, 0);
+        lighting_groups_task();
         underglow_manager_task();
+        keylight_apply_overrides();
     } else {
         lighting_discovery_task();
     }

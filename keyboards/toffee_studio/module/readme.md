@@ -8,14 +8,15 @@ handover, not a live device-status feed. Read the repository's
 
 The current target is the **screenless RP2040 Module PCB**. The local firmware
 is on `screenless-pcb`; the paired [board configurator](../../../../board-configurator/README.md)
-is on `lighting-fix`. The latest work is local and uncommitted, including
-untracked documentation/tools/tests; a fresh clone does not contain it yet.
+is on `lighting-fix`. Starting firmware is preserved in checkpoint `471710689a`.
+New screenless front/badge/per-key integration has passed host tests and the QMK
+build; hardware deployment and camera/browser verification are next. No push.
 
 | Area | Latest recorded status |
 | --- | --- |
 | Rear underglow | Ten effects plus speed, brightness and colour control implemented for the 22 verified rear LEDs. Changes auto-save after one second without another adjustment; startup restores that record. |
-| Front and badge | Off during normal underglow operation. Diagnostic presets remain available. Production front/per-key/badge controls have not been integrated for this screenless map. |
-| Configurator | Underglow reports disconnects, firmware rejection and timeouts, with Retry instead of indefinite loading. HID commands are queued within each Toffee HID wrapper. |
+| Front and badge | New source supports Off plus eight front effects, saved per-key dimming for all 66 regular front LEDs, and a separate 16-LED badge with on/off, brightness and solid colour. Badge effects are deferred. Hardware verification pending. |
+| Configurator | Four menus: Underglow, Front Lighting, Per-Key LED, Badge. Protocol-v2 capabilities and matched replies are required; failures offer Retry. All wrappers share a device queue, and VIA ignores tagged custom replies. |
 | Latest flash | The unchanged underglow candidate was copied to the identified RP2 drive on 30 September. Keyboard and raw HID returned; 15-second uptime check and keymap/macro/layout comparison passed. A later read still responded at approximately 89 seconds uptime. |
 | Physical verification | **Pending for that latest underglow flash:** typing, visible rear lighting, browser control and unplug/replug persistence. USB checks alone do not prove these. |
 | Recovery | The pre-change image was restored earlier, and Ethan explicitly confirmed both lights and typing. That confirmation applies to the recovery image, not the subsequent underglow candidate. Both images remain preserved outside the build directory. |
@@ -58,7 +59,9 @@ The bootloader accepts an ordinary **`.uf2` file copy** onto `RPI-RP2`, includin
 Finder drag-and-drop. A custom USB programmer is not required. The local updater
 automates bootloader entry, validated copying and post-copy USB checks. Follow
 the [current flashing and recovery instructions](documentation/led_discovery.md#automatic-usb-firmware-updates);
-close the configurator and connect only the intended Module before flashing.
+close the configurator and select the intended Module's explicit USB location
+and measured bootloader serial before flashing. Module B (`0x01142000`) is the
+only authorised target in the current two-board session.
 Do not flash merely to refresh documentation or inspect status.
 
 For browser development, see the [configurator README](../../../../board-configurator/README.md).
@@ -73,8 +76,9 @@ not guarantee that a server is still running in a later session.
    both the saved lighting and typing return. Record this separately from a
    software reboot/reflash test.
 4. Keep the earlier outage unresolved unless further evidence identifies its cause.
-5. Front/per-key/badge integration, removal of legacy display code, unrelated
-   TypeScript errors and shopfront work remain separate tasks.
+5. Camera/browser/live testing of front/per-key/badge integration is in progress
+   in the [active session log](../../../../AUTORESEARCH/01-09-2026%20Light%20testing/README.md).
+   Legacy display removal, unrelated TypeScript errors and shopfront work remain separate.
 
 ## Appendix — board identity and implementation
 
@@ -99,10 +103,11 @@ equals-key LED; older notes describing it as unresolved are superseded.
 Implementation entry points:
 
 - [module.c](module.c): startup and custom VIA dispatch entry point.
-- [rawhid/module_raw_hid.c](rawhid/module_raw_hid.c) and [header](rawhid/module_raw_hid.h): command parsing/status. Screenless underglow supports `0x71`, `0x72`, `0x74`, `0x75`, `0x76`, `0x7A`; bootloader command is `0x79`; diagnostics are `0x7C`–`0x7F`. Display/filesystem and per-key brightness `0x7B` are rejected in this mode.
+- [rawhid/module_raw_hid.c](rawhid/module_raw_hid.c) and [header](rawhid/module_raw_hid.h): command parsing/status. Rear: `0x71`, `0x72`, `0x74`, `0x75`, `0x76`, `0x7A`; per-key set/get: `0x7B`/`0x84`; front get/set: `0x80`/`0x81`; badge get/set: `0x82`/`0x83`; capabilities: `0x85` → `[2,66,22,16,104,9]`. Screenless replies carry `A5`, command, little-endian packet ID in bytes 26–31. Bootloader is `0x79`; diagnostics `0x7C`–`0x7F`. Display/filesystem remain rejected.
 - [animations/manager.c](animations/manager.c): effect IDs 0–9 and common brightness scaling. Five effects were corrected to avoid applying brightness twice.
 - [persistence.c](persistence.c): one-second firmware-side debounce; versioned eight-byte EEPROM record in unused keyboard/user slots 15–22, without moving VIA keymaps/macros. Unchanged records are not rewritten. The old littlefs lighting file is not migrated.
-- [lighting/lighting.c](lighting/lighting.c): saved-state startup and rear-only rendering. With no valid record, starts Solid with speed 100, brightness 18, hue 170, saturation 255. Diagnostic presets temporarily override rendering; an underglow setter or restart resumes normal lighting.
+- [lighting/lighting.c](lighting/lighting.c), [groups.c](lighting/groups.c), [screenless map](lighting/screenless-map.json): separate front/badge/rear rendering. Unmapped slots are black. No valid record: front solid white at brightness 18/speed 100, badge white at brightness 18, rear solid blue at brightness 18/speed 100. Diagnostic presets temporarily override rendering; a group/lighting setter or restart resumes normal lighting.
+- [lighting/storage.c](lighting/storage.c): front/badge/per-key persistence in two 4KB sectors at `0xFF0000`–`0xFF1FFF`; 256-byte CRC32 records append across sector rollover. A prior valid record is retained while the other sector is erased. Existing VIA EEPROM offsets and macro capacity are unchanged. The 16MB flash requirement is compile-time checked.
 - [tools/flash_module.py](tools/flash_module.py): explicit volume/serial, immutable candidate archive, private VIA snapshot, bounded copy, and verification. The snapshot covers keymaps/macros/layout, not a full flash or lighting-state backup. One targeted USB reset is allowed on a pre-copy read timeout; a copy failure is not blindly retried.
 
 ### Preserved artifacts and latest evidence
@@ -117,7 +122,7 @@ inside historical flash reports describe the location at the time of the run.
 - **Latest underglow candidate:** [archived UF2](../../../../ARCHIVE/firmware-recovery/20260930T133548Z-f7170b48/7e3574d7a6fc0bbc3a3e070b6e7a51db9d66f675f1571859a213a6229d86961e.uf2), 168448 bytes. SHA256 `7e3574d7a6fc0bbc3a3e070b6e7a51db9d66f675f1571859a213a6229d86961e`.
 - **Latest run:** [flash-report.json](../../../../ARCHIVE/firmware-recovery/20260930T133548Z-f7170b48/flash-report.json), `stage: usb_verified`, no USB reset needed on that retry, human confirmation pending. GET underglow returned `[0, 100, 18, 170, 255]` afterward.
 
-Recorded checks from the underglow work, not a new hardware test on this documentation date:
+Earlier underglow checks (historical; not proof of the new firmware):
 
 - Normal QMK build passed with existing warnings.
 - Ten updater unit tests passed, including bad UF2/serial rejection, bounded timeout handling, missing keyboard interface, reboot detection and no automatic copy retry.
@@ -128,7 +133,15 @@ Host-only updater regression command, from the firmware root (does not flash):
 
 ```sh
 /Users/ethanhan/.pyenv/shims/python3 -m unittest discover -s keyboards/toffee_studio/module/tools -p test_flash_module.py -v
+sh keyboards/toffee_studio/module/tools/test_lighting_host.sh
 ```
+
+New checkpoint checks: 12 updater tests, 16 frontend HID/map tests (1,064
+assertions), QMK/Vite builds, and sanitizer-enabled production storage/group
+tests passed. These cover 10,000 saves, 256 corruptions, 4,610 power-cut cases,
+16,896 per-key levels, debounce and sequence/timer wrap. Host QMK/rear adapters
+are stubs, so live hardware/camera verification is still required. The full
+frontend TypeScript check retains 11 unrelated legacy errors.
 
 ### Historical references
 

@@ -39,6 +39,12 @@ enum module_command_id {
     id_lighting_discovery_front    = 0x7D,
     id_lighting_discovery_all      = 0x7E,
     id_lighting_discovery_back     = 0x7F,
+    id_lighting_front_get          = 0x80,
+    id_lighting_front_set          = 0x81,
+    id_lighting_badge_get          = 0x82,
+    id_lighting_badge_set          = 0x83,
+    id_lighting_led_get            = 0x84,
+    id_lighting_capabilities       = 0x85,
     id_module_cmd_end               = 0xFF,
 };
 
