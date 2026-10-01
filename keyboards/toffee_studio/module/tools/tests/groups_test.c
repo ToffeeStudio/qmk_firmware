@@ -49,6 +49,7 @@ static void qmk_render(void) {
     }
     lighting_task();
 }
+#include "parser_test.c"
 int main(void) {
     lighting_init();
     unsigned front = 0, badge = 0, rear = 0;
@@ -104,4 +105,5 @@ int main(void) {
     now = 498; lighting_groups_persistence_task(); assert(saves == 1);
     now = 499; lighting_groups_persistence_task(); assert(saves == 2);
     puts("Groups PASS: 104-package map, 9 front modes, independent badge/rear, 16,896 per-key levels, debounce/reboot/timer wrap.");
+    test_parser();
 }

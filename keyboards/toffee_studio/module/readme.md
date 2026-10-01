@@ -72,6 +72,24 @@ not guarantee that a server is still running in a later session.
 
 ## Next verification and remaining work
 
+**2 October extensive-plan checkpoint:** see the
+[new execution log](../../../../AUTORESEARCH/02-09-2026%20Extensive%20Test%20Plan/README.md).
+Offline production lighting handlers/dispatcher and diagnostic renderer pass
+4,312 sanitizer-tested parser attempts; storage/group tests, 12 updater tests,
+17 configurator tests and normal `qmk compile -kb toffee_studio/module -km via`
+also pass. Fresh read-only checks preserve both boards' settings, and paired
+camera setup captures work. No powered test patterns or flashes have run in this
+new campaign: it is paused for the plan's unplugged safety/support confirmation.
+Temporary test firmware is approved in principle, but proposed startup-off,
+18-per-channel cap and five-second controller-loss timeout are not yet confirmed,
+implemented or deployed. Normal saved-startup behaviour remains unchanged.
+The new root UF2 hash is
+`bfda11cfff92e811b56daded8e9713afa16e62e5cfbe66f147ee7482204a0a02`,
+173,056 bytes, preserved with private snapshots in
+`ARCHIVE/firmware-recovery/20261002-pre-extensive-S71MzY/`; it is not an
+installed-image attestation. The previously deployed and pre-change images
+remain preserved. Full frontend TypeScript still has the 11 pre-existing errors.
+
 1. Obtain human unplug/replug and typing confirmation on exposed Module B;
    a bare PCB without switches may not allow a typing test. Keep software
    reboot/reflash evidence separate from actual power removal.
