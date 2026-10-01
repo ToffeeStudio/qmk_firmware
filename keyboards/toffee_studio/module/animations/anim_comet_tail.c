@@ -30,7 +30,7 @@ static HSV comet_tail_task(animation_params_t* params) {
         // Apply a curve to the fade to make it look more like a tail
         brightness_factor = ease8InOutCubic(brightness_factor);
 
-        hsv.v = scale8(params->config->brightness, brightness_factor);
+        hsv.v = scale8(params->config->color.v, brightness_factor);
         return hsv;
     }
 

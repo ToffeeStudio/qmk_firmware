@@ -15,6 +15,7 @@ typedef enum {
 } underglow_animation_ids;
 
 extern animation_config_t g_underglow_config;
+extern const uint8_t UNDERGLOW_ANIMATION_COUNT;
 
 void underglow_manager_init(void);
 void underglow_manager_task(void);

@@ -138,6 +138,7 @@ bool rgb_matrix_indicators_user(void) {
     return false; // Return false to prevent QMK from running its own animations.
 }
 
+#ifndef MODULE_LED_DISCOVERY
 typedef enum {
     SCREEN_RECOVERY_IDLE = 0,
     SCREEN_RECOVERY_WAKE_RETRY,
@@ -147,8 +148,10 @@ typedef enum {
 
 static uint32_t screen_recovery_timer = 0;
 static screen_recovery_phase_t screen_recovery_phase = SCREEN_RECOVERY_IDLE;
+#endif
 
 void matrix_scan_user(void) {
+#ifndef MODULE_LED_DISCOVERY
     static uint32_t wpm_timer = 0;
     if (timer_elapsed32(wpm_timer) > 25) {
         wpm_timer = timer_read32();
@@ -165,9 +168,17 @@ void matrix_scan_user(void) {
         ui_reinit_display();
         screen_recovery_phase = SCREEN_RECOVERY_DONE;
     }
+#endif
 }
 
 void keyboard_post_init_kb(void) {
+#ifdef MODULE_LED_DISCOVERY
+    // Screenless lighting restores its EEPROM settings without the legacy filesystem.
+    lighting_init();
+    keyboard_post_init_user();
+    uprintf("Screenless lighting/discovery ready: %u addresses\n", RGB_MATRIX_LED_COUNT);
+    return;
+#endif
     chThdSleepMilliseconds(3000);
     uprintf("keyboard_post_init_kb called.\n");
 
@@ -224,7 +235,7 @@ void keyboard_post_init_kb(void) {
 
     lighting_init();
 
-#ifdef QUANTUM_PAINTER_ENABLE
+#if defined(QUANTUM_PAINTER_ENABLE) && !defined(MODULE_LED_DISCOVERY)
     // 3) Initialize your display hardware and QP/LVGL
     uprintf("Initializing display hardware...\n");
     setPinOutputPushPull(0); // GP0

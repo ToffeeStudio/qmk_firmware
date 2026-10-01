@@ -996,8 +996,10 @@ static int parse_set_animation(uint8_t *data, uint8_t length) {
         return module_ret_invalid_command;
     }
     uint8_t anim_id = data[6];
+    if (anim_id >= UNDERGLOW_ANIMATION_COUNT) return module_ret_invalid_command;
     uprintf("RAW HID: Setting animation to ID %u\n", anim_id);
     underglow_manager_set_anim(anim_id);
+    lighting_enable_underglow();
     return module_ret_success;
 }
 
@@ -1008,6 +1010,7 @@ static int parse_set_speed(uint8_t *data, uint8_t length) {
     uint8_t speed = data[6];
     uprintf("RAW HID: Setting speed to %u\n", speed);
     underglow_manager_set_speed(speed);
+    lighting_enable_underglow();
     return module_ret_success;
 }
 
@@ -1030,6 +1033,7 @@ static int parse_set_brightness(uint8_t *data, uint8_t length) {
     uint8_t brightness = data[6];
     uprintf("RAW HID: Setting brightness to %u\n", brightness);
     underglow_manager_set_brightness(brightness); // New function we will add to the manager
+    lighting_enable_underglow();
     return module_ret_success;
 }
 
@@ -1044,6 +1048,31 @@ static int parse_set_led_brightness(uint8_t *data, uint8_t length) {
     return module_ret_success;
 }
 
+#ifdef MODULE_LED_DISCOVERY
+static int parse_lighting_discovery(uint8_t *data, uint8_t length) {
+    if (length < sizeof(struct packet_header) + LIGHTING_DISCOVERY_LED_COUNT + 1) {
+        return module_ret_invalid_command;
+    }
+    const uint8_t *led_indices = data + sizeof(struct packet_header);
+    for (uint8_t i = 0; i < LIGHTING_DISCOVERY_LED_COUNT; i++) {
+        if (led_indices[i] == NO_LED) {
+            continue;
+        }
+        if (led_indices[i] >= RGB_MATRIX_LED_COUNT) {
+            return module_ret_invalid_command;
+        }
+        for (uint8_t j = 0; j < i; j++) {
+            if (led_indices[i] == led_indices[j]) {
+                return module_ret_invalid_command;
+            }
+        }
+    }
+    lighting_discovery_set_leds(led_indices);
+    data[sizeof(struct packet_header) + LIGHTING_DISCOVERY_LED_COUNT] = RGB_MATRIX_LED_COUNT;
+    return module_ret_success;
+}
+#endif
+
 static int parse_set_color_hs(uint8_t *data, uint8_t length) {
     if (length < 8) { // Header (6) + Hue (1) + Sat (1)
         return module_ret_invalid_command;
@@ -1052,6 +1081,7 @@ static int parse_set_color_hs(uint8_t *data, uint8_t length) {
     uint8_t s = data[7];
     uprintf("RAW HID: Setting color to HS(%u, %u)\n", h, s);
     underglow_manager_set_color_hs(h, s); // New function we will add to the manager
+    lighting_enable_underglow();
     return module_ret_success;
 }
 
@@ -1111,9 +1141,11 @@ static int parse_placeholder(uint8_t *data, uint8_t length) {
 static int parse_jump_bootloader(uint8_t *data, uint8_t length) {
     (void)data; (void)length;
     uprintf("RAW HID: Jumping to bootloader.\n");
+#ifndef MODULE_LED_DISCOVERY
     // Optional: clean up subsystems that touch peripherals
     animation_cleanup();
     wpm_indicator_deactivate();
+#endif
     // This call does not return; USB disconnects immediately.
     bootloader_jump();
     return module_ret_success; // Not reached
@@ -1147,6 +1179,19 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
     }
 
     uprintf("Command ID: 0x%02X\n", command_id);
+
+#ifdef MODULE_LED_DISCOVERY
+    // Display/filesystem handlers require initialization skipped by this build.
+    if (command_id != id_lighting_discovery && command_id != id_lighting_discovery_front &&
+        command_id != id_lighting_discovery_all && command_id != id_lighting_discovery_back &&
+        command_id != id_lighting_set_animation && command_id != id_lighting_set_speed &&
+        command_id != id_lighting_set_brightness && command_id != id_lighting_set_color_hs &&
+        command_id != id_lighting_get_state && command_id != id_lighting_save &&
+        command_id != id_system_bootloader) {
+        return_buf[0] = module_ret_invalid_command;
+        return module_ret_invalid_command;
+    }
+#endif
 
     switch (command_id) {
         case id_module_cmd_ls:
@@ -1221,6 +1266,33 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
         case id_lighting_set_led_brightness:
             err = parse_set_led_brightness(data, length);
             break;
+#ifdef MODULE_LED_DISCOVERY
+        case id_lighting_discovery:
+            err = parse_lighting_discovery(data, length);
+            break;
+        case id_lighting_discovery_front:
+        case id_lighting_discovery_all:
+            if (length < 12) {
+                err = module_ret_invalid_command;
+                break;
+            }
+            data[6] = command_id == id_lighting_discovery_front ? lighting_discovery_show_front() : lighting_discovery_show_all();
+            data[7] = MODULE_LED_DISCOVERY_BRIGHTNESS;
+            data[11] = RGB_MATRIX_LED_COUNT;
+            err = module_ret_success;
+            break;
+        case id_lighting_discovery_back:
+            if (length < 12 || data[6] > 1) {
+                err = module_ret_invalid_command;
+                break;
+            }
+            // Request: byte 6 cycling flag, byte 7 initial/frozen hue phase.
+            data[6] = lighting_discovery_show_back(data[6], data[7]);
+            data[7] = MODULE_LED_DISCOVERY_BRIGHTNESS;
+            data[11] = RGB_MATRIX_LED_COUNT;
+            err = module_ret_success;
+            break;
+#endif
         case id_wpm_set_anim:
             err = parse_set_wpm_anim(data, length);
             break;

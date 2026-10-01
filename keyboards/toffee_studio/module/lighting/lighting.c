@@ -3,6 +3,7 @@
 #include "rgb_matrix_types.h"   // for led_point_t and led_config_t
 #include "animations/manager.h"
 #include "lighting.h"
+#include "persistence.h"
 #include <lib/lib8tion/lib8tion.h>   // for scale8()
 
 // The driver's working color buffer, holding the colors the active effect
@@ -12,6 +13,135 @@ extern rgb_led_t rgb_matrix_ws2812_array[RGB_MATRIX_LED_COUNT];
 // Per-front-LED brightness override (0-255), applied on top of the active
 // effect. 255 = unchanged, 0 = off. Lets a single key's LED be dimmed/off.
 static uint8_t g_keylight_brightness[RGB_MATRIX_LED_COUNT];
+
+#ifdef MODULE_LED_DISCOVERY
+// Red, blue, green, yellow, pink. NO_LED leaves a colour unused.
+static uint8_t discovery_leds[LIGHTING_DISCOVERY_LED_COUNT];
+static bool discovery_front_check;
+static bool discovery_all_check;
+static bool discovery_startup_check;
+static bool discovery_back_check;
+static bool discovery_underglow_active;
+static bool discovery_back_cycle;
+static uint8_t discovery_back_phase;
+static uint32_t discovery_back_started;
+
+// Original typing-view coordinates, with rear indices verified by camera.
+// Rear camera view mirrors x; do not mirror the stored animation coordinates.
+// Evidence: toffee-accounting/discord_capture/led_discovery/back_map_2026-09-26.json
+static const struct { uint8_t index, x, y; } discovery_back_leds[] = {
+    {90, 10, 8}, {89, 25, 8}, {88, 50, 8}, {87, 80, 8},
+    {86, 115, 8}, {85, 150, 8}, {84, 180, 8}, {82, 225, 8}, {81, 240, 8},
+    {49, 10, 80}, {33, 240, 80}, {48, 10, 156}, {32, 240, 156},
+    {16, 10, 190}, {14, 25, 190}, {12, 50, 190}, {11, 80, 190},
+    {9, 115, 190}, {8, 150, 190}, {5, 180, 190}, {3, 225, 190}, {1, 240, 190},
+};
+// Verified physical front packages, including the badge and repaired R1C13 (103).
+// Evidence: toffee-accounting/discord_capture/led_discovery/front_map_2026-09-25.json
+static const uint8_t discovery_front_leds[] = {
+    0, 2, 4, 6, 7, 10, 13, 15, 17, 18, 19, 20, 21, 22, 23, 24,
+    25, 26, 27, 28, 29, 30, 31, 34, 35, 36, 37, 38, 39, 40, 41,
+    42, 43, 44, 45, 46, 47, 50, 51, 52, 53, 54, 55, 56, 57, 58,
+    59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73,
+    74, 75, 76, 77, 78, 79, 80, 83, 91, 92, 93, 94, 95, 96, 97,
+    98, 99, 100, 101, 102, 103,
+};
+static const RGB discovery_colors[LIGHTING_DISCOVERY_LED_COUNT] = {
+    {.r = MODULE_LED_DISCOVERY_BRIGHTNESS, .g = 0, .b = 0},
+    {.r = 0, .g = 0, .b = MODULE_LED_DISCOVERY_BRIGHTNESS},
+    {.r = 0, .g = MODULE_LED_DISCOVERY_BRIGHTNESS, .b = 0},
+    {.r = MODULE_LED_DISCOVERY_BRIGHTNESS, .g = MODULE_LED_DISCOVERY_BRIGHTNESS, .b = 0},
+    {.r = MODULE_LED_DISCOVERY_BRIGHTNESS, .g = MODULE_LED_DISCOVERY_BRIGHTNESS / 2, .b = MODULE_LED_DISCOVERY_BRIGHTNESS * 3 / 4},
+};
+
+// Raw HID validates indices once before calling this function.
+void lighting_discovery_set_leds(const uint8_t *led_indices) {
+    discovery_underglow_active = false;
+    discovery_back_check = false;
+    discovery_startup_check = false;
+    discovery_front_check = false;
+    discovery_all_check = false;
+    memcpy(discovery_leds, led_indices, sizeof(discovery_leds));
+    uprintf("LED discovery: red=%u blue=%u green=%u yellow=%u pink=%u\n",
+            discovery_leds[0], discovery_leds[1], discovery_leds[2],
+            discovery_leds[3], discovery_leds[4]);
+}
+
+uint8_t lighting_discovery_show_front(void) {
+    discovery_underglow_active = false;
+    discovery_back_check = false;
+    discovery_startup_check = false;
+    discovery_all_check = false;
+    discovery_front_check = true;
+    uprintf("LED discovery: front check, %u LEDs\n", (unsigned)sizeof(discovery_front_leds));
+    return sizeof(discovery_front_leds);
+}
+
+uint8_t lighting_discovery_show_all(void) {
+    discovery_underglow_active = false;
+    discovery_back_check = false;
+    discovery_startup_check = false;
+    discovery_front_check = false;
+    discovery_all_check = true;
+    uprintf("LED discovery: all %u addresses\n", RGB_MATRIX_LED_COUNT);
+    return RGB_MATRIX_LED_COUNT;
+}
+
+uint8_t lighting_discovery_show_back(bool cycle, uint8_t phase) {
+    discovery_underglow_active = false;
+    discovery_startup_check = false;
+    discovery_front_check = false;
+    discovery_all_check = false;
+    discovery_back_check = true;
+    discovery_back_cycle = cycle;
+    discovery_back_phase = phase;
+    discovery_back_started = timer_read32();
+    uprintf("LED discovery: rear XY rainbow, cycle=%u phase=%u\n", cycle, phase);
+    return ARRAY_SIZE(discovery_back_leds);
+}
+
+static void lighting_discovery_task(void) {
+    if (discovery_all_check) {
+        rgb_matrix_set_color_all(MODULE_LED_DISCOVERY_BRIGHTNESS,
+                                 MODULE_LED_DISCOVERY_BRIGHTNESS, MODULE_LED_DISCOVERY_BRIGHTNESS);
+        return;
+    }
+    rgb_matrix_set_color_all(0, 0, 0);
+    if (discovery_back_check) {
+        uint8_t phase = discovery_back_phase;
+        if (discovery_back_cycle) {
+            phase += timer_elapsed32(discovery_back_started) / 40;
+        }
+        for (uint8_t i = 0; i < ARRAY_SIZE(discovery_back_leds); i++) {
+            uint8_t hue = (discovery_back_leds[i].x + discovery_back_leds[i].y) / 2 + phase;
+            RGB color = hsv_to_rgb_nocie((HSV){hue, 255, MODULE_LED_DISCOVERY_BRIGHTNESS});
+            rgb_matrix_set_color(discovery_back_leds[i].index, color.r, color.g, color.b);
+        }
+        return;
+    }
+    if (discovery_startup_check) {
+        for (uint16_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+            rgb_matrix_set_color(i, MODULE_LED_DISCOVERY_BRIGHTNESS,
+                                 MODULE_LED_DISCOVERY_BRIGHTNESS, MODULE_LED_DISCOVERY_BRIGHTNESS);
+        }
+        return;
+    }
+    if (discovery_front_check) {
+        for (uint8_t i = 0; i < sizeof(discovery_front_leds); i++) {
+            rgb_matrix_set_color(discovery_front_leds[i], MODULE_LED_DISCOVERY_BRIGHTNESS,
+                                 MODULE_LED_DISCOVERY_BRIGHTNESS, MODULE_LED_DISCOVERY_BRIGHTNESS);
+        }
+        return;
+    }
+    for (uint8_t i = 0; i < LIGHTING_DISCOVERY_LED_COUNT; i++) {
+        if (discovery_leds[i] == NO_LED) {
+            continue;
+        }
+        RGB color = discovery_colors[i];
+        rgb_matrix_set_color(discovery_leds[i], color.r, color.g, color.b);
+    }
+}
+#endif
 
 
 // NOT QMK-specific
@@ -126,6 +256,29 @@ static void keylight_apply_overrides(void) {
 }
 
 void lighting_init(void) {
+#ifdef MODULE_LED_DISCOVERY
+    discovery_back_check = false;
+    // Use QMK's normal render/flush cycle, with a black solid base effect.
+    rgb_matrix_enable_noeeprom();
+    rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
+    rgb_matrix_sethsv_noeeprom(0, 0, 0);
+    discovery_front_check = false;
+    discovery_all_check = false;
+    discovery_startup_check = false;
+    memset(g_led_config.flags, 0, sizeof(g_led_config.flags));
+    memset(g_led_config.point, 0, sizeof(g_led_config.point));
+    for (uint8_t i = 0; i < ARRAY_SIZE(discovery_back_leds); i++) {
+        uint8_t index = discovery_back_leds[i].index;
+        g_led_config.flags[index] = LED_FLAG_UNDERGLOW;
+        g_led_config.point[index] = (led_point_t){discovery_back_leds[i].x, discovery_back_leds[i].y};
+    }
+    underglow_manager_init();
+    underglow_manager_set_brightness(MODULE_LED_DISCOVERY_BRIGHTNESS);
+    load_underglow_config();
+    lighting_enable_underglow();
+    uprintf("Screenless lighting: %u verified rear LEDs ready\n", (unsigned)ARRAY_SIZE(discovery_back_leds));
+    return;
+#endif
     for (uint16_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
         g_keylight_brightness[i] = 255; // full brightness by default
     }
@@ -134,7 +287,23 @@ void lighting_init(void) {
     underglow_manager_init();
 }
 
+void lighting_enable_underglow(void) {
+#ifdef MODULE_LED_DISCOVERY
+    discovery_underglow_active = true;
+#endif
+}
+
 void lighting_task(void) {
+    underglow_persistence_task();
+#ifdef MODULE_LED_DISCOVERY
+    if (discovery_underglow_active) {
+        rgb_matrix_set_color_all(0, 0, 0);
+        underglow_manager_task();
+    } else {
+        lighting_discovery_task();
+    }
+    return;
+#endif
     underglow_manager_task();
     keylight_apply_overrides();
 }
@@ -144,6 +313,7 @@ bool lighting_process_user_command(uint16_t keycode, keyrecord_t *record) {
         switch (keycode) {
             case UG_ANIM:
                 underglow_manager_next_anim();
+                lighting_enable_underglow();
                 return false; // We handled the keycode
         }
     }

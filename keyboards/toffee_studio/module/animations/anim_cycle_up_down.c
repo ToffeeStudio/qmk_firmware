@@ -11,7 +11,8 @@ static cycle_up_down_state_t state_instance;
 static HSV cycle_up_down_task(animation_params_t* params) {
     HSV hsv;
     hsv.s = 255; // Full saturation for a vibrant rainbow
-    hsv.v = params->config->brightness;
+    // The manager applies master brightness once after the effect runs.
+    hsv.v = params->config->color.v;
 
     uint8_t time = (params->time * params->config->speed) / 2048;
     uint8_t pos_hue = (params->pos.y * 4); // Changed to pos.y

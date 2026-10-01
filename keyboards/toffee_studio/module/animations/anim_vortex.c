@@ -12,7 +12,7 @@ static vortex_state_t state_instance;
 
 static HSV vortex_task(animation_params_t* params) {
     HSV hsv = params->config->color; // Use the configured color
-    hsv.v = params->config->brightness;
+    hsv.v = params->config->color.v;
 
     // Calculate angle of the LED relative to the center
     float angle = atan2f(params->pos.y - CENTER_Y, params->pos.x - CENTER_X);

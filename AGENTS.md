@@ -1,3 +1,12 @@
+# Module documentation entry point
+
+Read [keyboards/toffee_studio/module/readme.md](keyboards/toffee_studio/module/readme.md)
+first for the current screenless board, local project locations, USB identity,
+lighting support, verification gaps, recovery images and detailed references.
+Keep that README current when board behavior or verified status changes. Record
+automated checks separately from human typing/lighting confirmation. Historical
+discovery and per-key notes must not override its current-status section.
+
 # Remote Machine Safety
 
 The remote Kali machine exposed through SSH/ngrok is a GOLDEN STATE reference system.
@@ -47,3 +56,13 @@ Rules:
 - Verified example pattern:
   - `ssh -i ~/.ssh/id_ed25519 -p 11608 ethanhaaan@2.tcp.ngrok.io 'bash -lic "cd ~/Desktop/pcb/qmk_firmware && make toffee_studio/module:via -j1"'`
 - Keep all remote verification non-mutating and scoped to inspection or compilation only.
+
+## Local Module flashing and recovery
+
+- The RP2040 bootloader accepts a normal `.uf2` file copied onto its `RPI-RP2` drive (Finder drag-and-drop or `/bin/cp -X`). A custom USB programmer is not required.
+- Keep exactly one Module connected. The locally verified bootloader serial is `E0C9125B0D9B`; explicitly identify the serial and mounted volume before writing. Never deploy to every UF2 drive.
+- Preserve the known-working pre-underglow image at `/Users/ethanhan/Desktop/projects/toffee/ARCHIVE/firmware-recovery/2026-09-30-pre-underglow/pre-underglow-8c65e8ad.uf2`. SHA256: `8c65e8ad26255d3a16f7a8de709344917c0fba663cfc0ea2114e4d91031979c6`. Do not overwrite or delete it. The user confirmed both lights and typing after restoring it on 30 September 2026.
+- Use `keyboards/toffee_studio/module/tools/flash_module.py --help` for the local updater. It archives each candidate and private VIA settings before rebooting, validates UF2 blocks, copies to one explicit drive, and checks keyboard/VIA reconnection and uptime. It must not change startup lighting as a diagnostic side effect.
+- A macOS bootloader mount has stalled even while USB descriptor access worked. Resetting only the identified bootloader's USB connection cleared the stalled reads; ordinary UF2 copying then succeeded. This is not proof of what caused the original keyboard outage.
+- Bound drive-access subprocesses, including their post-kill wait. A child stuck in kernel I/O can survive a kill until USB resets. Permit one targeted connection reset on a pre-copy read timeout; stop and inspect any copy failure instead of blindly retrying writes.
+- USB enumeration and VIA replies do not prove physical typing or correct lighting. Obtain human confirmation and distinguish it from automated checks. Do not claim full flash readback or exact installed-image attestation from these checks.

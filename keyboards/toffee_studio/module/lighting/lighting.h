@@ -12,4 +12,13 @@ enum custom_keycodes {
 
 void lighting_init(void);
 void lighting_task(void);
+void lighting_enable_underglow(void);
 void keylight_set_brightness(uint16_t led_index, uint8_t brightness);
+
+#ifdef MODULE_LED_DISCOVERY
+#define LIGHTING_DISCOVERY_LED_COUNT 5
+void lighting_discovery_set_leds(const uint8_t *led_indices);
+uint8_t lighting_discovery_show_front(void);
+uint8_t lighting_discovery_show_all(void);
+uint8_t lighting_discovery_show_back(bool cycle, uint8_t phase);
+#endif

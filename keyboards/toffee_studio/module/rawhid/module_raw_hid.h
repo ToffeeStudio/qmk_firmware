@@ -35,6 +35,10 @@ enum module_command_id {
     id_system_bootloader            = 0x79,
     id_lighting_save                = 0x7A,
     id_lighting_set_led_brightness  = 0x7B,
+    id_lighting_discovery          = 0x7C,
+    id_lighting_discovery_front    = 0x7D,
+    id_lighting_discovery_all      = 0x7E,
+    id_lighting_discovery_back     = 0x7F,
     id_module_cmd_end               = 0xFF,
 };
 

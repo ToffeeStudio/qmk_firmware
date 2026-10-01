@@ -5,6 +5,7 @@
 #include "module.h"
 #include "string.h"
 #include "persistence.h"
+#include "eeconfig.h"
 #include "display/animation.h"
 #include "display/ui.h"
 #include "animations/manager.h"
@@ -84,8 +85,65 @@ typedef struct {
     uint8_t current_animation_id;
 } underglow_storage_t;
 
+#ifdef MODULE_LED_DISCOVERY
+// The Module owns both unused 32-bit keyboard/user EEPROM slots (bytes 15–22).
+// Do not enlarge EECONFIG_SIZE: that would relocate existing VIA keymaps/macros.
+typedef struct {
+    uint16_t magic;
+    uint8_t version;
+    uint8_t effect;
+    uint8_t speed;
+    uint8_t brightness;
+    uint8_t hue;
+    uint8_t saturation;
+} screenless_underglow_storage_t;
+
+#define UNDERGLOW_STORAGE_MAGIC 0x5547
+#define UNDERGLOW_STORAGE_VERSION 1
+_Static_assert(sizeof(screenless_underglow_storage_t) == 8, "Underglow must fit the two EEPROM slots");
+_Static_assert(EECONFIG_KB_DATA_SIZE == 0 && EECONFIG_USER_DATA_SIZE == 0,
+               "Module underglow owns the keyboard/user EEPROM slots");
+#endif
+
+static bool underglow_save_pending;
+static uint32_t underglow_last_change;
+
+void schedule_underglow_save(void) {
+    underglow_save_pending = true;
+    underglow_last_change = timer_read32();
+}
+
+void underglow_persistence_task(void) {
+    if (underglow_save_pending && timer_elapsed32(underglow_last_change) >= 1000) {
+        save_underglow_config();
+    }
+}
+
 void save_underglow_config(void) {
     uprintf("PERSIST: Saving underglow config...\n");
+    underglow_save_pending = false;
+
+#ifdef MODULE_LED_DISCOVERY
+    screenless_underglow_storage_t stored = {
+        .magic = UNDERGLOW_STORAGE_MAGIC,
+        .version = UNDERGLOW_STORAGE_VERSION,
+        .effect = g_underglow_config.current_animation_id,
+        .speed = g_underglow_config.speed,
+        .brightness = g_underglow_config.brightness,
+        .hue = g_underglow_config.color.h,
+        .saturation = g_underglow_config.color.s,
+    };
+    screenless_underglow_storage_t previous;
+    eeprom_read_block(&previous, EECONFIG_KEYBOARD, sizeof(previous));
+    if (memcmp(&stored, &previous, sizeof(stored)) == 0) return;
+
+    // Commit the validity marker last so an interrupted write is not loaded.
+    stored.magic = 0;
+    eeprom_update_word((uint16_t *)EECONFIG_KEYBOARD, 0);
+    eeprom_update_block(&stored, EECONFIG_KEYBOARD, sizeof(stored));
+    eeprom_update_word((uint16_t *)EECONFIG_KEYBOARD, UNDERGLOW_STORAGE_MAGIC);
+    uprintf("PERSIST: Underglow saved to EEPROM.\n");
+#else
 
     // 1. Prepare the data to be saved.
     underglow_storage_t config_to_save;
@@ -111,11 +169,28 @@ void save_underglow_config(void) {
     } else {
         uprintf("PERSIST: Underglow config saved successfully.\n");
     }
+#endif
 }
 
 void load_underglow_config(void) {
     uprintf("PERSIST: Attempting to load underglow config...\n");
 
+#ifdef MODULE_LED_DISCOVERY
+    screenless_underglow_storage_t stored;
+    eeprom_read_block(&stored, EECONFIG_KEYBOARD, sizeof(stored));
+    if (stored.magic != UNDERGLOW_STORAGE_MAGIC || stored.version != UNDERGLOW_STORAGE_VERSION ||
+        stored.effect >= UNDERGLOW_ANIMATION_COUNT) {
+        uprintf("PERSIST: No valid screenless underglow saved; factory settings active.\n");
+        return;
+    }
+    g_underglow_config.speed = stored.speed;
+    g_underglow_config.brightness = stored.brightness;
+    g_underglow_config.color = (HSV){stored.hue, stored.saturation, 255};
+    underglow_manager_set_anim(stored.effect);
+    underglow_save_pending = false;
+    uprintf("PERSIST: Restored underglow effect=%u speed=%u brightness=%u hue=%u sat=%u\n",
+            stored.effect, stored.speed, stored.brightness, stored.hue, stored.saturation);
+#else
     underglow_storage_t loaded_config;
     lfs_file_t file;
 
@@ -149,4 +224,5 @@ void load_underglow_config(void) {
         uprintf("PERSIST: WARN! Saved animation ID %u is invalid. Reverting to default.\n", loaded_config.current_animation_id);
         // The default (ID 0) is already set by underglow_manager_init(), so we do nothing.
     }
+#endif
 }
