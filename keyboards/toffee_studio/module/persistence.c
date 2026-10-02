@@ -109,6 +109,9 @@ static bool underglow_save_pending;
 static uint32_t underglow_last_change;
 
 void schedule_underglow_save(void) {
+#ifdef MODULE_EXTENSIVE_TEST
+    return;
+#endif
     underglow_save_pending = true;
     underglow_last_change = timer_read32();
 }
@@ -120,6 +123,9 @@ void underglow_persistence_task(void) {
 }
 
 void save_underglow_config(void) {
+#ifdef MODULE_EXTENSIVE_TEST
+    return; // Test-only lighting changes remain in RAM, including explicit Save.
+#endif
     uprintf("PERSIST: Saving underglow config...\n");
     underglow_save_pending = false;
 

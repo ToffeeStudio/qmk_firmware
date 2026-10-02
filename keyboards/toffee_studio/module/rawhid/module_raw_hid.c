@@ -15,6 +15,9 @@
 #include "lvgl.h"
 #include "persistence.h"
 #include "bootloader.h"
+#ifdef MODULE_EXTENSIVE_TEST
+#include "lighting/test_mode.h"
+#endif
 
 #define CHUNK_SIZE 256
 static uint8_t file_buffer[CHUNK_SIZE];
@@ -1202,6 +1205,9 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
         command_id != id_lighting_front_get && command_id != id_lighting_front_set &&
         command_id != id_lighting_badge_get && command_id != id_lighting_badge_set &&
         command_id != id_lighting_led_get && command_id != id_lighting_capabilities &&
+#ifdef MODULE_EXTENSIVE_TEST
+        command_id != id_lighting_test_status && command_id != id_lighting_test_keepalive &&
+#endif
         command_id != id_system_bootloader) {
         return_buf[0] = module_ret_invalid_command;
         return module_ret_invalid_command;
@@ -1209,6 +1215,16 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
 #endif
 
     switch (command_id) {
+#ifdef MODULE_EXTENSIVE_TEST
+        case id_lighting_test_status:
+            lighting_test_status(data + 1);
+            err = module_ret_success;
+            break;
+        case id_lighting_test_keepalive:
+            lighting_test_keepalive();
+            err = module_ret_success;
+            break;
+#endif
         case id_lighting_front_get:
             memcpy(data + 1, &module_lighting_state.front, sizeof(front_config_t));
             err = module_ret_success;

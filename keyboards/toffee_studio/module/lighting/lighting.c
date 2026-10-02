@@ -6,6 +6,9 @@
 #include "persistence.h"
 #include "groups.h"
 #include "screenless-map.h"
+#ifdef MODULE_EXTENSIVE_TEST
+#include "test_mode.h"
+#endif
 #include <lib/lib8tion/lib8tion.h>   // for scale8()
 
 // The driver's working color buffer, holding the colors the active effect
@@ -64,6 +67,19 @@ void lighting_discovery_set_leds(const uint8_t *led_indices) {
     discovery_front_check = false;
     discovery_all_check = false;
     memcpy(discovery_leds, led_indices, sizeof(discovery_leds));
+#ifdef MODULE_EXTENSIVE_TEST
+    uint8_t groups = 0;
+    bool selected = false;
+    for (uint8_t i = 0; i < LIGHTING_DISCOVERY_LED_COUNT; i++) {
+        if (led_indices[i] == NO_LED) continue;
+        selected = true;
+        uint8_t flags = g_led_config.flags[led_indices[i]];
+        if (flags == LED_FLAG_KEYLIGHT) groups |= 1;
+        if (flags == LED_FLAG_UNDERGLOW) groups |= 2;
+        if (flags == LED_FLAG_INDICATOR) groups |= 4;
+    }
+    lighting_test_pattern(selected ? MODULE_TEST_SELECTED : MODULE_TEST_OFF, groups);
+#endif
     uprintf("LED discovery: red=%u blue=%u green=%u yellow=%u pink=%u\n",
             discovery_leds[0], discovery_leds[1], discovery_leds[2],
             discovery_leds[3], discovery_leds[4]);
@@ -75,6 +91,9 @@ uint8_t lighting_discovery_show_front(void) {
     discovery_startup_check = false;
     discovery_all_check = false;
     discovery_front_check = true;
+#ifdef MODULE_EXTENSIVE_TEST
+    lighting_test_pattern(MODULE_TEST_FRONT_WHITE, 5);
+#endif
     uprintf("LED discovery: front check, %u LEDs\n", (unsigned)sizeof(discovery_front_leds));
     return sizeof(discovery_front_leds);
 }
@@ -85,6 +104,9 @@ uint8_t lighting_discovery_show_all(void) {
     discovery_startup_check = false;
     discovery_front_check = false;
     discovery_all_check = true;
+#ifdef MODULE_EXTENSIVE_TEST
+    lighting_test_pattern(MODULE_TEST_ALL_WHITE, 7);
+#endif
     uprintf("LED discovery: all %u addresses\n", RGB_MATRIX_LED_COUNT);
     return RGB_MATRIX_LED_COUNT;
 }
@@ -98,6 +120,9 @@ uint8_t lighting_discovery_show_back(bool cycle, uint8_t phase) {
     discovery_back_cycle = cycle;
     discovery_back_phase = phase;
     discovery_back_started = timer_read32();
+#ifdef MODULE_EXTENSIVE_TEST
+    lighting_test_pattern(MODULE_TEST_REAR_RAINBOW, 2);
+#endif
     uprintf("LED discovery: rear XY rainbow, cycle=%u phase=%u\n", cycle, phase);
     return ARRAY_SIZE(discovery_back_leds);
 }
@@ -300,6 +325,9 @@ void lighting_init(void) {
     load_underglow_config();
     lighting_groups_init();
     lighting_enable_underglow();
+#ifdef MODULE_EXTENSIVE_TEST
+    lighting_test_init();
+#endif
     uprintf("Screenless lighting: %u verified rear LEDs ready\n", (unsigned)ARRAY_SIZE(discovery_back_leds));
     return;
 #endif
@@ -314,6 +342,9 @@ void lighting_init(void) {
 void lighting_enable_underglow(void) {
 #ifdef MODULE_LED_DISCOVERY
     discovery_underglow_active = true;
+#ifdef MODULE_EXTENSIVE_TEST
+    lighting_test_pattern(MODULE_TEST_GROUPS, 0);
+#endif
 #endif
 }
 
@@ -328,6 +359,9 @@ void lighting_task(void) {
     } else {
         lighting_discovery_task();
     }
+#ifdef MODULE_EXTENSIVE_TEST
+    lighting_test_apply_limits();
+#endif
     return;
 #endif
     underglow_manager_task();

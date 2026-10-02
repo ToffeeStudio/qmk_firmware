@@ -40,6 +40,9 @@ void lighting_groups_schedule_save(void) {
     last_change = timer_read32();
 }
 void lighting_groups_persistence_task(void) {
+#ifdef MODULE_EXTENSIVE_TEST
+    return; // Temporary patterns must not overwrite the user's saved settings.
+#endif
     if (!save_pending || timer_elapsed32(last_change) < 1000) return;
     if (!lighting_storage_save(&module_lighting_state)) {
         save_pending = false;

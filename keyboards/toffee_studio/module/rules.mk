@@ -45,3 +45,12 @@ VIRTSER_ENABLE = yes
 CDC_ENABLE = yes
 EXTRA_USB_INTERFACES = yes
 WPM_ENABLE = yes
+
+# Explicit opt-in only; the normal product build keeps saved-startup behaviour.
+ifeq ($(MODULE_EXTENSIVE_TEST),yes)
+    ifndef MODULE_TEST_BUILD_ID
+        $(error MODULE_TEST_BUILD_ID is required for MODULE_EXTENSIVE_TEST=yes)
+    endif
+    OPT_DEFS += -DMODULE_EXTENSIVE_TEST -DMODULE_TEST_BUILD_ID=$(MODULE_TEST_BUILD_ID)
+    SRC += lighting/test_mode.c
+endif

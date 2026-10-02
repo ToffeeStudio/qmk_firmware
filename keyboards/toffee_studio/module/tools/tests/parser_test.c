@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include "../../rawhid/module_raw_hid.h"
 #include "../../display/wpm_indicator.h"
+#ifdef MODULE_EXTENSIVE_TEST
+#include "../../lighting/test_mode.h"
+#endif
 
 static uint8_t *return_buf;
 const uint8_t UNDERGLOW_ANIMATION_COUNT = 10;
@@ -116,6 +119,9 @@ static void test_parser(void) {
         free(data);
     }
     for (unsigned command = 0; command <= 255; command++) {
+#ifdef MODULE_EXTENSIVE_TEST
+        if (command == id_lighting_test_status || command == id_lighting_test_keepalive) continue;
+#endif
         if ((command >= 0x71 && command <= 0x76 && command != 0x73) ||
             (command >= 0x79 && command <= 0x85)) continue;
         reject_packet(command, off, sizeof(off));

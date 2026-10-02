@@ -50,7 +50,13 @@ static void qmk_render(void) {
     lighting_task();
 }
 #include "parser_test.c"
+#ifdef MODULE_EXTENSIVE_TEST
+#include "test_mode_test.c"
+#endif
 int main(void) {
+#ifdef MODULE_EXTENSIVE_TEST
+    test_temporary_firmware();
+#else
     lighting_init();
     unsigned front = 0, badge = 0, rear = 0;
     for (unsigned i = 0; i < 201; i++) {
@@ -106,4 +112,5 @@ int main(void) {
     now = 499; lighting_groups_persistence_task(); assert(saves == 2);
     puts("Groups PASS: 104-package map, 9 front modes, independent badge/rear, 16,896 per-key levels, debounce/reboot/timer wrap.");
     test_parser();
+#endif
 }

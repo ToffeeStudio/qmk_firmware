@@ -1,6 +1,6 @@
 # Toffee Studio Module — start here
 
-Last reviewed: **1 October 2026 (Australia/Sydney)**. This is the current board
+Last reviewed: **2 October 2026 (Australia/Sydney)**. This is the current board
 handover, not a live device-status feed. Read the repository's
 [agent safety instructions](../../../AGENTS.md) before working on hardware.
 
@@ -19,8 +19,8 @@ headless browser, cameras and saved-state reboot checks pass. No push.
 | Front and badge | Off plus eight front effects, saved dimming for 66 regular front LEDs and an independent 16-LED badge with on/off, brightness and solid colour. Badge effects are deferred. Cameras confirm independent front/badge/rear operation; 65 functioning front packages respond at their expected positions. |
 | Configurator | Four menus: Underglow, Front Lighting, Per-Key LED, Badge. Protocol-v2 matched replies, explicit errors and Retry. Shared custom queue; VIA ignores tagged replies and retains replies arriving before its send finishes. Headless actual-app controls, reload and rejection/Retry passed through a real-board native JavaScript HID bridge. |
 | Latest flash | Lighting-v2 UF2 copied successfully to Module B's identified RP2 drive on 1 October, followed by two same-image reboot/reflash persistence checks. All three runs passed keyboard/raw HID enumeration, 15-second uptime and VIA keymap/macro/layout verification, without a USB-reset workaround. |
-| Saved startup | Distinctive non-default front/badge/rear states and all 66 overrides survive restart. The starting lighting was then restored and verified after another restart: front solid white 18/speed 100, badge white/on 18, rear solid blue 18/speed 100, overrides 255. No arbitrary test colours remain. |
-| Physical verification | **Physical typing and actual unplug/replug confirmation remain pending.** The equals LED's formerly working manual bridge is now broken, per Ethan; its observed dark state is excluded as a hardware fault, not a new indexing/firmware regression. |
+| Saved startup | Distinctive states and all 66 overrides survived the earlier software reboot/reflash checks. Ethan subsequently requested orange-yellow: hue 36/saturation 255, front/rear brightness 11, badge brightness 2, speed 100, overrides 255. Fresh reads after his 2 October hub reconnect match exactly; no test colours were written in the new campaign. |
+| Physical verification | Ethan reported a hub unplug/replug; enumeration, saved settings and cameras pass afterwards, but actual VBUS removal was not measured. **Controlled cold cycles and physical typing remain pending.** The equals LED's formerly working manual bridge is now broken, per Ethan; its dark state is excluded as a hardware fault, not a new indexing/firmware regression. |
 | Recovery | The pre-change image was restored earlier, and Ethan explicitly confirmed both lights and typing. That confirmation applies to the recovery image, not the subsequent underglow candidate. Both images remain preserved outside the build directory. |
 | Earlier outage | Cause unconfirmed. A stalled macOS bootloader volume was observed and cleared by a targeted USB connection reset. Neither a firmware defect nor a transfer defect has been established as the original cause. |
 
@@ -74,23 +74,40 @@ not guarantee that a server is still running in a later session.
 
 **2 October extensive-plan checkpoint:** see the
 [new execution log](../../../../AUTORESEARCH/02-09-2026%20Extensive%20Test%20Plan/README.md).
-Offline production lighting handlers/dispatcher and diagnostic renderer pass
-4,312 sanitizer-tested parser attempts; storage/group tests, 12 updater tests,
-17 configurator tests and normal `qmk compile -kb toffee_studio/module -km via`
-also pass. Fresh read-only checks preserve both boards' settings, and paired
-camera setup captures work. No powered test patterns or flashes have run in this
-new campaign: it is paused for the plan's unplugged safety/support confirmation.
-Temporary test firmware is approved in principle, but proposed startup-off,
-18-per-channel cap and five-second controller-loss timeout are not yet confirmed,
-implemented or deployed. Normal saved-startup behaviour remains unchanged.
-The new root UF2 hash is
+Production/temporary parsers pass 4,312/4,315 sanitizer-tested attempts. Storage,
+groups, actual rear persistence, 12 updater tests, 27 JavaScript tests (1,747
+assertions) and normal/temporary QMK builds pass. The runner's seven offline
+simulations cover all 312 RGB checks, group combinations, 290 invalid commands,
+camera failure, wrong firmware, failed all-off and controller loss; simulated
+images are not PCB evidence. New camera/read-only checks after Ethan reconnected
+the hubs identify the same units with unchanged lighting/VIA data and refreshed
+HID handles. Rear framing changed; recalibrate before image scoring.
+
+Ethan explicitly approved the temporary settings and instructed us to proceed
+without more firmware-change approval questions. `MODULE_EXTENSIVE_TEST=yes`
+with required `MODULE_TEST_BUILD_ID=0x26100202` implements startup off, final RGB
+channel clamp 18/255, five-second loss timeout and RAM-only lighting changes.
+Status `0x86` is read-only; `0x87` is keepalive. A late heartbeat cannot re-light
+an expired pattern. Both front/badge and rear saved records stay unchanged.
+Tests found/fixed a deadline race in the earlier `0x26100201` candidate: retain
+its failed-test history but **do not deploy that image**. New candidate SHA256
+`e67ce04bc1bfe5b787505a9d4b3171c0f4a8ba393edc08da21d6be7390d117c0`,
+172,544 bytes, is archived beside the other recovery images.
+
+**Neither temporary candidate has been flashed.** No powered pattern writes ran
+in this campaign. The remaining prerequisite is the plan's unplugged physical
+safety/support inspection, not firmware permission. Normal saved-startup
+behaviour is unchanged. A final normal rebuild is byte-identical to the original
+campaign baseline and excludes test-mode symbols. The root UF2 is that normal
+build, SHA256
 `bfda11cfff92e811b56daded8e9713afa16e62e5cfbe66f147ee7482204a0a02`,
 173,056 bytes, preserved with private snapshots in
 `ARCHIVE/firmware-recovery/20261002-pre-extensive-S71MzY/`; it is not an
 installed-image attestation. The previously deployed and pre-change images
 remain preserved. Full frontend TypeScript still has the 11 pre-existing errors.
 
-1. Obtain human unplug/replug and typing confirmation on exposed Module B;
+1. Obtain the plan's unplugged fixture inspection, then controlled cold cycles
+   and typing confirmation on exposed Module B;
    a bare PCB without switches may not allow a typing test. Keep software
    reboot/reflash evidence separate from actual power removal.
 2. Keep the equals LED at index 103. Ethan says he repaired it previously and

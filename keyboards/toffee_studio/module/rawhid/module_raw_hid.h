@@ -45,6 +45,8 @@ enum module_command_id {
     id_lighting_badge_set          = 0x83,
     id_lighting_led_get            = 0x84,
     id_lighting_capabilities       = 0x85,
+    id_lighting_test_status        = 0x86,
+    id_lighting_test_keepalive     = 0x87,
     id_module_cmd_end               = 0xFF,
 };
 
