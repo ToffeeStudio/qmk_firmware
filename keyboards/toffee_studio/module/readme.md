@@ -17,9 +17,9 @@ headless browser, cameras and saved-state reboot checks pass. No push.
 | --- | --- |
 | Rear underglow | Ten effects plus speed, brightness and colour control implemented for the 22 verified rear LEDs. Changes auto-save after one second without another adjustment; startup restores that record. |
 | Front and badge | Off plus eight front effects, saved dimming for 66 regular front LEDs and an independent 16-LED badge with on/off, brightness and solid colour. Badge effects are deferred. Cameras confirm independent front/badge/rear operation; 65 functioning front packages respond at their expected positions. |
-| Configurator | Four menus: Underglow, Front Lighting, Per-Key LED, Badge. Protocol-v2 matched replies, explicit errors and Retry. Shared custom queue; VIA ignores tagged replies and retains replies arriving before its send finishes. Headless actual-app controls, reload and rejection/Retry passed through a real-board native JavaScript HID bridge. |
-| Latest flash | On 2 October at 10:25 UTC, temporary capped test build `0x26100202` was copied to Module B's uniquely identified RP2 drive. Serial/location matched, application returned and 15-second uptime/VIA preservation passed, without a USB-reset workaround. The normal image must be restored at campaign completion. |
-| Saved startup | Product state remains hue 36/saturation 255, front/rear brightness 11, badge brightness 2, speed 100, overrides 255. Fresh pre-test reads match exactly. Temporary test patterns are RAM-only and start off; final normal-image restoration and saved-state reads are pending while the campaign runs. |
+| Configurator | Four menus and protocol-v2 API remain implemented. **Latest final headless check failed twice:** the connected-device map becomes empty after loading while the selected path/keymap remain, leaving the Connect Keyboard overlay blocking tabs. Raw HID stays responsive. App connection-state/loading race unresolved; earlier browser passes do not clear it. |
+| Latest flash | Temporary build `0x26100202` completed testing, then normal product image `bfda11cf...` was restored at 11:32 UTC on 2 October. Both copies matched serial/location and passed 15-second application/keyboard/VIA verification without a USB-reset workaround. |
+| Saved startup | Normal restart restored hue 36/saturation 255, front/rear brightness 11, badge brightness 2, speed 100, all 66 overrides 255, before any product lighting setter. Final reads after browser-test cleanup also match the original. Both VIA snapshots remain unchanged. |
 | Physical verification | Ethan reported a hub unplug/replug; enumeration, saved settings and cameras pass afterwards, but actual VBUS removal was not measured. **Controlled cold cycles and physical typing remain pending.** The equals LED's formerly working manual bridge is now broken, per Ethan; its dark state is excluded as a hardware fault, not a new indexing/firmware regression. |
 | Recovery | The pre-change image was restored earlier, and Ethan explicitly confirmed both lights and typing. That confirmation applies to the recovery image, not the subsequent underglow candidate. Both images remain preserved outside the build directory. |
 | Earlier outage | Cause unconfirmed. A stalled macOS bootloader volume was observed and cleared by a targeted USB connection reset. Neither a firmware defect nor a transfer defect has been established as the original cause. |
@@ -94,7 +94,7 @@ its failed-test history but **do not deploy that image**. New candidate SHA256
 `e67ce04bc1bfe5b787505a9d4b3171c0f4a8ba393edc08da21d6be7390d117c0`,
 172,544 bytes, is archived beside the other recovery images.
 
-**Temporary build `0x26100202` is deployed to Module B.** Ethan confirmed the
+**Temporary build `0x26100202` completed testing and normal firmware is restored.** Ethan confirmed the
 unplugged loose-wire/support inspection and directed execution; do not ask again.
 Baseline/transition/gradient capture (31 pairs), all 312 RGB checks (109 pairs),
 51 individual ambiguity repeats (52 pairs), eight group combinations and 15
@@ -106,10 +106,14 @@ group state. Closing HID and an actual SIGKILL of a disposable controller both
 caused expiry/all-off; late keepalive did not relight. Original paired images
 show all-off after both interruptions. Physical cable removal remains separate.
 The JavaScript regression now passes 28 tests / 1,750 assertions.
-The 30-minute capped observation is currently in progress. No electrical,
+The 30-minute capped observation completed: 1,733 status samples, 30 unchanged
+enumerations, no unexpected expiry/reset/disconnect, and successful post-run
+baseline. Active-pattern keepalive age peaked at 1,003ms. The full session lasted
+1,810.77s including captures/cleanup (mixed-pattern hold 1,800.68s). No electrical,
 thermal, switch-input or complete prototype qualification is implied.
 
-Deployment evidence: `ARCHIVE/firmware-recovery/20261002T102514Z-f0e2a34f/flash-report.json`;
+Temporary deployment: `ARCHIVE/firmware-recovery/20261002T102514Z-f0e2a34f/flash-report.json`;
+normal restoration: `ARCHIVE/firmware-recovery/20261002T113201Z-5fab807b/flash-report.json`.
 case logs, originals and camera analyses are under the linked extensive-plan run.
 The older `0x26100201` candidate was never deployed.
 Normal saved-startup behaviour is unchanged. A final normal rebuild is byte-identical to the original
@@ -121,8 +125,9 @@ build, SHA256
 installed-image attestation. The previously deployed and pre-change images
 remain preserved. Full frontend TypeScript still has the 11 pre-existing errors.
 
-1. Complete the capped observation, restore normal firmware and verify saved
-   settings. Controlled cold cycles and typing confirmation remain on Module B;
+1. Diagnose the final app connected-device/loader regression without hiding the
+   overlay or treating raw API success as a browser pass. Controlled cold cycles
+   and typing confirmation remain on Module B;
    a bare PCB without switches may not allow a typing test. Keep software
    reboot/reflash evidence separate from actual power removal.
 2. Keep the equals LED at index 103. Ethan says he repaired it previously and
