@@ -17,7 +17,7 @@ headless browser, cameras and saved-state reboot checks pass. No push.
 | --- | --- |
 | Rear underglow | Ten effects plus speed, brightness and colour control implemented for the 22 verified rear LEDs. Changes auto-save after one second without another adjustment; startup restores that record. |
 | Front and badge | Off plus eight front effects, saved dimming for 66 regular front LEDs and an independent 16-LED badge with on/off, brightness and solid colour. Badge effects are deferred. Cameras confirm independent front/badge/rear operation; 65 functioning front packages respond at their expected positions. |
-| Configurator | Four menus and protocol-v2 API remain implemented. **Latest final headless check failed twice:** the connected-device map becomes empty after loading while the selected path/keymap remain, leaving the Connect Keyboard overlay blocking tabs. Raw HID stays responsive. App connection-state/loading race unresolved; earlier browser passes do not clear it. |
+| Configurator | Four menus and protocol-v2 API implemented. **2 October follow-up fixes the startup race:** saved/bundled definitions load before one device scan. Two clean headless actual-app runs pass mouse/keyboard input on all six sliders, PCB readback, repeated reloads, injected read/write errors and simulated WebHID reconnect. See the linked extensive-plan UI report. No firmware change or flash was needed. |
 | Latest flash | Temporary build `0x26100202` completed testing, then normal product image `bfda11cf...` was restored at 11:32 UTC on 2 October. Both copies matched serial/location and passed 15-second application/keyboard/VIA verification without a USB-reset workaround. |
 | Saved startup | Normal restart restored hue 36/saturation 255, front/rear brightness 11, badge brightness 2, speed 100, all 66 overrides 255, before any product lighting setter. Final reads after browser-test cleanup also match the original. Both VIA snapshots remain unchanged. |
 | Physical verification | Ethan reported a hub unplug/replug; enumeration, saved settings and cameras pass afterwards, but actual VBUS removal was not measured. **Controlled cold cycles and physical typing remain pending.** The equals LED's formerly working manual bridge is now broken, per Ethan; its dark state is excluded as a hardware fault, not a new indexing/firmware regression. |
@@ -125,8 +125,11 @@ build, SHA256
 installed-image attestation. The previously deployed and pre-change images
 remain preserved. Full frontend TypeScript still has the 11 pre-existing errors.
 
-1. Diagnose the final app connected-device/loader regression without hiding the
-   overlay or treating raw API success as a browser pass. Controlled cold cycles
+1. The final app connected-device/loader regression is fixed without hiding the
+   overlay. [UI evidence](../../../../AUTORESEARCH/02-09-2026%20Extensive%20Test%20Plan/ui-fix-20261002-YcMyLx/README.md)
+   includes two clean real-board browser runs, 30 offline tests / 1,754 assertions
+   and a successful production frontend build. Original groups/66 overrides and
+   both boards' keymaps/macros remain unchanged. Controlled cold cycles
    and typing confirmation remain on Module B;
    a bare PCB without switches may not allow a typing test. Keep software
    reboot/reflash evidence separate from actual power removal.
