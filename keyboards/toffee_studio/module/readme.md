@@ -28,6 +28,14 @@ Do not remove `MODULE_LED_DISCOVERY` just to enable lighting: it also keeps
 the old screen/filesystem startup disabled. Legacy source and build dependencies
 remain in the tree; this pass did not remove them or restore display support.
 
+**2 October, 23:16 Sydney — visible native-browser follow-up:** real Chrome
+WebHID permission selection, all six slider drags, badge toggles and reload pass
+11 complete PCB-state comparisons, without the headless HID bridge. The selected
+device's keymap fingerprint matched independently enumerated Module B before
+writes. Original lighting/all 66 overrides and both VIA snapshots remain intact;
+Module A lighting is unchanged. No firmware changes or flash. See the
+[visible UI report](../../../../AUTORESEARCH/02-09-2026%20Extensive%20Test%20Plan/visible-ui-20261002-r5sRGo/README.md).
+
 ## Where things live
 
 The local workspace is `/Users/ethanhan/Desktop/projects/toffee/`:
