@@ -16,6 +16,13 @@ for historical evidence, BOM discrepancies and a proposed firmware limiter.
 Research/documentation only; no limiter implemented, no hardware tests or flash
 performed for this investigation. Power/thermal P0/P1 gates remain open.
 
+**4 October follow-up — standalone plug-in rescue prepared, not run on hardware.**
+Ethan requested a native helper already waiting before he plugs in the sole
+Module, repeating all-off every 200 ms without a browser. See
+[temporary lighting rescue](#temporary-lighting-rescue). This is a host tool,
+not a firmware change or a current-budget implementation. Saved high startup
+settings are not yet repaired; the reported power-cycle failure remains open.
+
 **3 October 2026, 11:59 Sydney — requested flash completed.** The sole connected
 PCB at `0x02140000` received the exact normal image previously used on B:
 `bfda11cfff92e811b56daded8e9713afa16e62e5cfbe66f147ee7482204a0a02`.
@@ -100,6 +107,55 @@ Do not flash merely to refresh documentation or inspect status.
 For browser development, see the [configurator README](../../../../board-configurator/README.md).
 The development URL is `http://localhost:5173`; a past successful launch does
 not guarantee that a server is still running in a later session.
+
+### Temporary lighting rescue
+
+Run this **before plugging in the PCB**, with the configurator/other lighting
+controllers closed and only one Module connected:
+
+```sh
+/Users/ethanhan/.pyenv/shims/python3 /Users/ethanhan/Desktop/projects/toffee/firmware/keyboards/toffee_studio/module/tools/rescue_lighting.py
+```
+
+The [rescue script](tools/rescue_lighting.py) uses the existing native Python
+`hid` library. It finds VID/PID `1067:626D`, raw usage `FF60:61` on every cycle,
+so changing USB paths after unplugging is expected. Ethan explicitly chose the
+single-Module workflow; two matching interfaces cause a clear stop, not an
+arbitrary selection. No remembered port, browser permission or slider is needed.
+
+- Sends existing command `0x7C` with **all five slots `255`**. Current firmware
+  clears the entire RGB buffer: front, rear, badge and unused transport addresses.
+  It is not the rear-only brightness command `0x74`.
+- Writes immediately after opening, then on a 200 ms target cadence. Keeps the
+  handle open and retries disconnect/open/write errors. Host scheduling/native USB
+  stalls can delay the cadence; it is not a hard real-time cutoff or guaranteed rescue.
+- Uses 32 firmware bytes plus HIDAPI's leading zero report ID. Nonblocking reads
+  check tagged command/packet IDs; a write without a reply is **unconfirmed**.
+  No legacy fallback: old firmware may reject it or give no tagged acknowledgement.
+- Ctrl+C sends **no restore command**. The override remains in RAM, but **saved
+  startup is unchanged**. A normal lighting setter or power cycle can reactivate
+  unsafe saved levels. Do not manipulate the configurator or reconnect casually.
+- Does not flash, reset EEPROM, modify keymaps/macros or write saved lighting.
+  If the PCB still shuts down, unplug it and let it cool; do not deliberately
+  repeat the power-failure cycle. Coordinate a supervised plug-in after arming.
+
+Persistence is separate, not a silent Ctrl+C side effect. Repeating group setters
+every 200 ms postpones their one-second save debounce; setters also exit diagnostic
+blanking and can re-enable still-high groups. The helper avoids both. Saving zero
+safely is not implemented in this version.
+
+Offline checks (no USB writes), from the firmware root:
+
+```sh
+/Users/ethanhan/.pyenv/shims/python3 keyboards/toffee_studio/module/tools/rescue_lighting.py --dry-run
+/Users/ethanhan/.pyenv/shims/python3 -m unittest discover -s keyboards/toffee_studio/module/tools -p test_rescue_lighting.py -v
+sh keyboards/toffee_studio/module/tools/test_lighting_host.sh
+```
+
+On 4 October, 12 mocked-USB tests and existing sanitizer-enabled production
+parser/rendering/persistence tests passed. The production parser test verifies
+that five unused slots clear every RGB address. Offline only: the read-only
+inventory found no Module, the loop was not armed, and physical recovery is untested.
 
 ## Next verification and remaining work
 
