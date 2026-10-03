@@ -1,10 +1,20 @@
 # Toffee Studio Module — start here
 
-Last reviewed: **2 October 2026 (Australia/Sydney)**. This is the current board
+Last reviewed: **4 October 2026 (Australia/Sydney)**. This is the current board
 handover, not a live device-status feed. Read the repository's
 [agent safety instructions](../../../AGENTS.md) before working on hardware.
 
 ## Current status
+
+**4 October — unresolved high-brightness shutdown risk.** The normal firmware
+has no shared current budget across front/rear/badge. The front ceiling of 160
+does not globally constrain custom rear/badge output or establish safe current.
+Past low-drive tests and flash success are not high-load electrical qualification.
+Fitted fuse/source limits and present shutdown mechanism remain unverified.
+See [current-budget research](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/README.md)
+for historical evidence, BOM discrepancies and a proposed firmware limiter.
+Research/documentation only; no limiter implemented, no hardware tests or flash
+performed for this investigation. Power/thermal P0/P1 gates remain open.
 
 **3 October 2026, 11:59 Sydney — requested flash completed.** The sole connected
 PCB at `0x02140000` received the exact normal image previously used on B:
