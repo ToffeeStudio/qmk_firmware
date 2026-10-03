@@ -13,15 +13,22 @@ Past low-drive tests and flash success are not high-load electrical qualificatio
 Fitted fuse/source limits and present shutdown mechanism remain unverified.
 See [current-budget research](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/README.md)
 for historical evidence, BOM discrepancies and a proposed firmware limiter.
-Research/documentation only; no limiter implemented, no hardware tests or flash
-performed for this investigation. Power/thermal P0/P1 gates remain open.
+No limiter implemented or high-load tests/flash performed for this investigation.
+The later authorised temporary rescue is recorded below. Power/thermal P0/P1
+gates remain open.
 
-**4 October follow-up — standalone plug-in rescue prepared, not run on hardware.**
+**4 October follow-up — standalone plug-in rescue responding on hardware.**
 Ethan requested a native helper already waiting before he plugs in the sole
 Module, repeating all-off every 200 ms without a browser. See
 [temporary lighting rescue](#temporary-lighting-rescue). This is a host tool,
 not a firmware change or a current-budget implementation. Saved high startup
 settings are not yet repaired; the reported power-cycle failure remains open.
+Ethan authorised starting the loop, then reported "I think it's good now."
+The helper reported tagged all-off acknowledgements from write 2 through 102
+(roughly 20 seconds), with no USB-error messages in that interval. It remains
+running at this checkpoint (exec session `66996`); recheck before another controller
+is used. This supports successful temporary contact, not verified typing, saved
+startup repair or a proven electrical root cause. No brightness setters or flash.
 
 **3 October 2026, 11:59 Sydney — requested flash completed.** The sole connected
 PCB at `0x02140000` received the exact normal image previously used on B:
@@ -154,8 +161,8 @@ sh keyboards/toffee_studio/module/tools/test_lighting_host.sh
 
 On 4 October, 12 mocked-USB tests and existing sanitizer-enabled production
 parser/rendering/persistence tests passed. The production parser test verifies
-that five unused slots clear every RGB address. Offline only: the read-only
-inventory found no Module, the loop was not armed, and physical recovery is untested.
+that five unused slots clear every RGB address. Initially the read-only inventory
+found no Module; the later user-authorised live run is recorded in Current status.
 
 ## Next verification and remaining work
 
