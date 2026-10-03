@@ -6,6 +6,19 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**3 October 2026, 11:59 Sydney — requested flash completed.** The sole connected
+PCB at `0x02140000` received the exact normal image previously used on B:
+`bfda11cfff92e811b56daded8e9713afa16e62e5cfbe66f147ee7482204a0a02`.
+The ordinary UF2 copy needed no USB-reset workaround; keyboard/VIA returned and
+passed the updater's 15-second check. The updater restored the backed-up keymap;
+final keymap/macros/layout matched. No lighting setters or extended tests were
+run. Physical typing and saved-lighting confirmation remain pending.
+The measured bootloader serial was `E0C9125B0D9B`, historically assigned to B,
+despite this connection/keymap having been labelled A. Do not infer physical
+identity from those historical labels. Original recovery firmware is preserved.
+Report: `ARCHIVE/firmware-recovery/20261003-module-a-07YqQt/20261003T015911Z-d6a7c1fd/flash-report.json`
+under the Toffee root. The dated campaign results below predate this flash.
+
 The current target is the **screenless RP2040 Module PCB**. The local firmware
 is on `screenless-pcb`; the paired [board configurator](../../../../board-configurator/README.md)
 is on `lighting-fix`. Starting firmware is preserved in checkpoint `471710689a`.

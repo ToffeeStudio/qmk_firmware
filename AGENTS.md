@@ -59,6 +59,12 @@ Rules:
 
 ## Local Module flashing and recovery
 
+- **3 October 2026 update:** Ethan explicitly authorised the sole connected PCB
+  at `0x02140000`; normal image `bfda11cf...` was copied successfully. Its measured
+  bootloader serial was `E0C9125B0D9B`, previously assigned to B. Port/keymap-based
+  A/B labels below are historical, not trustworthy physical identity. This was
+  authorisation for this flash, not blanket authorisation for future boards.
+
 - The RP2040 bootloader accepts a normal `.uf2` file copied onto its `RPI-RP2` drive (Finder drag-and-drop or `/bin/cp -X`). A custom USB programmer is not required.
 - Select the target by an explicit physical USB location ID (`--usb-location`), not enumeration order. In the active two-board session, only exposed Module B at `0x01142000` is authorised for testing/flashing; Module A at `0x02140000` must stay untouched. Require exactly one raw HID interface at that target connection and exactly one RP2 bootloader before copying. Recheck identity after reboot.
 - On 1 October 2026, Module B's application-to-bootloader transition confirmed RP2 serial `E0C9125B0D9B` at the same physical connection `0x01142000`. Recheck both for each flash; do not infer identity from an application HID path, which changes on reboot.
