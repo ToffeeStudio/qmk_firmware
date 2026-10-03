@@ -6,6 +6,7 @@
 #include "persistence.h"
 #include "groups.h"
 #include "screenless-map.h"
+#include "usb_device_state.h"
 #ifdef MODULE_EXTENSIVE_TEST
 #include "test_mode.h"
 #endif
@@ -14,6 +15,52 @@
 // The driver's working color buffer, holding the colors the active effect
 // rendered this frame. We read it back to dim individual front LEDs.
 extern rgb_led_t rgb_matrix_ws2812_array[RGB_MATRIX_LED_COUNT];
+
+static bool startup_waiting = true;
+static bool startup_done;
+static uint32_t startup_started;
+
+void notify_usb_device_state_change_kb(enum usb_device_state state) {
+    if (state != USB_DEVICE_STATE_CONFIGURED) {
+        startup_waiting = true;
+        startup_done = false;
+    }
+    notify_usb_device_state_change_user(state);
+}
+
+static void lighting_startup_apply(void) {
+    // Run on completed frames, not a blocking sleep during keyboard/USB init.
+    if (usb_device_state != USB_DEVICE_STATE_CONFIGURED) {
+        rgb_matrix_set_color_all(0, 0, 0);
+        return;
+    }
+    if (startup_done) return;
+    if (startup_waiting) {
+        startup_waiting = false;
+        startup_started = timer_read32();
+        uprintf("Lighting: USB ready; 1000ms off, then 1000ms fade\n");
+    }
+    uint32_t elapsed = timer_elapsed32(startup_started);
+    if (elapsed <= MODULE_LIGHTING_STARTUP_DELAY_MS) {
+        rgb_matrix_set_color_all(0, 0, 0);
+        return;
+    }
+    elapsed -= MODULE_LIGHTING_STARTUP_DELAY_MS;
+    if (elapsed >= MODULE_LIGHTING_STARTUP_FADE_MS) {
+        startup_done = true; // Do not restart the fade when the 32-bit timer wraps.
+        uprintf("Lighting: startup fade complete\n");
+        return;
+    }
+    // Scale the freshly rendered frame, never the saved/requested settings.
+    // All groups, per-key overrides and diagnostic patterns pass through here.
+    for (uint16_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+        rgb_led_t c = rgb_matrix_ws2812_array[i];
+        rgb_matrix_set_color(i,
+            (uint32_t)c.r * elapsed / MODULE_LIGHTING_STARTUP_FADE_MS,
+            (uint32_t)c.g * elapsed / MODULE_LIGHTING_STARTUP_FADE_MS,
+            (uint32_t)c.b * elapsed / MODULE_LIGHTING_STARTUP_FADE_MS);
+    }
+}
 
 // Per-front-LED brightness override (0-255), applied on top of the active
 // effect. 255 = unchanged, 0 = off. Lets a single key's LED be dimmed/off.
@@ -294,6 +341,9 @@ static void keylight_apply_overrides(void) {
 }
 
 void lighting_init(void) {
+    startup_waiting = true;
+    startup_done = false;
+    rgb_matrix_set_color_all(0, 0, 0);
 #ifdef MODULE_LED_DISCOVERY
     discovery_back_check = false;
     // Use QMK's normal render/flush cycle, with a black solid base effect.
@@ -362,10 +412,12 @@ void lighting_task(void) {
 #ifdef MODULE_EXTENSIVE_TEST
     lighting_test_apply_limits();
 #endif
+    lighting_startup_apply();
     return;
 #endif
     underglow_manager_task();
     keylight_apply_overrides();
+    lighting_startup_apply();
 }
 
 bool lighting_process_user_command(uint16_t keycode, keyrecord_t *record) {

@@ -6,6 +6,32 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**4 October — startup rescue window and fade implemented, built, NOT flashed.**
+As explicitly chosen by Ethan: **1 second completely dark after USB is configured
+and the main loop is running, then a 1-second fade to saved/requested lighting**.
+All front/rear/badge/per-key and diagnostic output goes through the gate. USB
+commands continue throughout; saved settings remain unchanged, and a rescue
+all-off command is not overwritten by the end of startup. Reset/suspend re-arms
+the window. Both agent instruction files now make this a permanent requirement.
+
+The normal candidate is `toffee_studio_module_via.uf2`, **173568 bytes**, SHA256
+`7ff7946621e927dfa934348bfe771f43c9c9e9dee9796ef2818d3bae1382691a`, also preserved as
+[startup-fade.uf2](../../../../ARCHIVE/firmware-recovery/20261004-startup-fade-OGr5zV/startup-fade.uf2).
+It replaces only the local build output; the previously deployed `bfda11cf...`
+and protected pre-change `8c65e8ad...` images remain archived unchanged.
+No deployment or hardware timing test was performed. The separate rescue process
+is still running (session `66996`, latest observed ACK at write 3077); recheck
+before another controller is used. The connected board's saved high brightness
+has **not** been repaired. A fade does not make an excessive steady-state load safe.
+
+Verification: normal QMK build succeeds with existing legacy warnings; ASan/UBSan
+host tests pass, including 1001 fade positions, all 201 output addresses, stored
+configuration retention, group scaling, repeated frames, USB reset/suspend,
+timer wrap and rescue commands before/during/after the fade. Production/temporary
+parser totals are 4,326/4,329 attempts. Existing storage and rear debounce tests
+and all 24 Python updater/rescue tests pass. Updater tests simulate flashing;
+they do not flash hardware. See the [current research/recovery log](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/README.md).
+
 **4 October — unresolved high-brightness shutdown risk.** The normal firmware
 has no shared current budget across front/rear/badge. The front ceiling of 160
 does not globally constrain custom rear/badge output or establish safe current.
@@ -264,6 +290,7 @@ Implementation entry points:
 - [animations/manager.c](animations/manager.c): effect IDs 0–9 and common brightness scaling. Five effects were corrected to avoid applying brightness twice.
 - [persistence.c](persistence.c): one-second firmware-side debounce; versioned eight-byte EEPROM record in unused keyboard/user slots 15–22, without moving VIA keymaps/macros. Unchanged records are not rewritten. The old littlefs lighting file is not migrated.
 - [lighting/lighting.c](lighting/lighting.c), [groups.c](lighting/groups.c), [screenless map](lighting/screenless-map.json): separate front/badge/rear rendering. Unmapped slots are black. No valid record: front solid white at brightness 18/speed 100, badge white at brightness 18, rear solid blue at brightness 18/speed 100. Diagnostic presets temporarily override rendering; a group/lighting setter or restart resumes normal lighting.
+- [lighting.h](lighting/lighting.h): explicit 1000 ms startup-black and 1000 ms fade constants. `lighting_startup_apply()` in `lighting.c` scales the completed fresh RGB frame after all group/per-key/test-mode rendering, never saved configuration. The timer starts on the first rendered frame with configured USB, not before enumeration. `notify_usb_device_state_change_kb()` re-arms on USB loss/suspend and preserves the user notification hook. QMK's render/flush loop and Raw HID task remain live; no sleep/delay or new persistence format. Future later output callbacks must not bypass this gate.
 - [lighting/storage.c](lighting/storage.c): front/badge/per-key persistence in two 4KB sectors at `0xFF0000`–`0xFF1FFF`; 256-byte CRC32 records append across sector rollover. A prior valid record is retained while the other sector is erased. Existing VIA EEPROM offsets and macro capacity are unchanged. The 16MB flash requirement is compile-time checked.
 - [tools/flash_module.py](tools/flash_module.py): explicit volume/serial, immutable candidate archive, private VIA snapshot, bounded copy, and verification. The snapshot covers keymaps/macros/layout, not a full flash or lighting-state backup. One targeted USB reset is allowed on a pre-copy read timeout; a copy failure is not blindly retried.
 

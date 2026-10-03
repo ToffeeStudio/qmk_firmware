@@ -5,6 +5,10 @@
 
 extern led_config_t g_led_config;
 
+// Keep a command-ready rescue window before any LED output, then fade in.
+#define MODULE_LIGHTING_STARTUP_DELAY_MS 1000U
+#define MODULE_LIGHTING_STARTUP_FADE_MS 1000U
+
 // Custom keycodes for the keymap
 enum custom_keycodes {
     UG_ANIM = SAFE_RANGE, // Underglow Next Animation

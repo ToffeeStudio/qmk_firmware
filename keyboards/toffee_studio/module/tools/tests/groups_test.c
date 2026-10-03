@@ -3,6 +3,7 @@
 #include "../../lighting/groups.h"
 #include "../../lighting/lighting.h"
 #include "../../animations/manager.h"
+#include "usb_device_state.h"
 #include <lib/lib8tion/lib8tion.h>
 
 rgb_led_t rgb_matrix_ws2812_array[201];
@@ -13,6 +14,8 @@ static HSV qmk_hsv;
 static bool qmk_enabled, saved_available;
 static unsigned saves;
 static module_lighting_state_t saved;
+enum usb_device_state usb_device_state = USB_DEVICE_STATE_CONFIGURED;
+void notify_usb_device_state_change_user(enum usb_device_state state) {(void)state;}
 uint32_t timer_read32(void) {return now;}
 uint32_t timer_elapsed32(uint32_t last) {return now - last;}
 void rgb_matrix_enable_noeeprom(void) {qmk_enabled = true;}
@@ -50,14 +53,24 @@ static void qmk_render(void) {
     lighting_task();
 }
 #include "parser_test.c"
+#include "startup_test.c"
 #ifdef MODULE_EXTENSIVE_TEST
 #include "test_mode_test.c"
 #endif
 int main(void) {
+    test_startup_lighting();
+    // Start the pre-existing regression suites with a clean persistence fixture.
+    saved_available = false;
+    saves = 0;
+    now = 0;
 #ifdef MODULE_EXTENSIVE_TEST
     test_temporary_firmware();
 #else
     lighting_init();
+    qmk_render();
+    now = MODULE_LIGHTING_STARTUP_DELAY_MS + MODULE_LIGHTING_STARTUP_FADE_MS;
+    qmk_render();
+    now = 0; // Existing debounce tests below use a zero-based clock.
     unsigned front = 0, badge = 0, rear = 0;
     for (unsigned i = 0; i < 201; i++) {
         if (g_led_config.flags[i] == LED_FLAG_KEYLIGHT) front++;

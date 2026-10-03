@@ -7,6 +7,20 @@ Keep that README current when board behavior or verified status changes. Record
 automated checks separately from human typing/lighting confirmation. Historical
 discovery and per-key notes must not override its current-status section.
 
+## Permanent Module lighting startup contract
+
+Ethan requires an **always-preserved rescue window before LEDs turn on**.
+Agreed 4 October 2026: keep every LED black for **1000 ms after USB is configured
+and the main task loop is servicing commands**, then fade the complete rendered
+output from zero to the saved/requested level over **1000 ms**. Never implement
+the window as a blocking delay before Raw HID service. Reset/suspend must re-arm
+the window for the next configured connection. Cover front, rear, badge, per-key
+and diagnostic paths, without changing saved settings or restoring a high state
+over a received rescue all-off command. Keep the host startup/parser tests passing
+when modifying initialization, rendering, USB lifecycle or adding output paths.
+This is startup behavior, **not a shared current limit**; the saved steady-state
+load can still be unsafe. Do not claim it resolves the underlying overcurrent risk.
+
 # Remote Machine Safety
 
 The remote Kali machine exposed through SSH/ngrok is a GOLDEN STATE reference system.
