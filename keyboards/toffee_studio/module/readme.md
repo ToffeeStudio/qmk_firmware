@@ -6,6 +6,15 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**4 October budget decision — 900 mA whole-board provisional limit selected.**
+Ethan explicitly chose 0.9 A for now. Source profile revision 2 records
+`board_limit_ma = 900`; this includes the electronics and model margin, with
+the remainder shared across front/rear/badge LEDs. Calibration is still pending,
+so `configured = false` remains and the research profile outputs black. This
+records the agreed working budget, not a measured safe rating. No UF2 rebuild,
+flash or powered measurement accompanied this change; the connected board
+continues to run the previously deployed image.
+
 **4 October latest specification check — Discord and original BOMs reviewed.**
 F1's best-supported identification is **BHFUSE BSMD0603-100-6V / C18203128**,
 a 0603 resettable fuse rated 1 A hold at 25°C. Both August screenless

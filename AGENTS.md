@@ -41,7 +41,13 @@ The source now routes every RGB flush through `lighting/power_driver.c` and
 final boundary. Preserve an unscaled render buffer, saved preferences, all 104
 mapped positions (including broken 103), and the startup contract above.
 `lighting/power_profile.c` is intentionally **unconfigured**: builds hold LEDs off.
-No safe current ceiling/calibrated coefficients have been established; 90 mA and
+Ethan subsequently selected **900 mA total PCB current** as the provisional
+budget on 4 October. This decision is settled; do not ask for the number again.
+Source profile revision 2 records `board_limit_ma = 900`; subtract electronics
+consumption and model margin to obtain the shared LED allowance. Calibration
+remains incomplete, so `configured = false` is retained. The existing UF2s were
+not rebuilt/flashed for this value change. It is a working budget, not a measured
+safe operating rating. No calibrated coefficients have been established; 90 mA and
 12 mA/channel are preliminary/reference numbers, not qualified limits. Do not
 turn the synthetic host-test profile into a deployed profile. `0x88` is read-only
 estimated-current telemetry, not a physical current sensor or budget override.
