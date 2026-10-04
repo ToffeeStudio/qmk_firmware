@@ -66,6 +66,20 @@ int main(void) {
     assert(group(103) == 0); // Broken physical repair cannot reduce the accounting map.
     rgb_led_t input[201], original[201], output[201], repeated[201];
     module_power_frame_t result, repeat;
+#ifdef MODULE_POWER_CALIBRATION
+    assert(module_power_profile.board_limit_ma == 450 && module_power_led_budget(&module_power_profile) == 230);
+    // Full RGB sparse requests 1/2/3 pass unchanged; larger requests are scaled
+    // at the same final boundary, never treated as successfully delivered 255.
+    for (unsigned count = 1; count <= 104; count++) {
+        memset(input, 0, sizeof(input));
+        for (unsigned i = 0; i < count; i++) input[i] = (RGB){255, 255, 255};
+        module_power_limit(&module_power_profile, input, g_led_config.flags, 1000, output, &result);
+        assert(result.requested_ua == count * 60000U);
+        assert(result.effective_ua <= 230000);
+        assert(result.limited == (count > 3));
+        if (count <= 3) assert(memcmp(input, output, sizeof(input)) == 0);
+    }
+#endif
     module_power_profile_t profile = {
         .configured = true, .board_limit_ma = 500, .base_ma = 100, .margin_ma = 50,
         .channel_ua = {{12000, 15000, 18000}, {10000, 9000, 8000}, {20000, 19000, 18000}},

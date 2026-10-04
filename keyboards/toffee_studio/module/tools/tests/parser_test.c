@@ -150,6 +150,9 @@ static void test_parser(void) {
         free(data);
     }
     for (unsigned command = 0; command <= 255; command++) {
+#ifdef MODULE_POWER_CALIBRATION
+        if (command == id_lighting_test_raw) continue; // Exercised by raw-pattern boundary tests.
+#endif
         if (command == id_lighting_power_status) continue;
 #ifdef MODULE_EXTENSIVE_TEST
         if (command == id_lighting_test_status || command == id_lighting_test_keepalive || command == id_lighting_test_rgb_sums) continue;

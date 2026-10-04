@@ -2,18 +2,20 @@
 
 #ifdef MODULE_POWER_CALIBRATION
 #ifndef MODULE_EXTENSIVE_TEST
-#error "Calibration profile requires startup-off, 18/channel, RAM-only test firmware"
+#error "Calibration profile requires startup-off, watchdog, RAM-only test firmware"
 #endif
 // Measurement fixture only, NOT fitted/calibrated product coefficients.
-// The independent test cap/watchdog still applies at final transmission.
+// Start below the currently recorded 500 mA USB allocation. The 450 mA test
+// ceiling is separate from the user's provisional 900 mA product budget.
+// Allow sparse full-drive measurements; final limiting/watchdog still apply.
 const module_power_profile_t module_power_profile = {
-    .revision = 0x8001,
+    .revision = 0x8002,
     .configured = true,
-    .board_limit_ma = 900,
+    .board_limit_ma = 450,
     .base_ma = 120,
     .margin_ma = 100,
     .channel_ua = {{20000, 20000, 20000}, {20000, 20000, 20000}, {20000, 20000, 20000}},
-    .channel_ceiling = {18, 18, 18},
+    .channel_ceiling = {255, 255, 255},
 };
 #else
 // Ethan's provisional whole-board budget, agreed 4 October 2026: 900 mA.

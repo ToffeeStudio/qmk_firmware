@@ -1210,6 +1210,9 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
 #ifdef MODULE_EXTENSIVE_TEST
         command_id != id_lighting_test_status && command_id != id_lighting_test_keepalive &&
         command_id != id_lighting_test_rgb_sums &&
+#ifdef MODULE_POWER_CALIBRATION
+        command_id != id_lighting_test_raw &&
+#endif
 #endif
         command_id != id_system_bootloader) {
         return_buf[0] = module_ret_invalid_command;
@@ -1218,6 +1221,11 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
 #endif
 
     switch (command_id) {
+#ifdef MODULE_POWER_CALIBRATION
+        case id_lighting_test_raw:
+            err = lighting_test_raw(data + 6) ? module_ret_success : module_ret_invalid_command;
+            break;
+#endif
         case id_lighting_power_status:
             lighting_power_status(data + 1);
             err = module_ret_success;

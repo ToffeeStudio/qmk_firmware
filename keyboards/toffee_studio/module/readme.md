@@ -6,6 +6,23 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**4 October sparse-drive calibration candidate — built/tested, not yet flashed:**
+build `0x26100403`, SHA256 `3b08d2aebad3e15dbe164815a92697ee6b64c3b32cf8a34d5f9dfacc949a9840`.
+The calibration-only `0x8A` command accepts literal R/G/B plus a 13-byte bitmap
+of mapped positions 0–103. Up to 50 requested LEDs may use 255; larger selections
+are restricted to 150 per channel. Production and ordinary 18-cap test builds
+reject this command. Requests still pass through the final shared limiter.
+Temporary profile 0x8002 allows sparse full-drive but retains a **450 mA initial
+test-model ceiling** (120 mA baseline reserve, 100 mA margin, 20 mA/channel
+reference; 230 mA LED allowance). This does NOT change the provisional 900 mA
+product budget, and is not a calibrated profile. Startup-off, no saves and
+five-second watchdog remain. All-off and timeout cancel the raw pattern.
+Host regressions pass, including all 104 raw indices, 50/150 boundaries, timeout,
+no settings changes and three 20,000-frame limiter variants. Visual-controller
+tests: 14 tests / 286 assertions. **Every future meter image must be viewed by
+the agent; no OCR/image-reading scripts.** Use `tests/visual-calibration.ts` in
+the configurator; earlier OCR runner is historical and must not be restarted.
+
 **4 October calibration preparation:** protected candidate build `0x26100402`
 adds test-only read-only command `0x89`: 25-byte payload, schema byte 0 = 1,
 frame-valid byte 1, little-endian sequence/age at 2/4, nine u16 final RGB sums
