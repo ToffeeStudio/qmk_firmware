@@ -66,6 +66,25 @@ int main(void) {
     assert(group(103) == 0); // Broken physical repair cannot reduce the accounting map.
     rgb_led_t input[201], original[201], output[201], repeated[201];
     module_power_frame_t result, repeat;
+#if !defined(MODULE_POWER_CALIBRATION) && !defined(POWER_TEST_PROFILE)
+    // The fitted product candidate must stay disabled until hardware qualification.
+    assert(module_power_profile.revision == 3 && !module_power_profile.configured);
+    assert(module_power_profile.board_limit_ma == 900);
+    assert(module_power_profile.base_ma == 120 && module_power_profile.margin_ma == 100);
+    module_power_profile_t candidate = module_power_profile;
+    candidate.configured = true; // Local host-only copy, never flashed.
+    assert(module_power_led_budget(&candidate) == 680);
+    for (unsigned level = 0; level <= 255; level++) {
+        memset(input, 0, sizeof(input));
+        for (unsigned i = 0; i < 104; i++) input[i] = (RGB){.r=level, .g=level, .b=level};
+        memcpy(original, input, sizeof(input));
+        module_power_limit(&candidate, input, g_led_config.flags, 1000, output, &result);
+        assert(result.effective_ua <= 680000);
+        assert(result.effective_ua == (demand(output, &candidate) + 254) / 255);
+        assert(memcmp(input, original, sizeof(input)) == 0);
+        if (level == 255) assert(result.limited);
+    }
+#endif
 #ifdef MODULE_POWER_CALIBRATION
     assert(module_power_profile.board_limit_ma == 450 && module_power_led_budget(&module_power_profile) == 230);
     // Full RGB sparse requests 1/2/3 pass unchanged; larger requests are scaled

@@ -6,6 +6,47 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**Latest 4 October checkpoint — rough model measured; normal deployment blocked.**
+The sole Module at USB`0x00100000`, bootloader serial`E0C9125B0D9B`, runs
+protected temporary **0x26100404**, SHA256
+`c90c69b7dea2f5eadc3a2ff81b549fd8053376b42fb55de3dcfd6bd35504e11f`.
+It is **dark**, startup-off, saves-disabled, with a five-second controller-loss
+timeout. No test/rescue loop remains. Its450 mA temporary reference model is
+not the settled900 mA provisional product budget.
+
+The visual campaign recorded 47 corrected-build images and final RGB sums.
+Full-drive sparse white and isolated RGB passed; larger requested255/150 patterns
+were limited, not qualified at those unscaled levels. Nominal baseline80 mA;
+front/rear/badge R/G/B coefficients 11/11/11,13/14/13,13/13/13 mA at 255.
+Independent combinations differed by at most 34.8 mA. Meter baseline varies
+considerably, including post-run 0/60 mA idle displays; model accuracy remains rough.
+
+Normal source **profile 3**:900 mA total,120 mA baseline reserve,100 mA margin,
+680 mA LED allowance, conservative coefficients 15/15/15,18/19/18,18/18/18.
+It stays **configured=false**, built/archived **NOT FLASHED**. Candidate SHA256
+`11e8d49e6d00e3aa17856f93771c6a072df23b2d1b1f1d8d5fc11d14a29df692` is now the
+root UF2 and archived under`ARCHIVE/firmware-recovery/20261004-profile3-unqualified/`.
+Do not deploy an enabled900 mA profile until higher source allowance, PCB/fuse
+thermal headroom and intended-range measurements pass. Current source allocation
+is recorded 500 mA; a port's nominal capability is not negotiated entitlement.
+
+Actual visible Chrome/PCB tests pass all six sliders, effects, independent groups,
+rapid changes, retries/reloads, Debug limiting and browser-close watchdog.
+The app labels temporary firmware and estimates. Host suites pass persistence,
+startup1 s black/1 s fade,104-map/raw boundaries, parser,60,000 randomized limiter
+frames plus profile 3 white-level sweeps.39 selected JS tests and Vite build pass.
+
+Final same-image protected reflash passed 15 s USB/keyboard/VIA response; subsequent
+read-only checks match original saved lighting, all 66 overrides and private
+keymap/macros/layout, with final RGB all zero. Protected original UF2 hash is
+unchanged. Human typing, controlled cold power and physical fade timing remain
+pending; software reboot is not a cold-power test. Camera stays open at 5174.
+
+See [complete current report and exact remaining requirements](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/visual-calibration-20261004-lL59DO/README.md).
+Root/firmware AGENTS contain the permanent **view images yourself, no OCR** rule.
+
+## Historical checkpoints (superseded by Current status above)
+
 **4 October diagnostic colour correction:** build `0x26100403` completed the
 1/2/3 full-white experiment, but its new raw-colour initializer swapped R/G on
 QMK's GRB struct layout. Telemetry caught the first non-white mismatch; the
@@ -400,8 +441,8 @@ show all-off after both interruptions. Physical cable removal remains separate.
 The JavaScript regression now passes 28 tests / 1,750 assertions.
 The 30-minute capped observation completed: 1,733 status samples, 30 unchanged
 enumerations, no unexpected expiry/reset/disconnect, and successful post-run
-baseline. Active-pattern keepalive age peaked at 1,003ms. The full session lasted
-1,810.77s including captures/cleanup (mixed-pattern hold 1,800.68s). No electrical,
+baseline. Active-pattern keepalive age peaked at 1,003 ms. The full session lasted
+1,810.77 s including captures/cleanup (mixed-pattern hold 1,800.68 s). No electrical,
 thermal, switch-input or complete prototype qualification is implied.
 
 Temporary deployment: `ARCHIVE/firmware-recovery/20261002T102514Z-f0e2a34f/flash-report.json`;

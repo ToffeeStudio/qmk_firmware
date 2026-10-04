@@ -19,17 +19,20 @@ const module_power_profile_t module_power_profile = {
 };
 #else
 // Ethan's provisional whole-board budget, agreed 4 October 2026: 900 mA.
-// Calibration remains incomplete, so the profile stays disabled and LEDs off.
-// 90 mA is the preliminary meter baseline, NOT a worst-case reserve.
-// 12 mA/channel is a datasheet reference, NOT calibrated fitted-part coefficients.
-// Calibrate baseline, channel coefficients and margin before enabling the profile.
+// Provisional measured model, still disabled pending intended-range source and
+// thermal qualification. See AUTORESEARCH/04-09-2026 PCB Lacking Current/
+// visual-calibration-20261004-lL59DO/model-fit.json (visually read meter, no OCR).
+// Nominal baseline 80 mA; coefficients front 11/11/11, rear 13/14/13,
+// badge 13/13/13 mA at full channel. Below: ceil(1.25 * nominal + 1),
+// with 120 mA electronics reserve and a separate 100 mA model margin.
+// Observed validation range is NOT a qualification for the full 900 mA budget.
 const module_power_profile_t module_power_profile = {
-    .revision = 2,
+    .revision = 3,
     .configured = false,
     .board_limit_ma = 900,
-    .base_ma = 90,
-    .margin_ma = 0,
-    .channel_ua = {{12000, 12000, 12000}, {12000, 12000, 12000}, {12000, 12000, 12000}},
+    .base_ma = 120,
+    .margin_ma = 100,
+    .channel_ua = {{15000, 15000, 15000}, {18000, 19000, 18000}, {18000, 18000, 18000}},
     .channel_ceiling = {160, 255, 255},
 };
 #endif
