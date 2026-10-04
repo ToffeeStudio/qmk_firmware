@@ -86,17 +86,37 @@ static void test_temporary_firmware(void) {
             assert(memcmp(&rgb_matrix_ws2812_array[i], &expected, sizeof(RGB)) == 0);
         }
     }
-    // Exact population boundaries: 50 at full drive; >50 only at <=150.
+    // Population AND current admission: accepted requests must survive the
+    // actual final limiter byte-for-byte, not silently turn into lower output.
     for (unsigned count = 1; count <= 104; count++) {
         memset(raw + 3, 0, 13);
         for (unsigned i = 0; i < count; i++) raw[3 + i / 8] |= 1u << (i % 8);
         for (unsigned channel = 0; channel < 3; channel++) {
             memset(raw, 150, 3); raw[channel] = 255;
-            if (count <= 50) assert(packet(id_lighting_test_raw, raw, sizeof(raw)) == 0);
-            else reject_packet(id_lighting_test_raw, raw, sizeof(raw));
+            rgb_led_t input[201] = {0}, output[201]; module_power_frame_t result;
+            for (unsigned i = 0; i < count; i++) input[i] = (RGB){.r=raw[0], .g=raw[1], .b=raw[2]};
+            module_power_limit(&module_power_profile, input, g_led_config.flags, 1000, output, &result);
+            if (count <= 50 && !result.limited) {
+                assert(packet(id_lighting_test_raw, raw, sizeof(raw)) == 0);
+                lighting_task();
+                lighting_power_prepare(rgb_matrix_ws2812_array, output);
+                assert(memcmp(input, output, sizeof(input)) == 0);
+            } else reject_packet(id_lighting_test_raw, raw, sizeof(raw));
         }
         memset(raw, 150, 3);
+        rgb_led_t input[201] = {0}, output[201]; module_power_frame_t result;
+        for (unsigned i = 0; i < count; i++) input[i] = (RGB){150,150,150};
+        module_power_limit(&module_power_profile, input, g_led_config.flags, 1000, output, &result);
+        if (!result.limited) assert(packet(id_lighting_test_raw, raw, sizeof(raw)) == 0);
+        else reject_packet(id_lighting_test_raw, raw, sizeof(raw));
+        // A many-LED low-level pattern remains valid; no arbitrary 18 cap.
+        memset(raw, 30, 3);
         assert(packet(id_lighting_test_raw, raw, sizeof(raw)) == 0);
+        lighting_task(); lighting_power_prepare(rgb_matrix_ws2812_array, output);
+        for (unsigned i = 0; i < 201; i++) {
+            RGB expected = i < count ? (RGB){30,30,30} : (RGB){0};
+            assert(memcmp(&output[i], &expected, sizeof(RGB)) == 0);
+        }
     }
     memset(raw + 3, 0, 13);
     reject_packet(id_lighting_test_raw, raw, sizeof(raw)); // Empty selection fails.
@@ -111,7 +131,7 @@ static void test_temporary_firmware(void) {
     lighting_task(); assert_black();
     assert(memcmp(&original, &module_lighting_state, sizeof(original)) == 0);
     lighting_groups_persistence_task(); assert(saves == 0);
-    puts("Raw calibration PASS: all 104 positions, exact 50/150 bounds, no padding, literal RGB, repeat flush, timeout, rescue and preserved settings.");
+    puts("Raw calibration PASS: all 104 positions, 50/150 bounds, exact-output budget admission, no silent dimming, timeout, rescue and preserved settings.");
 #endif
     puts("Temporary firmware PASS: startup off; all 201 RGB slots capped through 256 levels; exact 5000ms timeout/wrap; status read-only; late heartbeat cannot relight; group saves disabled.");
 }

@@ -4,17 +4,16 @@
 #ifndef MODULE_EXTENSIVE_TEST
 #error "Calibration profile requires startup-off, watchdog, RAM-only test firmware"
 #endif
-// Measurement fixture only, NOT fitted/calibrated product coefficients.
-// Start below the currently recorded 500 mA USB allocation. The 450 mA test
-// ceiling is separate from the user's provisional 900 mA product budget.
-// Allow sparse full-drive measurements; final limiting/watchdog still apply.
+// Provisional measurement fixture: no claim of source/thermal qualification.
+// Raw calibration requests must fit this budget unchanged or are rejected.
+// Other render paths retain the final limiter; startup-off/watchdog still apply.
 const module_power_profile_t module_power_profile = {
-    .revision = 0x8002,
+    .revision = 0x8003,
     .configured = true,
-    .board_limit_ma = 450,
+    .board_limit_ma = 900,
     .base_ma = 120,
     .margin_ma = 100,
-    .channel_ua = {{20000, 20000, 20000}, {20000, 20000, 20000}, {20000, 20000, 20000}},
+    .channel_ua = {{15000, 15000, 15000}, {18000, 19000, 18000}, {18000, 18000, 18000}},
     .channel_ceiling = {255, 255, 255},
 };
 #else

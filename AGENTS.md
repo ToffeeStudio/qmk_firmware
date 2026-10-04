@@ -61,6 +61,15 @@ load can still be unsafe. Do not claim it resolves the underlying overcurrent ri
 
 ## Power-budget research checkpoint (4 October 2026)
 
+**Later continuation:** Ethan requests no silent dimming in calibration and says
+idle variation is expected. Candidate0x26100405/profile0x8003 admits exact raw
+patterns within the provisional900 mA conservative model or rejects them;
+startup-off, no saves,5s watchdog and final limiting of other paths remain.
+Controller rejects any reduced final RGB sums. Record idle ranges rather than
+requiring constant values. [Active evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/exact-output-20261004-gFljV8/README.md)
+is authoritative for build/flash progression. Do not claim source/thermal
+qualification from these provisional tests. Older checkpoint below is historical.
+
 Installed protected temporary build **0x26100404**, SHA256
 `c90c69b7dea2f5eadc3a2ff81b549fd8053376b42fb55de3dcfd6bd35504e11f`,
 at sole Module USB `0x00100000`, serial `E0C9125B0D9B`. After the visual

@@ -1,6 +1,7 @@
 #include "test_mode.h"
 #include "groups.h"
 #include "lighting.h"
+#include "power.h"
 #include "animations/manager.h"
 
 #ifndef MODULE_TEST_BUILD_ID
@@ -18,6 +19,7 @@ static uint8_t raw_mask[13];
 bool lighting_test_raw(const uint8_t *payload) {
     unsigned count = 0;
     uint8_t groups = 0;
+    uint64_t weighted_request = 0;
     for (unsigned i = 0; i < MODULE_MAPPED_LED_COUNT; i++) {
         if (!(payload[3 + i / 8] & (1u << (i % 8)))) continue;
         count++;
@@ -25,10 +27,15 @@ bool lighting_test_raw(const uint8_t *payload) {
         if (flags == LED_FLAG_KEYLIGHT) groups |= 1;
         if (flags == LED_FLAG_UNDERGLOW) groups |= 2;
         if (flags == LED_FLAG_INDICATOR) groups |= 4;
+        unsigned group = flags == LED_FLAG_KEYLIGHT ? 0 : flags == LED_FLAG_UNDERGLOW ? 1 : 2;
+        for (unsigned channel = 0; channel < 3; channel++)
+            weighted_request += (uint64_t)payload[channel] * module_power_profile.channel_ua[group][channel];
     }
     // User's experiment endpoints: up to 50 packages at 255, otherwise <=150.
-    // These are requests, still subject to the shared current-model limiter.
+    // Calibration is exact-output: reject excessive requests rather than silently
+    // measuring a dimmed substitute. Final limiting remains for other paths.
     if (!count || (count > 50 && (payload[0] > 150 || payload[1] > 150 || payload[2] > 150))) return false;
+    if (weighted_request > (uint64_t)module_power_led_budget(&module_power_profile) * 1000 * 255) return false;
     raw_color = (RGB){.r = payload[0], .g = payload[1], .b = payload[2]};
     memcpy(raw_mask, payload + 3, sizeof(raw_mask));
     lighting_test_pattern(MODULE_TEST_RAW, groups);
