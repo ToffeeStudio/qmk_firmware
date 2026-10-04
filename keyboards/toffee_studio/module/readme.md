@@ -200,6 +200,67 @@ For browser development, see the [configurator README](../../../../board-configu
 The development URL is `http://localhost:5173`; a past successful launch does
 not guarantee that a server is still running in a later session.
 
+### Persistent iPhone meter camera
+
+**Shared live preview:** http://127.0.0.1:5174. Rotate, zoom and drag the view
+to position the meter. `/frame.jpg` supplies a fresh JPEG from that same camera
+connection; `/status` reports helper identity, frame age and lifecycle counts.
+MJPEG `/stream` shares one capture across all viewers. It listens only on
+loopback, records no continuous video/audio, and does not touch the PCB.
+
+```sh
+node keyboards/toffee_studio/module/tools/camera_preview.mjs --camera-tool /Users/ethanhan/Desktop/projects/toffee/firmware/.build/module_camera --device 2A398C8F-C0AC-4706-90E0-D2D300000001 --port 5174
+```
+
+4 October current owner: Node PID **53454**, exec **51668**, native helper
+**53464**. Browser reload, rotation/zoom/Fit and simultaneous viewers passed;
+one camera session, no stops/interruptions or JavaScript errors. Recheck status
+before reuse. While this server is running, request HTTP snapshots instead of
+starting the standalone helper below. SIGTERM to the verified Node owner closes
+its camera child cleanly. Do not overwrite a running native executable.
+
+Use `tools/capture_camera.swift` in **`--serve` mode** for repeated snapshots.
+One process keeps one AVFoundation session open; it waits for two seconds of
+initial frames, then each snapshot request captures a new frame. Idle frames
+are discarded. Only requested PNGs are saved; no audio or video file is recorded.
+The helper's main run loop remains active for camera lifecycle notifications.
+
+Build from the firmware root while the helper is stopped:
+
+```sh
+swiftc keyboards/toffee_studio/module/tools/capture_camera.swift -o .build/module_camera -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __info_plist -Xlinker keyboards/toffee_studio/module/tools/camera_capture_info.plist
+.build/module_camera --list
+.build/module_camera --serve 2A398C8F-C0AC-4706-90E0-D2D300000001
+```
+
+Send lines to that **same process's stdin**:
+
+```text
+status
+snapshot /absolute/existing/folder/meter-01.png
+snapshot /absolute/existing/folder/meter-02.png
+quit
+```
+
+Spaces in snapshot paths are supported; do not add shell quotes inside the stdin
+line. Responses are JSON lines containing PID, snapshot/frame number, frame
+timestamp and image dimensions. `status` includes running state, frame age and
+observed session starts/stops/interruptions. Bad commands/paths return an error
+without reopening the camera. A capture failure or five-second fresh-frame
+timeout ends the helper; it does not return a cached frame or silently restart.
+`quit` or stdin EOF closes the connection. The old `DEVICE_ID OUTPUT.png` mode
+still takes one shot and exits; avoid that mode during persistent meter work.
+Future measurement runners should keep one child process and reuse its stdin.
+
+**Earlier 4 October standalone verification (now closed):** helper PID **47541**,
+exec **66202**, used Ethan iPhone Camera. Three 1920×1080 snapshots
+passed with advancing frame numbers/timestamps, one session start, zero stops
+and zero reported interruptions. An invalid `.jpg` request was rejected without
+disconnecting. Recheck `status` before reuse; these are recorded runtime IDs.
+The meter is visible but currently soft in focus, so these frames do not qualify
+automated current readings. Camera-only test: no PCB commands or firmware flash.
+[Evidence and images](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/persistent-camera-20261004-yXj3aN/README.md).
+
 ### Temporary lighting rescue
 
 Run this **before plugging in the PCB**, with the configurator/other lighting

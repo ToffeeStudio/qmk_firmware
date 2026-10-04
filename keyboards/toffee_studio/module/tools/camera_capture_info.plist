@@ -7,6 +7,8 @@
     <key>CFBundleName</key>
     <string>Toffee LED Camera</string>
     <key>NSCameraUsageDescription</key>
-    <string>Photograph the Module PCB LEDs to discover their physical positions.</string>
+    <string>Capture the Module PCB LEDs and USB meter for lighting tests.</string>
+    <key>NSCameraUseContinuityCameraDeviceType</key>
+    <true/>
 </dict>
 </plist>

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toffee · Meter camera</title>
+<style>
+  * {box-sizing:border-box} body {margin:0;background:#0b0b12;color:#eeeef7;font:15px system-ui,sans-serif}
+  header {padding:20px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;border-bottom:1px solid #292736}
+  h1 {margin:0;font-size:20px;font-weight:650} .badge {color:#c7c2d7;font-size:13px} .badge.live {color:#8ce5b4}
+  .tools {margin-left:auto;display:flex;align-items:center;gap:8px}
+  button {border:1px solid #464055;background:#201b30;color:#f3efff;border-radius:8px;padding:9px 14px;font:inherit;cursor:pointer}
+  button:hover {background:#332745} button:focus-visible {outline:2px solid #c09cff;outline-offset:3px}
+  #stage {height:calc(100dvh - 140px);min-height:300px;position:relative;overflow:hidden;touch-action:none;cursor:grab}
+  #stage:active {cursor:grabbing} #feed {position:absolute;left:50%;top:50%;transform-origin:center;max-width:none;user-select:none;pointer-events:none}
+  #message {position:absolute;inset:0;display:grid;place-items:center;padding:30px;text-align:center;background:#0b0b12e8;color:#d7cce9}
+  #message[hidden] {display:none} footer {padding:13px 24px;color:#aaa3ba;font-size:13px}
+  @media(max-width:680px) {header{padding:12px;gap:9px}.tools{margin-left:0}button{padding:7px 10px}#stage{height:calc(100dvh - 180px)}}
+</style>
+<header>
+  <h1>Toffee · Meter camera</h1>
+  <span id="status" class="badge" role="status">Connecting…</span>
+  <div class="tools">
+    <button id="rotate" aria-label="Rotate camera view clockwise">Rotate ↻</button>
+    <button id="out" aria-label="Zoom out">−</button>
+    <span id="zoom">1×</span>
+    <button id="in" aria-label="Zoom in">+</button>
+    <button id="fit">Fit</button>
+  </div>
+</header>
+<main id="stage">
+  <img id="feed" alt="Live view from Ethan's iPhone camera" draggable="false">
+  <div id="message">Connecting to the iPhone…</div>
+</main>
+<footer>Drag to pan · Scroll to zoom · Refreshing this page keeps the camera connected.</footer>
+<script>
+  const feed = document.querySelector('#feed'), stage = document.querySelector('#stage');
+  const status = document.querySelector('#status'), message = document.querySelector('#message');
+  let angle = 0, zoom = 1, panX = 0, panY = 0, pointer;
+  function layout() {
+    const width = feed.naturalWidth || 1920, height = feed.naturalHeight || 1080;
+    const turned = angle % 180 !== 0;
+    const fit = Math.min(stage.clientWidth / (turned ? height : width), stage.clientHeight / (turned ? width : height));
+    feed.style.width = width + 'px'; feed.style.height = height + 'px';
+    feed.style.transform = `translate(calc(-50% + ${panX}px), calc(-50% + ${panY}px)) rotate(${angle}deg) scale(${fit * zoom})`;
+    document.querySelector('#zoom').textContent = zoom.toFixed(1).replace('.0','') + '×';
+  }
+  function scale(amount) { zoom = Math.max(1, Math.min(5, zoom * amount)); layout(); }
+  document.querySelector('#rotate').onclick = () => { angle = (angle + 90) % 360; panX = panY = 0; layout(); };
+  document.querySelector('#in').onclick = () => scale(1.25);
+  document.querySelector('#out').onclick = () => scale(0.8);
+  document.querySelector('#fit').onclick = () => { zoom = 1; panX = panY = 0; layout(); };
+  stage.onwheel = event => { event.preventDefault(); scale(event.deltaY < 0 ? 1.1 : 1 / 1.1); };
+  stage.onpointerdown = event => { pointer = [event.clientX, event.clientY]; stage.setPointerCapture(event.pointerId); };
+  stage.onpointermove = event => {
+    if (!pointer) return;
+    panX += event.clientX - pointer[0]; panY += event.clientY - pointer[1];
+    pointer = [event.clientX, event.clientY]; layout();
+  };
+  stage.onpointerup = stage.onpointercancel = () => { pointer = undefined; };
+  new ResizeObserver(layout).observe(stage);
+  feed.onload = layout;
+  feed.onerror = () => { feed.removeAttribute('src'); };
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) feed.removeAttribute('src');
+  });
+  async function update() {
+    try {
+      const state = await fetch('/status', {cache:'no-store'}).then(response => response.json());
+      const live = state.ready && state.frameAgeMs !== null && state.frameAgeMs < 3000;
+      status.textContent = live ? '● Live · iPhone' : state.error ? 'Camera unavailable' : 'Connecting…';
+      status.classList.toggle('live', live);
+      message.hidden = live;
+      message.textContent = state.error || (state.ready ? 'Waiting for a fresh camera frame…' : 'Connecting to the iPhone…');
+      if (state.ready && !document.hidden && !feed.getAttribute('src')) feed.src = '/stream';
+      if (!state.ready) feed.removeAttribute('src');
+      layout();
+    } catch {
+      status.textContent = 'Preview disconnected'; status.classList.remove('live');
+      message.hidden = false; message.textContent = 'The local camera preview has stopped.';
+    }
+    setTimeout(update, 750);
+  }
+  update();
+</script>
+</html>

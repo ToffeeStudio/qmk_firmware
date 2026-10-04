@@ -20,6 +20,17 @@ photo. This is the best-supported identification, not certified as-built identit
 November 2025's 1.5 A / C2844005 approval is an older `Module-02` BOM decision.
 Neither nominal fuse rating is a qualified operating-current ceiling.
 
+## Persistent meter camera
+
+For repeated iPhone snapshots, keep `capture_camera.swift --serve DEVICE_ID`
+running and send snapshot requests to the same process. Do not spawn the one-shot
+mode each time. See the [camera usage and latest runtime IDs](keyboards/toffee_studio/module/readme.md#persistent-iphone-meter-camera).
+The shared preview now owns the session: http://127.0.0.1:5174, Node PID 53454
+(exec 51668), native helper PID 53464. Use `/frame.jpg` and `/status`; do not
+write to its stdin or start another helper. Previous helper 47541/66202 was
+closed deliberately. Reload/multiple viewers kept one session, no interruptions.
+Camera capture alone does not authorise PCB writes.
+
 ## Permanent Module lighting startup contract
 
 Ethan requires an **always-preserved rescue window before LEDs turn on**.
