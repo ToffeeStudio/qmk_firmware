@@ -1,5 +1,21 @@
 #include "power.h"
 
+#ifdef MODULE_POWER_CALIBRATION
+#ifndef MODULE_EXTENSIVE_TEST
+#error "Calibration profile requires startup-off, 18/channel, RAM-only test firmware"
+#endif
+// Measurement fixture only, NOT fitted/calibrated product coefficients.
+// The independent test cap/watchdog still applies at final transmission.
+const module_power_profile_t module_power_profile = {
+    .revision = 0x8001,
+    .configured = true,
+    .board_limit_ma = 900,
+    .base_ma = 120,
+    .margin_ma = 100,
+    .channel_ua = {{20000, 20000, 20000}, {20000, 20000, 20000}, {20000, 20000, 20000}},
+    .channel_ceiling = {18, 18, 18},
+};
+#else
 // Ethan's provisional whole-board budget, agreed 4 October 2026: 900 mA.
 // Calibration remains incomplete, so the profile stays disabled and LEDs off.
 // 90 mA is the preliminary meter baseline, NOT a worst-case reserve.
@@ -14,3 +30,4 @@ const module_power_profile_t module_power_profile = {
     .channel_ua = {{12000, 12000, 12000}, {12000, 12000, 12000}, {12000, 12000, 12000}},
     .channel_ceiling = {160, 255, 255},
 };
+#endif

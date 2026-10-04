@@ -48,6 +48,12 @@ EXTRA_USB_INTERFACES = yes
 WPM_ENABLE = yes
 
 # Explicit opt-in only; the normal product build keeps saved-startup behaviour.
+ifeq ($(MODULE_POWER_CALIBRATION),yes)
+    ifneq ($(MODULE_EXTENSIVE_TEST),yes)
+        $(error MODULE_POWER_CALIBRATION requires MODULE_EXTENSIVE_TEST=yes)
+    endif
+    OPT_DEFS += -DMODULE_POWER_CALIBRATION
+endif
 ifeq ($(MODULE_EXTENSIVE_TEST),yes)
     ifndef MODULE_TEST_BUILD_ID
         $(error MODULE_TEST_BUILD_ID is required for MODULE_EXTENSIVE_TEST=yes)

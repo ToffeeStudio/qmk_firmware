@@ -11,6 +11,11 @@ static uint32_t now;
 static uint16_t startup = 1000;
 static rgb_led_t wire[RGB_MATRIX_LED_COUNT];
 static unsigned transmissions;
+#ifdef MODULE_EXTENSIVE_TEST
+// This suite isolates the final power boundary; real watchdog/cap behavior is
+// covered with the production test_mode.c in groups_test/test_mode_test.
+void lighting_test_apply_limits(void) {}
+#endif
 
 // Explicitly synthetic, never a board calibration or deployable profile.
 #ifdef POWER_TEST_PROFILE
@@ -140,10 +145,23 @@ int main(void) {
         assert(u16(status + 17) == (demand(wire, &module_power_profile) + 254999) / 255000);
         assert(u16(status + 21) == elapsed);
         assert(u16(status + 23) == module_power_led_budget(&module_power_profile));
+#ifdef MODULE_EXTENSIVE_TEST
+        uint8_t sums[27]; memset(sums, 0xCC, sizeof(sums));
+        lighting_power_rgb_sums(sums + 1);
+        assert(sums[0] == 0xCC && sums[26] == 0xCC && sums[1] == 1 && sums[2] == 1 && sums[25] == 0);
+        assert(u16(sums + 3) == elapsed + 1 && u16(sums + 5) == 0);
+        uint16_t expected[3][3] = {{0}};
+        for (unsigned i = 0; i < 201; i++) {
+            int g = group(i); if (g < 0) continue;
+            expected[g][0] += wire[i].r; expected[g][1] += wire[i].g; expected[g][2] += wire[i].b;
+        }
+        for (unsigned g = 0; g < 3; g++) for (unsigned c = 0; c < 3; c++)
+            assert(u16(sums + 7 + (g * 3 + c) * 2) == expected[g][c]);
+#endif
         for (unsigned i = 104; i < 201; i++) assert(!wire[i].r && !wire[i].g && !wire[i].b);
     }
     assert(transmissions == 1001);
-#ifdef POWER_TEST_PROFILE
+#if defined(POWER_TEST_PROFILE) || defined(MODULE_POWER_CALIBRATION)
     assert(wire[103].r > 0 && (status[2] & 1));
 #else
     for (unsigned i = 0; i < 201; i++) assert(!wire[i].r && !wire[i].g && !wire[i].b);

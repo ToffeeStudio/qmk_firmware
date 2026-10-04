@@ -6,6 +6,23 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**4 October calibration preparation:** protected candidate build `0x26100402`
+adds test-only read-only command `0x89`: 25-byte payload, schema byte 0 = 1,
+frame-valid byte 1, little-endian sequence/age at 2/4, nine u16 final RGB sums
+at 6–23 (front/rear/badge; R/G/B), reserved byte 24 = 0. Product builds reject
+the command. Counts are after final limiting/startup, not requested sliders.
+Opt-in `MODULE_POWER_CALIBRATION=yes` requires `MODULE_EXTENSIVE_TEST=yes`;
+its revision 0x8001 is a reference measurement profile, NOT calibrated product
+coefficients: 900 mA total, 120 mA baseline reserve, 100 mA margin, 20 mA/channel,
+18-byte package cap, existing startup-off/5-second timeout and disabled saves.
+Normal profile remains unconfigured. Host parser/storage/startup/power tests
+pass, including three 20,000-frame variants and final-sum comparisons. Twelve
+JS meter/runner tests (67 assertions) cover nine fail-closed scenarios.
+Candidate SHA256 `f6f1918483a0596eb75875c91be5c72c7daabe0b3da438a6c5136182ca81513d`.
+Preflight passed at current sole Module location 0x00100000; original recovery
+hash verified unchanged. A private pre-flash VIA/lighting/66-override snapshot
+and three matching OCR readings are retained in the current calibration log.
+
 **4 October budget decision — 900 mA whole-board provisional limit selected.**
 Ethan explicitly chose 0.9 A for now. Source profile revision 2 records
 `board_limit_ma = 900`; this includes the electronics and model margin, with
@@ -201,6 +218,13 @@ The development URL is `http://localhost:5173`; a past successful launch does
 not guarantee that a server is still running in a later session.
 
 ### Persistent iPhone meter camera
+
+**Latest wired retry:** Node 77553 / exec 49593 owns helper 77563. iPhone is
+now enumerated over USB at 0x02100000. Three fresh HTTP images were fetched and
+viewed; underlying macOS Continuity logs show no disconnects during the test.
+Earlier PID references below are historical. The wireless session DID reconnect
+despite unchanged local AVFoundation counters; those counters alone are insufficient.
+[Wired retry evidence](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/wired-camera-20261004-VJtE4v/README.md).
 
 **Shared live preview:** http://127.0.0.1:5174. Rotate, zoom and drag the view
 to position the meter. `/frame.jpg` supplies a fresh JPEG from that same camera

@@ -25,3 +25,6 @@ void module_power_limit(const module_power_profile_t *profile, const rgb_led_t *
 uint16_t module_power_led_budget(const module_power_profile_t *profile);
 void lighting_power_prepare(const rgb_led_t *input, rgb_led_t *output);
 void lighting_power_status(uint8_t *payload); // 25 bytes, little-endian protocol v1.
+#ifdef MODULE_EXTENSIVE_TEST
+void lighting_power_rgb_sums(uint8_t *payload); // Test-only final-output sums, 25 bytes.
+#endif

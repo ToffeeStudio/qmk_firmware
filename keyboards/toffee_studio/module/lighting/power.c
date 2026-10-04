@@ -7,6 +7,9 @@ static module_power_frame_t last_frame;
 static uint16_t sequence;
 static uint32_t captured_at;
 static bool frame_valid;
+#ifdef MODULE_EXTENSIVE_TEST
+static uint16_t transmitted_sums[3][3];
+#endif
 
 static int group_for(uint16_t index, uint8_t flags) {
     if (index >= MODULE_MAPPED_LED_COUNT) return -1;
@@ -77,6 +80,16 @@ void module_power_limit(const module_power_profile_t *profile, const rgb_led_t *
 void lighting_power_prepare(const rgb_led_t *input, rgb_led_t *output) {
     module_power_limit(&module_power_profile, input, g_led_config.flags,
                        lighting_startup_scale(), output, &last_frame);
+#ifdef MODULE_EXTENSIVE_TEST
+    memset(transmitted_sums, 0, sizeof(transmitted_sums));
+    for (uint16_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+        int group = group_for(i, g_led_config.flags[i]);
+        if (group < 0) continue;
+        transmitted_sums[group][0] += output[i].r;
+        transmitted_sums[group][1] += output[i].g;
+        transmitted_sums[group][2] += output[i].b;
+    }
+#endif
     sequence++;
     captured_at = timer_read32();
     frame_valid = true;
@@ -86,6 +99,20 @@ static void put16(uint8_t *data, uint16_t value) {
     data[0] = value;
     data[1] = value >> 8;
 }
+
+#ifdef MODULE_EXTENSIVE_TEST
+void lighting_power_rgb_sums(uint8_t *payload) {
+    uint32_t age = timer_elapsed32(captured_at);
+    memset(payload, 0, 25);
+    payload[0] = 1;
+    payload[1] = frame_valid;
+    put16(payload + 2, sequence);
+    put16(payload + 4, age > UINT16_MAX ? UINT16_MAX : age);
+    for (unsigned group = 0; group < 3; group++)
+        for (unsigned color = 0; color < 3; color++)
+            put16(payload + 6 + (group * 3 + color) * 2, transmitted_sums[group][color]);
+}
+#endif
 
 void lighting_power_status(uint8_t *payload) {
     uint32_t age = timer_elapsed32(captured_at);

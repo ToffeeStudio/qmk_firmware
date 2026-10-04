@@ -22,6 +22,13 @@ Neither nominal fuse rating is a qualified operating-current ceiling.
 
 ## Persistent meter camera
 
+Latest 4 October retry: the iPhone is present on USB at 0x02100000. Preview
+Node PID 77553 / exec 49593 owns helper 77563; use http://127.0.0.1:5174.
+Three fresh snapshots were fetched and viewed, with no underlying Continuity
+disconnects in the test log. Earlier PID 53454/53464 below is historical, stopped
+after wireless transport reconnects that the helper's own counters missed.
+Do not use application session counters alone to claim the phone stayed connected.
+
 For repeated iPhone snapshots, keep `capture_camera.swift --serve DEVICE_ID`
 running and send snapshot requests to the same process. Do not spawn the one-shot
 mode each time. See the [camera usage and latest runtime IDs](keyboards/toffee_studio/module/readme.md#persistent-iphone-meter-camera).

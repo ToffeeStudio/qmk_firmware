@@ -85,6 +85,18 @@ static void test_parser(void) {
         assert(memcmp(&settings_before, &module_lighting_state, sizeof(settings_before)) == 0);
         assert(memcmp(&rear_before, &g_underglow_config, sizeof(rear_before)) == 0);
         assert(memcmp(rendered_before, rgb_matrix_ws2812_array, sizeof(rendered_before)) == 0);
+#ifdef MODULE_EXTENSIVE_TEST
+        memset(data, fill, sizeof(data));
+        data[0] = 9; data[1] = id_lighting_test_rgb_sums;
+        assert(module_raw_hid_parse_packet(data, sizeof(data)) == 0);
+        parser_attempts++;
+        assert(data[1] == 1 && data[25] == 0);
+        assert(data[26] == 0xA5 && data[27] == id_lighting_test_rgb_sums);
+        assert(memcmp(packet_id, data + 28, 4) == 0);
+        assert(memcmp(&settings_before, &module_lighting_state, sizeof(settings_before)) == 0);
+        assert(memcmp(&rear_before, &g_underglow_config, sizeof(rear_before)) == 0);
+        assert(memcmp(rendered_before, rgb_matrix_ws2812_array, sizeof(rendered_before)) == 0);
+#endif
     }
     const uint8_t off[5] = {255, 255, 255, 255, 255};
     const RGB colors[5] = {{18, 0, 0}, {0, 0, 18}, {0, 18, 0}, {18, 18, 0}, {18, 9, 13}};
@@ -140,7 +152,7 @@ static void test_parser(void) {
     for (unsigned command = 0; command <= 255; command++) {
         if (command == id_lighting_power_status) continue;
 #ifdef MODULE_EXTENSIVE_TEST
-        if (command == id_lighting_test_status || command == id_lighting_test_keepalive) continue;
+        if (command == id_lighting_test_status || command == id_lighting_test_keepalive || command == id_lighting_test_rgb_sums) continue;
 #endif
         if ((command >= 0x71 && command <= 0x76 && command != 0x73) ||
             (command >= 0x79 && command <= 0x85)) continue;

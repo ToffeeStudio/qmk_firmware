@@ -33,12 +33,15 @@ for mode in production temporary; do
   "$test_dir/rear-$mode"
 done
 printf 'Test executables retained at %s\n' "$test_dir"
-for profile in unconfigured synthetic; do
+for profile in unconfigured synthetic calibration; do
   profile_sources="lighting/power_profile.c"
   profile_define=""
   if [ "$profile" = synthetic ]; then
     profile_sources=""
     profile_define="-DPOWER_TEST_PROFILE"
+  fi
+  if [ "$profile" = calibration ]; then
+    profile_define="-DMODULE_EXTENSIVE_TEST -DMODULE_POWER_CALIBRATION"
   fi
   clang -std=c11 -O1 -g -fsanitize=address,undefined $profile_define \
     -I tools/tests/include -I ../../../tmk_core/protocol -I . \
