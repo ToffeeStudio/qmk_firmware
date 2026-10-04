@@ -5,16 +5,19 @@
 #error "Calibration profile requires startup-off, watchdog, RAM-only test firmware"
 #endif
 // Provisional measurement fixture: no claim of source/thermal qualification.
-// Exact-output campaign: 54 visually recorded readings, 60–120 mA idle.
-// Rounded nominal coefficients below over/under-predicted by -132/+40 mA.
+// Exact-output campaign: 83 visually recorded readings, variable 0–120 mA idle.
+// Rounded nominal coefficients below over/under-predicted by -170/+40 mA.
 // The separate 100 mA margin covers observed variation, not a certified bound.
-// Ethan authorised staged measurements targeting 800 mA actual current.
+// Ethan explicitly authorised a separate staged measurement toward 1 A.
+// 1100 mA modeled envelope minus baseline/margin admits up to 1000 mA
+// nominal board demand. Host observations stop at 1000 mA; not a sensor/cutoff.
+// This test-only envelope does not change the 900 mA product budget below.
 // Raw calibration requests must fit this budget unchanged or are rejected.
 // Other render paths retain the final limiter; startup-off/watchdog still apply.
 const module_power_profile_t module_power_profile = {
-    .revision = 0x8004,
+    .revision = 0x8005,
     .configured = true,
-    .board_limit_ma = 900,
+    .board_limit_ma = 1100,
     .base_ma = 80,
     .margin_ma = 100,
     .channel_ua = {{12000, 12000, 12000}, {15000, 15000, 15000}, {13000, 13000, 13000}},

@@ -86,9 +86,9 @@ int main(void) {
     }
 #endif
 #ifdef MODULE_POWER_CALIBRATION
-    assert(module_power_profile.revision == 0x8004);
+    assert(module_power_profile.revision == 0x8005);
     assert(module_power_profile.base_ma == 80 && module_power_profile.margin_ma == 100);
-    assert(module_power_profile.board_limit_ma == 900 && module_power_led_budget(&module_power_profile) == 720);
+    assert(module_power_profile.board_limit_ma == 1100 && module_power_led_budget(&module_power_profile) == 920);
     // Full RGB sparse requests 1/2/3 pass unchanged; larger requests are scaled
     // at the same final boundary, never treated as successfully delivered 255.
     for (unsigned count = 1; count <= 104; count++) {
@@ -96,8 +96,8 @@ int main(void) {
         for (unsigned i = 0; i < count; i++) input[i] = (RGB){255, 255, 255};
         module_power_limit(&module_power_profile, input, g_led_config.flags, 1000, output, &result);
         assert(result.requested_ua == (demand(input, &module_power_profile) + 254) / 255);
-        assert(result.effective_ua <= 720000);
-        assert(result.limited == (result.requested_ua > 720000));
+        assert(result.effective_ua <= 920000);
+        assert(result.limited == (result.requested_ua > 920000));
         if (!result.limited) assert(memcmp(input, output, sizeof(input)) == 0);
     }
 #endif
