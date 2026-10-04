@@ -20,7 +20,7 @@ static void test_temporary_firmware(void) {
     }
     // Sweep all channel input levels over all 201 slots, including padding.
     for (unsigned value = 0; value <= 255; value++) {
-        RGB raw = {value, 255 - value, (value * 17) & 255};
+        RGB raw = {.r=value, .g=255 - value, .b=(value * 17) & 255};
         for (unsigned i = 0; i < 201; i++) rgb_matrix_ws2812_array[i] = raw;
         lighting_test_apply_limits();
         for (unsigned i = 0; i < 201; i++) {
@@ -82,7 +82,7 @@ static void test_temporary_firmware(void) {
         lighting_task();
         lighting_test_apply_limits(); // Final-boundary repeat must be idempotent.
         for (unsigned i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
-            RGB expected = i == selected ? (RGB){255, 128, 32} : (RGB){0, 0, 0};
+            RGB expected = i == selected ? (RGB){.r=255, .g=128, .b=32} : (RGB){0};
             assert(memcmp(&rgb_matrix_ws2812_array[i], &expected, sizeof(RGB)) == 0);
         }
     }

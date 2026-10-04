@@ -25,12 +25,12 @@ void rgb_matrix_mode_noeeprom(uint8_t mode) {qmk_mode = mode;}
 void rgb_matrix_set_speed_noeeprom(uint8_t speed) {qmk_speed = speed;}
 void rgb_matrix_sethsv_noeeprom(uint8_t h, uint8_t s, uint8_t v) {qmk_hsv = (HSV){h, s, v};}
 void rgb_matrix_set_color(uint16_t i, uint8_t r, uint8_t g, uint8_t b) {
-    assert(i < 201); rgb_matrix_ws2812_array[i] = (RGB){r, g, b};
+    assert(i < 201); rgb_matrix_ws2812_array[i] = (RGB){.r = r, .g = g, .b = b};
 }
 void rgb_matrix_set_color_all(uint8_t r, uint8_t g, uint8_t b) {
     for (unsigned i = 0; i < 201; i++) rgb_matrix_set_color(i, r, g, b);
 }
-RGB hsv_to_rgb_nocie(HSV hsv) {return (RGB){hsv.v, hsv.s, hsv.h};}
+RGB hsv_to_rgb_nocie(HSV hsv) {return (RGB){.r = hsv.v, .g = hsv.s, .b = hsv.h};}
 void underglow_manager_init(void) {memset(&g_underglow_config, 0, sizeof(g_underglow_config));}
 void underglow_manager_set_brightness(uint8_t value) {g_underglow_config.brightness = value;}
 void underglow_manager_next_anim(void) {}
@@ -57,7 +57,7 @@ static void qmk_render(void) {
     uint16_t startup = lighting_startup_scale();
     for (unsigned i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
         RGB c = rgb_matrix_ws2812_array[i];
-        rgb_matrix_ws2812_array[i] = (RGB){c.r * startup / 1000, c.g * startup / 1000, c.b * startup / 1000};
+        rgb_matrix_ws2812_array[i] = (RGB){.r = c.r * startup / 1000, .g = c.g * startup / 1000, .b = c.b * startup / 1000};
     }
 }
 #include "parser_test.c"

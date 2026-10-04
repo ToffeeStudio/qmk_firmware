@@ -99,7 +99,7 @@ static void test_parser(void) {
 #endif
     }
     const uint8_t off[5] = {255, 255, 255, 255, 255};
-    const RGB colors[5] = {{18, 0, 0}, {0, 0, 18}, {0, 18, 0}, {18, 18, 0}, {18, 9, 13}};
+    const RGB colors[5] = {{.r=18}, {.b=18}, {.g=18}, {.r=18,.g=18}, {.r=18,.g=9,.b=13}};
     assert(packet(id_lighting_discovery, off, sizeof(off)) == 0);
     lighting_task();
     for (unsigned i = 0; i < RGB_MATRIX_LED_COUNT; i++)

@@ -29,7 +29,7 @@ bool lighting_test_raw(const uint8_t *payload) {
     // User's experiment endpoints: up to 50 packages at 255, otherwise <=150.
     // These are requests, still subject to the shared current-model limiter.
     if (!count || (count > 50 && (payload[0] > 150 || payload[1] > 150 || payload[2] > 150))) return false;
-    raw_color = (RGB){payload[0], payload[1], payload[2]};
+    raw_color = (RGB){.r = payload[0], .g = payload[1], .b = payload[2]};
     memcpy(raw_mask, payload + 3, sizeof(raw_mask));
     lighting_test_pattern(MODULE_TEST_RAW, groups);
     return true;

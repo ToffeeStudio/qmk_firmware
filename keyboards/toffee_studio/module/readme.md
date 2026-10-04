@@ -6,6 +6,17 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**4 October diagnostic colour correction:** build `0x26100403` completed the
+1/2/3 full-white experiment, but its new raw-colour initializer swapped R/G on
+QMK's GRB struct layout. Telemetry caught the first non-white mismatch; the
+controller was stopped and LEDs blanked. Do not use that build for colour fits.
+Build `0x26100404` uses designated RGB members. Host tests now include QMK's
+actual `quantum/color.h`, rather than inventing an RGB struct ABI; all suites pass.
+The visual controller additionally rejects requested-versus-transmitted colour /
+group mismatches and waits five seconds before its first meter image.
+Candidate SHA256 `c90c69b7dea2f5eadc3a2ff81b549fd8053376b42fb55de3dcfd6bd35504e11f`.
+Below is the earlier candidate's historical checkpoint, not a deployment recommendation.
+
 **4 October sparse-drive calibration candidate — built/tested, not yet flashed:**
 build `0x26100403`, SHA256 `3b08d2aebad3e15dbe164815a92697ee6b64c3b32cf8a34d5f9dfacc949a9840`.
 The calibration-only `0x8A` command accepts literal R/G/B plus a 13-byte bitmap

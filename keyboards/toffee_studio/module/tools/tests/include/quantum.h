@@ -20,9 +20,8 @@
 enum {RGB_MATRIX_SOLID_COLOR = 1, RGB_MATRIX_BREATHING, RGB_MATRIX_CYCLE_ALL,
       RGB_MATRIX_CYCLE_LEFT_RIGHT, RGB_MATRIX_CYCLE_UP_DOWN,
       RGB_MATRIX_GRADIENT_LEFT_RIGHT, RGB_MATRIX_GRADIENT_UP_DOWN, RGB_MATRIX_RAINBOW_BEACON};
-typedef struct {uint8_t r, g, b;} RGB;
-typedef RGB rgb_led_t;
-typedef struct {uint8_t h, s, v;} HSV;
+// Use QMK's real GRB/RGB memory layout; never invent a different host RGB ABI.
+#include "../../../../../../quantum/color.h"
 typedef struct {uint8_t x, y;} led_point_t;
 typedef struct {
     uint8_t matrix_co[MATRIX_ROWS][MATRIX_COLS];

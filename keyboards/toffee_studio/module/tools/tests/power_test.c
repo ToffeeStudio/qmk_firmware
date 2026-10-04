@@ -89,12 +89,12 @@ int main(void) {
     module_power_limit(&profile, input, g_led_config.flags, 1000, output, &result);
     assert(!result.requested_ua && !result.effective_ua && !result.limited);
     assert(result.limit_scale == UINT16_MAX);
-    input[103] = (RGB){100, 50, 25};
+    input[103] = (RGB){.r=100, .g=50, .b=25};
     module_power_limit(&profile, input, g_led_config.flags, 1000, output, &result);
     assert(memcmp(input, output, sizeof(input)) == 0 && !result.limited);
     assert(result.requested_ua == (100 * 12000 + 50 * 15000 + 25 * 18000 + 254) / 255);
     // RGB coefficients are separate; equal numeric red and blue need not draw alike.
-    input[103] = (RGB){0, 0, 100};
+    input[103] = (RGB){.b=100};
     module_power_limit(&profile, input, g_led_config.flags, 1000, output, &result);
     assert(result.requested_ua == (100 * 18000 + 254) / 255);
     // Even a falsely flagged padding address stays black and is not counted.
