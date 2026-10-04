@@ -6,6 +6,17 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**4 October latest specification check — Discord and original BOMs reviewed.**
+F1's best-supported identification is **BHFUSE BSMD0603-100-6V / C18203128**,
+a 0603 resettable fuse rated 1 A hold at 25°C. Both August screenless
+`Module4.zip` BOMs (before the September order) and the September 20 BOM specify
+1000 mA/C18203128; the new photo's `0` marking matches the manufacturer's table.
+November 2025's approved 1.5 A/C2844005 applies to the older `Module-02` BOM,
+not confirmation of this sample. Exact fitted identity still needs the assembly
+record; 1 A is not an established safe current budget. Root and firmware
+`AGENTS.md` now require Discord/attachment lookup for all hardware specs.
+See the [revision/evidence trail](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/README.md#4-october-follow-up-discord-and-f1-revision-check).
+
 **4 October latest follow-up — rescue stopped and new PCB photos reviewed.**
 On Ethan's explicit instruction, session `66996` received Ctrl+C and exited 0
 after observed ACK write 34288. No rescue process remains; no command restored

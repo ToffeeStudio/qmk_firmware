@@ -7,6 +7,19 @@ Keep that README current when board behavior or verified status changes. Record
 automated checks separately from human typing/lighting confirmation. Historical
 discovery and per-key notes must not override its current-status section.
 
+## Hardware specifications and Discord evidence
+
+Always consult the archived Discord history and original attachments for board
+and component specifications, as Ethan explicitly requires. Follow the
+[Toffee-root evidence-source rules](../AGENTS.md#hardware-specifications-always-consult-discord-history)
+for the full Suzu archive, Topfast conversations and BOM provenance. Do not
+infer fitted components from firmware constants or apply older revision decisions
+to today's sample. August/September 2026 screenless BOMs specify F1 as
+**1000 mA / C18203128, BHFUSE BSMD0603-100-6V**; its `0` marking matches the
+photo. This is the best-supported identification, not certified as-built identity.
+November 2025's 1.5 A / C2844005 approval is an older `Module-02` BOM decision.
+Neither nominal fuse rating is a qualified operating-current ceiling.
+
 ## Permanent Module lighting startup contract
 
 Ethan requires an **always-preserved rescue window before LEDs turn on**.
