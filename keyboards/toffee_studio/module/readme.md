@@ -6,43 +6,49 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
-**Latest 4 October checkpoint — rough model measured; normal deployment blocked.**
-The sole Module at USB`0x00100000`, bootloader serial`E0C9125B0D9B`, runs
-protected temporary **0x26100404**, SHA256
-`c90c69b7dea2f5eadc3a2ff81b549fd8053376b42fb55de3dcfd6bd35504e11f`.
+**Latest4 October — camera recovered; exact-output measurements up to770 mA.**
+The sole Module now at USB`0x02100000` runs protected temporary **0x26100406**,
+profile0x8004, SHA256
+`622fdde701da4113f2f69efb245f4487e9511604beb957bc51a3169c0b75737b`.
+Historical bootloader serial`E0C9125B0D9B` must be rechecked at the next flash.
 It is **dark**, startup-off, saves-disabled, with a five-second controller-loss
-timeout. No test/rescue loop remains. Its450 mA temporary reference model is
-not the settled900 mA provisional product budget.
+timeout. No test/rescue loop remains. Its900 mA provisional measurement model
+reserves80 mA baseline plus100 mA margin, leaving720 mA LED allowance. Accepted
+raw patterns are transmitted unchanged; oversized patterns are rejected instead
+of silently dimmed. Ordinary render paths retain the final shared limiter.
 
-The visual campaign recorded 47 corrected-build images and final RGB sums.
-Full-drive sparse white and isolated RGB passed; larger requested255/150 patterns
-were limited, not qualified at those unscaled levels. Nominal baseline80 mA;
-front/rear/badge R/G/B coefficients 11/11/11,13/14/13,13/13/13 mA at 255.
-Independent combinations differed by at most 34.8 mA. Meter baseline varies
-considerably, including post-run 0/60 mA idle displays; model accuracy remains rough.
+The latest exact-output campaign contains83 accepted visual readings and final
+RGB sums, including20 front white LEDs at255 (750–770 mA over146 seconds),
+50 front red255 (660 mA),50 front orangeR255/G51 (770 mA), and all104 atwhite46
+or isolated RGB138 (630–750 mA). Earlier build04 large requests were limited;
+these05/06 requests were not. Nominal baseline80 mA plus front/rear/badge R/G/B
+coefficients12/12/12,15/15/15,13/13/13 mA at255 gives a simple byte-sum estimate.
+Observed minus estimate spans about-170 to+40 mA, with white overestimated.
+Idle0–120 mA and10 mA display resolution remain recorded uncertainties, not
+reasons to require a perfectly steady baseline. No OCR or image-reading programs.
 
 Normal source **profile 3**:900 mA total,120 mA baseline reserve,100 mA margin,
 680 mA LED allowance, conservative coefficients 15/15/15,18/19/18,18/18/18.
 It stays **configured=false**, built/archived **NOT FLASHED**. Candidate SHA256
-`11e8d49e6d00e3aa17856f93771c6a072df23b2d1b1f1d8d5fc11d14a29df692` is now the
-root UF2 and archived under`ARCHIVE/firmware-recovery/20261004-profile3-unqualified/`.
+`11e8d49e6d00e3aa17856f93771c6a072df23b2d1b1f1d8d5fc11d14a29df692` is
+archived under`ARCHIVE/firmware-recovery/20261004-profile3-unqualified/`.
 Do not deploy an enabled900 mA profile until higher source allowance, PCB/fuse
 thermal headroom and intended-range measurements pass. Current source allocation
 is recorded 500 mA; a port's nominal capability is not negotiated entitlement.
 
-Actual visible Chrome/PCB tests pass all six sliders, effects, independent groups,
+Earlier build04 visible Chrome/PCB tests pass all six sliders, effects, independent groups,
 rapid changes, retries/reloads, Debug limiting and browser-close watchdog.
 The app labels temporary firmware and estimates. Host suites pass persistence,
 startup1 s black/1 s fade,104-map/raw boundaries, parser,60,000 randomized limiter
 frames plus profile 3 white-level sweeps.39 selected JS tests and Vite build pass.
 
-Final same-image protected reflash passed 15 s USB/keyboard/VIA response; subsequent
-read-only checks match original saved lighting, all 66 overrides and private
+Build06 flash passed15 s USB/keyboard/VIA response; latest post-measurement
+read-only checks match original saved lighting, all66 overrides and private
 keymap/macros/layout, with final RGB all zero. Protected original UF2 hash is
 unchanged. Human typing, controlled cold power and physical fade timing remain
 pending; software reboot is not a cold-power test. Camera stays open at 5174.
 
-See [complete current report and exact remaining requirements](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/visual-calibration-20261004-lL59DO/README.md).
+See [complete current report and exact remaining requirements](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/exact-output-20261004-gFljV8/README.md).
 Root/firmware AGENTS contain the permanent **view images yourself, no OCR** rule.
 
 ## Historical checkpoints (superseded by Current status above)
@@ -288,10 +294,13 @@ not guarantee that a server is still running in a later session.
 
 ### Persistent iPhone meter camera
 
-**Latest wired retry:** Node 77553 / exec 49593 owns helper 77563. iPhone is
-now enumerated over USB at 0x02100000. Three fresh HTTP images were fetched and
-viewed; underlying macOS Continuity logs show no disconnects during the test.
-Earlier PID references below are historical. The wireless session DID reconnect
+**Latest recovery:** Ethan explicitly requested restart after AVFoundation
+-11808 stopped the old bridge. Node61821 / exec62718 now owns helper61830.
+Meter images are fetched from the same `/frame.jpg` connection; fresh frame IDs
+advanced through48185. An underlying Continuity stop/disconnect query over a
+5-minute resumed-test window found no matching events. These are bounded
+observations; counters alone cannot prove continuity. Earlier77553/77563 and
+other PID references below are historical/stopped. The wireless session DID reconnect
 despite unchanged local AVFoundation counters; those counters alone are insufficient.
 [Wired retry evidence](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/wired-camera-20261004-VJtE4v/README.md).
 
@@ -305,7 +314,7 @@ loopback, records no continuous video/audio, and does not touch the PCB.
 node keyboards/toffee_studio/module/tools/camera_preview.mjs --camera-tool /Users/ethanhan/Desktop/projects/toffee/firmware/.build/module_camera --device 2A398C8F-C0AC-4706-90E0-D2D300000001 --port 5174
 ```
 
-4 October current owner: Node PID **53454**, exec **51668**, native helper
+Earlier4 October owner (stopped): Node PID **53454**, exec **51668**, native helper
 **53464**. Browser reload, rotation/zoom/Fit and simultaneous viewers passed;
 one camera session, no stops/interruptions or JavaScript errors. Recheck status
 before reuse. While this server is running, request HTTP snapshots instead of

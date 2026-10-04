@@ -30,20 +30,22 @@ stale images stop the measurement. Reuse the existing `/frame.jpg` connection;
 do not reopen the phone camera for a snapshot. The old `read_meter` helper and
 OCR-based calibration runner must not be used for future meter readings.
 
-Latest 4 October retry: the iPhone is present on USB at 0x02100000. Preview
-Node PID 77553 / exec 49593 owns helper 77563; use http://127.0.0.1:5174.
-Three fresh snapshots were fetched and viewed, with no underlying Continuity
-disconnects in the test log. Earlier PID 53454/53464 below is historical, stopped
-after wireless transport reconnects that the helper's own counters missed.
+Latest4 October recovery: Ethan requested restart after the old bridge failed
+with AVFoundation -11808. Preview Node61821 / exec62718 owns helper61830;
+use http://127.0.0.1:5174. All subsequent measurements reuse `/frame.jpg`.
+Fresh frame IDs advanced through48185; a5-minute underlying Continuity log
+query during the resumed white hold found no matching stop/disconnect events.
+Earlier77553/77563 and53454/53464 are stopped/historical. The latter wireless
+session had transport reconnects that the helper's own counters missed.
 Do not use application session counters alone to claim the phone stayed connected.
 
 For repeated iPhone snapshots, keep `capture_camera.swift --serve DEVICE_ID`
 running and send snapshot requests to the same process. Do not spawn the one-shot
 mode each time. See the [camera usage and latest runtime IDs](keyboards/toffee_studio/module/readme.md#persistent-iphone-meter-camera).
 Use `/frame.jpg` and `/status`; do not write to the helper's stdin or start
-another camera owner. Historical helpers 53464 and 47541 are stopped. Final
-campaign snapshots and a30-minute underlying Continuity log query found no
-matching disconnect/stop events. Camera capture alone does not authorise PCB writes.
+another camera owner. Historical helpers53464 and47541 are stopped. Camera
+capture alone does not authorise PCB writes. Recheck live ownership and advancing
+frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
@@ -62,19 +64,25 @@ load can still be unsafe. Do not claim it resolves the underlying overcurrent ri
 ## Power-budget research checkpoint (4 October 2026)
 
 **Later continuation:** Ethan requests no silent dimming in calibration and says
-idle variation is expected. Candidate0x26100405/profile0x8003 admits exact raw
-patterns within the provisional900 mA conservative model or rejects them;
+idle variation is expected; measurements toward800 mA are authorised.
+Installed0x26100406/profile0x8004 admits exact raw patterns within its provisional
+900 mA model (80 mA baseline,100 mA margin,720 mA LED allowance) or rejects them;
 startup-off, no saves,5s watchdog and final limiting of other paths remain.
 Controller rejects any reduced final RGB sums. Record idle ranges rather than
 requiring constant values. [Active evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/exact-output-20261004-gFljV8/README.md)
-is authoritative for build/flash progression. Do not claim source/thermal
-qualification from these provisional tests. Older checkpoint below is historical.
+is authoritative for build/flash progression. There are83 accepted manual
+readings; exact20-front-white255 output held146 s at750–770 mA,50-front-red255
+at660 mA,50-front-orangeR255/G51 at770 mA, and all104white46/RGB138 at630–750 mA.
+Nominal channel mA at255: front12/12/12,rear15/15/15,badge13/13/13 plus80 mA
+baseline. Observed-minus-estimate spans approximately-170 to+40 mA; retain100 mA
+margin and idle ranges. Do not claim source/thermal qualification from these
+provisional tests. Older checkpoint below is historical.
 
-Installed protected temporary build **0x26100404**, SHA256
-`c90c69b7dea2f5eadc3a2ff81b549fd8053376b42fb55de3dcfd6bd35504e11f`,
-at sole Module USB `0x00100000`, serial `E0C9125B0D9B`. After the visual
-measurement/UI campaign it was reflashed unchanged; saved lighting, all 66
-overrides and private VIA settings match the pre-test snapshot. Output is
+Installed protected temporary build **0x26100406**, SHA256
+`622fdde701da4113f2f69efb245f4487e9511604beb957bc51a3169c0b75737b`,
+at sole Module USB `0x02100000`; historical boot serial `E0C9125B0D9B` must be
+rechecked at next flash. Latest read-only preservation check after measurements
+confirms saved lighting, all66 overrides and private VIA match the baseline. Output is
 **dark**, no test/rescue controller remains. Keep the wired camera open.
 
 Normal source profile **revision 3** records the agreed provisional **900 mA
@@ -87,7 +95,7 @@ intended-range source/thermal qualification. Normal build is archived,
 `11e8d49e6d00e3aa17856f93771c6a072df23b2d1b1f1d8d5fc11d14a29df692`.
 Do not enable it or substitute synthetic test coefficients as qualified data.
 
-Temporary profile 0x8002 keeps a450 mA model ceiling,120 mA base,100 mA margin,
+Historical temporary profile0x8002 kept a450 mA model ceiling,120 mA base,100 mA margin,
 20 mA/channel reference; saves disabled, startup-off, five-second watchdog.
 Its raw test command0x8A allows up to50 LEDs requested at 255, otherwise150.
 Larger loads in this campaign were limited; this is not unscaled full-range
@@ -109,7 +117,7 @@ are not verified. Need those physical/electrical checks and full-range validatio
 before normal deployment; no trip-point hunting or fuse bypass. Controlled cold
 power/physical typing and hardware startup timing remain pending.
 
-See [current evidence and next requirements](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/visual-calibration-20261004-lL59DO/README.md).
+See [current evidence and next requirements](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/exact-output-20261004-gFljV8/README.md).
 Older deployment/runtime statements elsewhere are historical. Rescue was stopped
 by Ethan; **do not automatically restart it or restore high saved lighting**.
 
@@ -172,7 +180,7 @@ Rules:
   authorisation for this flash, not blanket authorisation for future boards.
 
 - The RP2040 bootloader accepts a normal `.uf2` file copied onto its `RPI-RP2` drive (Finder drag-and-drop or `/bin/cp -X`). A custom USB programmer is not required.
-- Select by freshly enumerated physical USB location (`--usb-location`), not enumeration order. Latest authorised sole-board target is `0x00100000`, serial `E0C9125B0D9B`. Older two-board B=`0x01142000`/A=`0x02140000` labels are historical, not identities. Require exactly one raw HID at the selected connection and exactly one matching RP2 bootloader before copying; recheck after reboot. Do not touch another board implicitly.
+- Select by freshly enumerated physical USB location (`--usb-location`), not enumeration order. Latest sole-board location is `0x02100000`; last flash measured serial `E0C9125B0D9B` at former `0x00100000`. Recheck both before flashing. Older two-board B=`0x01142000`/A=`0x02140000` labels are historical, not identities. Require exactly one raw HID at the selected connection and exactly one matching RP2 bootloader before copying; recheck after reboot. Do not touch another board implicitly.
 - On 1 October 2026, Module B's application-to-bootloader transition confirmed RP2 serial `E0C9125B0D9B` at the same physical connection `0x01142000`. Recheck both for each flash; do not infer identity from an application HID path, which changes on reboot.
 - Preserve the known-working pre-underglow image at `/Users/ethanhan/Desktop/projects/toffee/ARCHIVE/firmware-recovery/2026-09-30-pre-underglow/pre-underglow-8c65e8ad.uf2`. SHA256: `8c65e8ad26255d3a16f7a8de709344917c0fba663cfc0ea2114e4d91031979c6`. Do not overwrite or delete it. The user confirmed both lights and typing after restoring it on 30 September 2026.
 - Use `keyboards/toffee_studio/module/tools/flash_module.py --help` for the local updater. It archives each candidate and private VIA settings before rebooting, validates UF2 blocks, copies to one explicit drive, and checks keyboard/VIA reconnection and uptime. It must not change startup lighting as a diagnostic side effect.
