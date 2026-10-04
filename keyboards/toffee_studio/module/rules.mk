@@ -9,7 +9,7 @@ QUANTUM_PAINTER_ENABLE = yes
 QUANTUM_PAINTER_DRIVERS += gc9107_spi
 QUANTUM_PAINTER_LVGL_INTEGRATION = yes
 
-SRC += lighting/groups.c lighting/storage.c \
+SRC += lighting/groups.c lighting/storage.c lighting/power.c lighting/power_profile.c lighting/power_driver.c \
        rawhid/module_raw_hid.c \
 	   persistence.c \
 	   display/wpm_indicator.c \
@@ -40,6 +40,7 @@ RGB_MATRIX_ENABLE = yes
 RGBLIGHT_ENABLE = no
 BACKLIGHT_ENABLE = no
 WS2812_DRIVER = vendor
+WS2812_DRIVER_REQUIRED = yes
 
 VIRTSER_ENABLE = yes
 CDC_ENABLE = yes

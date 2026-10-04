@@ -14,12 +14,12 @@ sed -n '/^static int parse_set_animation(/,$p' rawhid/module_raw_hid.c > "$test_
 test -s "$test_dir/module_parser.inc"
 clang -std=c11 -O1 -g -fsanitize=address,undefined -DMODULE_LED_DISCOVERY \
   -I tools/tests/include -I ../../../tmk_core/protocol -I . -I "$test_dir" tools/tests/groups_test.c lighting/groups.c lighting/lighting.c \
-  -o "$test_dir/groups"
+  lighting/power.c lighting/power_profile.c -o "$test_dir/groups"
 "$test_dir/groups"
 clang -std=c11 -O1 -g -fsanitize=address,undefined -DMODULE_LED_DISCOVERY \
   -DMODULE_EXTENSIVE_TEST -DMODULE_TEST_BUILD_ID=0x26100202 \
   -I tools/tests/include -I ../../../tmk_core/protocol -I . -I "$test_dir" tools/tests/groups_test.c \
-  lighting/groups.c lighting/lighting.c lighting/test_mode.c -o "$test_dir/temporary"
+  lighting/groups.c lighting/lighting.c lighting/test_mode.c lighting/power.c lighting/power_profile.c -o "$test_dir/temporary"
 "$test_dir/temporary"
 # Compile the actual rear persistence functions, excluding unrelated display I/O.
 sed -n '/^extern animation_t\* underglow_animations\[\];/,$p' persistence.c > "$test_dir/module_persistence.inc"
@@ -33,3 +33,16 @@ for mode in production temporary; do
   "$test_dir/rear-$mode"
 done
 printf 'Test executables retained at %s\n' "$test_dir"
+for profile in unconfigured synthetic; do
+  profile_sources="lighting/power_profile.c"
+  profile_define=""
+  if [ "$profile" = synthetic ]; then
+    profile_sources=""
+    profile_define="-DPOWER_TEST_PROFILE"
+  fi
+  clang -std=c11 -O1 -g -fsanitize=address,undefined $profile_define \
+    -I tools/tests/include -I ../../../tmk_core/protocol -I . \
+    tools/tests/power_test.c lighting/power.c lighting/power_driver.c $profile_sources \
+    -o "$test_dir/power-$profile"
+  "$test_dir/power-$profile"
+done

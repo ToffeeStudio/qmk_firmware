@@ -21,6 +21,24 @@ when modifying initialization, rendering, USB lifecycle or adding output paths.
 This is startup behavior, **not a shared current limit**; the saved steady-state
 load can still be unsafe. Do not claim it resolves the underlying overcurrent risk.
 
+## Power-budget research candidate (4 October 2026)
+
+The source now routes every RGB flush through `lighting/power_driver.c` and
+`lighting/power.c`, before the existing RP2040 WS2812 transport. Never bypass this
+final boundary. Preserve an unscaled render buffer, saved preferences, all 104
+mapped positions (including broken 103), and the startup contract above.
+`lighting/power_profile.c` is intentionally **unconfigured**: builds hold LEDs off.
+No safe current ceiling/calibrated coefficients have been established; 90 mA and
+12 mA/channel are preliminary/reference numbers, not qualified limits. Do not
+turn the synthetic host-test profile into a deployed profile. `0x88` is read-only
+estimated-current telemetry, not a physical current sensor or budget override.
+The root `31cf12bf...` UF2 is built and archived, **not flashed**. The connected
+PCB still runs its previous normal firmware with the rescue loop active; saved
+high lighting is unsafe. Do not stop rescue or restore high settings as cleanup.
+Ethan confirmed board-only metering and secure support; do not ask again.
+Fitted fuse/source/thermal limits remain unresolved. Follow the P0/P1 gates in
+the [current research log](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/README.md).
+
 # Remote Machine Safety
 
 The remote Kali machine exposed through SSH/ngrok is a GOLDEN STATE reference system.

@@ -2,6 +2,7 @@
 #include <assert.h>
 #include "../../lighting/groups.h"
 #include "../../lighting/lighting.h"
+#include "../../lighting/power.h"
 #include "../../animations/manager.h"
 #include "usb_device_state.h"
 #include <lib/lib8tion/lib8tion.h>
@@ -51,6 +52,13 @@ static void qmk_render(void) {
         else rgb_matrix_set_color(i, 255, 255, 255); // Must be cleared/overwritten.
     }
     lighting_task();
+    // This suite inspects the renderer and startup contract independently of
+    // electrical profile selection. The actual final driver has its own suite.
+    uint16_t startup = lighting_startup_scale();
+    for (unsigned i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+        RGB c = rgb_matrix_ws2812_array[i];
+        rgb_matrix_ws2812_array[i] = (RGB){c.r * startup / 1000, c.g * startup / 1000, c.b * startup / 1000};
+    }
 }
 #include "parser_test.c"
 #include "startup_test.c"

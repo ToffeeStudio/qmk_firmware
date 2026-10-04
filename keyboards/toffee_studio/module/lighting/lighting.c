@@ -28,13 +28,12 @@ void notify_usb_device_state_change_kb(enum usb_device_state state) {
     notify_usb_device_state_change_user(state);
 }
 
-static void lighting_startup_apply(void) {
+uint16_t lighting_startup_scale(void) {
     // Run on completed frames, not a blocking sleep during keyboard/USB init.
     if (usb_device_state != USB_DEVICE_STATE_CONFIGURED) {
-        rgb_matrix_set_color_all(0, 0, 0);
-        return;
+        return 0;
     }
-    if (startup_done) return;
+    if (startup_done) return 1000;
     if (startup_waiting) {
         startup_waiting = false;
         startup_started = timer_read32();
@@ -42,24 +41,15 @@ static void lighting_startup_apply(void) {
     }
     uint32_t elapsed = timer_elapsed32(startup_started);
     if (elapsed <= MODULE_LIGHTING_STARTUP_DELAY_MS) {
-        rgb_matrix_set_color_all(0, 0, 0);
-        return;
+        return 0;
     }
     elapsed -= MODULE_LIGHTING_STARTUP_DELAY_MS;
     if (elapsed >= MODULE_LIGHTING_STARTUP_FADE_MS) {
         startup_done = true; // Do not restart the fade when the 32-bit timer wraps.
         uprintf("Lighting: startup fade complete\n");
-        return;
+        return 1000;
     }
-    // Scale the freshly rendered frame, never the saved/requested settings.
-    // All groups, per-key overrides and diagnostic patterns pass through here.
-    for (uint16_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
-        rgb_led_t c = rgb_matrix_ws2812_array[i];
-        rgb_matrix_set_color(i,
-            (uint32_t)c.r * elapsed / MODULE_LIGHTING_STARTUP_FADE_MS,
-            (uint32_t)c.g * elapsed / MODULE_LIGHTING_STARTUP_FADE_MS,
-            (uint32_t)c.b * elapsed / MODULE_LIGHTING_STARTUP_FADE_MS);
-    }
+    return elapsed * 1000 / MODULE_LIGHTING_STARTUP_FADE_MS;
 }
 
 // Per-front-LED brightness override (0-255), applied on top of the active
@@ -412,12 +402,10 @@ void lighting_task(void) {
 #ifdef MODULE_EXTENSIVE_TEST
     lighting_test_apply_limits();
 #endif
-    lighting_startup_apply();
     return;
 #endif
     underglow_manager_task();
     keylight_apply_overrides();
-    lighting_startup_apply();
 }
 
 bool lighting_process_user_command(uint16_t keycode, keyrecord_t *record) {

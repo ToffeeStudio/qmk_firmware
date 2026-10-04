@@ -16,6 +16,7 @@ enum custom_keycodes {
 
 void lighting_init(void);
 void lighting_task(void);
+uint16_t lighting_startup_scale(void); // 0..1000; applied at final transmission.
 void lighting_enable_underglow(void);
 void keylight_set_brightness(uint16_t led_index, uint8_t brightness);
 

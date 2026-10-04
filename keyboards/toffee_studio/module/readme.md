@@ -6,6 +6,33 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**4 October — shared limiter and Debug telemetry implemented, NOT flashed.**
+The source now proportionally limits final RGB transmission across front/rear/
+badge, with a read-only `0x88` status API and companion configurator Debug panel.
+The profile is **unconfigured**, so this research build holds LEDs black rather
+than inventing a safe current budget. Existing saved lighting is not changed.
+Ethan confirmed the design, board-only meter and secure fixture; fitted F1,
+source allowance and calibrated RGB coefficients are still unknown. This is
+an offline software checkpoint, not electrical qualification or deployed protection.
+
+Current root UF2: **175616 bytes**, SHA256
+`31cf12bfbabd7819557f1d89f4f8ca3b2544fe9d0d6993bf76cb81cf839b6f67`, preserved as
+[power-debug-unconfigured.uf2](../../../../ARCHIVE/firmware-recovery/20261004-power-debug-dQ3Ake/power-debug-unconfigured.uf2).
+Normal and temporary `0x26100401` builds pass; a final normal rebuild is byte-identical.
+Both candidates remain unflashed. The protected pre-change and startup-only images
+are unchanged. Rescue session `66996` remains active (observed ACK write 31088,
+truncated history); no new live setters, flash or powered ramps were performed.
+
+ASan/UBSan checks pass 20,000 randomized frames in each of two profile/driver
+variants, parser 4,581/4,584 attempts, startup, storage and rendering suites.
+All 24 mocked Python updater/rescue tests pass. Companion frontend: 24 HID/map/
+startup tests (1,137 assertions), 11 actual-component simulated-HID browser
+checks and Vite build pass. The same 11 legacy TypeScript errors remain.
+Browser checks include real slider mouse/keyboard input, queued writes, current
+expiry, unsupported firmware, hidden pages and disconnect/retry; **no PCB access**.
+Details, limitations and measurement blockers are in the
+[research log](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/README.md).
+
 **4 October — startup rescue window and fade implemented, built, NOT flashed.**
 As explicitly chosen by Ethan: **1 second completely dark after USB is configured
 and the main loop is running, then a 1-second fade to saved/requested lighting**.
@@ -14,10 +41,10 @@ commands continue throughout; saved settings remain unchanged, and a rescue
 all-off command is not overwritten by the end of startup. Reset/suspend re-arms
 the window. Both agent instruction files now make this a permanent requirement.
 
-The normal candidate is `toffee_studio_module_via.uf2`, **173568 bytes**, SHA256
+The earlier startup-only candidate was **173568 bytes**, SHA256
 `7ff7946621e927dfa934348bfe771f43c9c9e9dee9796ef2818d3bae1382691a`, also preserved as
 [startup-fade.uf2](../../../../ARCHIVE/firmware-recovery/20261004-startup-fade-OGr5zV/startup-fade.uf2).
-It replaces only the local build output; the previously deployed `bfda11cf...`
+It is now superseded at the local build root by the power candidate above; the previously deployed `bfda11cf...`
 and protected pre-change `8c65e8ad...` images remain archived unchanged.
 No deployment or hardware timing test was performed. The separate rescue process
 is still running (session `66996`, latest observed ACK at write 3077); recheck
@@ -32,14 +59,14 @@ parser totals are 4,326/4,329 attempts. Existing storage and rear debounce tests
 and all 24 Python updater/rescue tests pass. Updater tests simulate flashing;
 they do not flash hardware. See the [current research/recovery log](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/README.md).
 
-**4 October — unresolved high-brightness shutdown risk.** The normal firmware
+**4 October — unresolved high-brightness shutdown risk.** The deployed firmware
 has no shared current budget across front/rear/badge. The front ceiling of 160
 does not globally constrain custom rear/badge output or establish safe current.
 Past low-drive tests and flash success are not high-load electrical qualification.
 Fitted fuse/source limits and present shutdown mechanism remain unverified.
 See [current-budget research](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/README.md)
-for historical evidence, BOM discrepancies and a proposed firmware limiter.
-No limiter implemented or high-load tests/flash performed for this investigation.
+for historical evidence, BOM discrepancies and the unflashed firmware limiter.
+No high-load tests or flash were performed for this investigation.
 The later authorised temporary rescue is recorded below. Power/thermal P0/P1
 gates remain open.
 
@@ -290,9 +317,36 @@ Implementation entry points:
 - [animations/manager.c](animations/manager.c): effect IDs 0–9 and common brightness scaling. Five effects were corrected to avoid applying brightness twice.
 - [persistence.c](persistence.c): one-second firmware-side debounce; versioned eight-byte EEPROM record in unused keyboard/user slots 15–22, without moving VIA keymaps/macros. Unchanged records are not rewritten. The old littlefs lighting file is not migrated.
 - [lighting/lighting.c](lighting/lighting.c), [groups.c](lighting/groups.c), [screenless map](lighting/screenless-map.json): separate front/badge/rear rendering. Unmapped slots are black. No valid record: front solid white at brightness 18/speed 100, badge white at brightness 18, rear solid blue at brightness 18/speed 100. Diagnostic presets temporarily override rendering; a group/lighting setter or restart resumes normal lighting.
-- [lighting.h](lighting/lighting.h): explicit 1000 ms startup-black and 1000 ms fade constants. `lighting_startup_apply()` in `lighting.c` scales the completed fresh RGB frame after all group/per-key/test-mode rendering, never saved configuration. The timer starts on the first rendered frame with configured USB, not before enumeration. `notify_usb_device_state_change_kb()` re-arms on USB loss/suspend and preserves the user notification hook. QMK's render/flush loop and Raw HID task remain live; no sleep/delay or new persistence format. Future later output callbacks must not bypass this gate.
+- [lighting.h](lighting/lighting.h): explicit 1000 ms startup-black and 1000 ms fade constants. `lighting_startup_scale()` returns a 0–1000 factor, applied at final transmission to the budget-limited frame, never saved configuration. The timer starts on the first flush with configured USB, not before enumeration. `notify_usb_device_state_change_kb()` re-arms on USB loss/suspend and preserves the user hook. QMK's render/flush loop and Raw HID remain live; no blocking delay or new persistence format.
+- [power_driver.c](lighting/power_driver.c), [power.c](lighting/power.c), [power_profile.c](lighting/power_profile.c): board-local custom RGB driver using the existing WS2812 vendor transport; immutable rendered buffer plus separate limited output. A common factor enforces aggregate and package caps; 64-bit weighted sums, RGB rounded down/current rounded up, unmapped slots black. Profile revision 1 is unconfigured: 90 mA preliminary base and 12 mA/channel reference coefficients are NOT calibration. Never deploy the synthetic 350 mA test profile as a board rating.
 - [lighting/storage.c](lighting/storage.c): front/badge/per-key persistence in two 4KB sectors at `0xFF0000`–`0xFF1FFF`; 256-byte CRC32 records append across sector rollover. A prior valid record is retained while the other sector is erased. Existing VIA EEPROM offsets and macro capacity are unchanged. The 16MB flash requirement is compile-time checked.
 - [tools/flash_module.py](tools/flash_module.py): explicit volume/serial, immutable candidate archive, private VIA snapshot, bounded copy, and verification. The snapshot covers keymaps/macros/layout, not a full flash or lighting-state backup. One targeted USB reset is allowed on a pre-copy read timeout; a copy failure is not blindly retried.
+
+### Power status API (candidate only)
+
+Command `0x88` uses the existing 32-byte custom packet and tagged reply trailer;
+lighting protocol-v2 capabilities remain `[2,66,22,16,104,9]`. No input payload,
+settings write, save, test keepalive or budget override. Unsupported older firmware
+returns `0xEF`; the UI stops polling with a clear error, without affecting menus.
+Response byte 0 is status; the following 25-byte payload is:
+
+| Payload offset | Field |
+| --- | --- |
+| 0 | Schema version 1 |
+| 1 | Flags: configured, limited, USB configured, startup active, valid frame (bits 0–4) |
+| 2, 4, 6 | Model revision, frame sequence, frame age ms (saturates at 65535) |
+| 8, 10, 12 | Board ceiling, base reserve, engineering margin in mA |
+| 14, 16 | Requested/effective incremental LED estimates in mA, rounded up |
+| 18, 20 | Limiter and startup factors in permille |
+| 22 | Available LED budget: max(0, ceiling − base − margin), zero if unconfigured |
+| 24 | Reserved zero |
+
+All multi-byte fields are unsigned little-endian 16-bit. Payload excludes the
+unchanged bytes 26–31 reply tag. Total-board estimate is base + effective LED
+estimate; margin is withheld headroom, not measured consumption. Budget usage
+is effective LED estimate / available LED budget, unavailable at zero budget.
+No per-group telemetry is included in schema 1. Firmware execution time, physical
+startup timing, calibrated accuracy and electrical/thermal envelope remain unverified.
 
 ### Preserved artifacts and latest evidence
 

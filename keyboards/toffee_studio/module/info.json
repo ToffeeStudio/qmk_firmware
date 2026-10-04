@@ -11,7 +11,7 @@
         "device_version": "0.0.1"
     },
     "rgb_matrix": {
-        "driver": "ws2812"
+        "driver": "custom"
     },
     "matrix_pins": {
         "rows": ["GP18", "GP17", "GP11", "GP20", "GP21", "GP23", "GP19", "GP24", "GP22"],
@@ -92,4 +92,3 @@
         }
     }
 }
-

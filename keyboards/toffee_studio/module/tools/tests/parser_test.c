@@ -67,6 +67,25 @@ static void reject_packet(uint8_t command, const uint8_t *payload, size_t size) 
 }
 
 static void test_parser(void) {
+    // Real telemetry handler writes only the 25-byte reply payload and keeps
+    // command/packet correlation, renderer and persisted preferences unchanged.
+    module_lighting_state_t settings_before = module_lighting_state;
+    animation_config_t rear_before = g_underglow_config;
+    RGB rendered_before[RGB_MATRIX_LED_COUNT];
+    memcpy(rendered_before, rgb_matrix_ws2812_array, sizeof(rendered_before));
+    for (unsigned fill = 0; fill < 256; fill++) {
+        uint8_t data[32]; memset(data, fill, sizeof(data));
+        data[0] = 9; data[1] = id_lighting_power_status;
+        uint8_t packet_id[4]; memcpy(packet_id, data + 2, 4);
+        assert(module_raw_hid_parse_packet(data, sizeof(data)) == 0);
+        parser_attempts++;
+        assert(data[0] == 0 && data[1] == 1 && data[25] == 0);
+        assert(data[26] == 0xA5 && data[27] == id_lighting_power_status);
+        assert(memcmp(packet_id, data + 28, 4) == 0);
+        assert(memcmp(&settings_before, &module_lighting_state, sizeof(settings_before)) == 0);
+        assert(memcmp(&rear_before, &g_underglow_config, sizeof(rear_before)) == 0);
+        assert(memcmp(rendered_before, rgb_matrix_ws2812_array, sizeof(rendered_before)) == 0);
+    }
     const uint8_t off[5] = {255, 255, 255, 255, 255};
     const RGB colors[5] = {{18, 0, 0}, {0, 0, 18}, {0, 18, 0}, {18, 18, 0}, {18, 9, 13}};
     assert(packet(id_lighting_discovery, off, sizeof(off)) == 0);
@@ -119,6 +138,7 @@ static void test_parser(void) {
         free(data);
     }
     for (unsigned command = 0; command <= 255; command++) {
+        if (command == id_lighting_power_status) continue;
 #ifdef MODULE_EXTENSIVE_TEST
         if (command == id_lighting_test_status || command == id_lighting_test_keepalive) continue;
 #endif

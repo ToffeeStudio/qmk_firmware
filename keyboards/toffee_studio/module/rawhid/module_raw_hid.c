@@ -12,6 +12,7 @@
 #include "animations/manager.h"
 #include "lighting/lighting.h"
 #include "lighting/groups.h"
+#include "lighting/power.h"
 #include "lvgl.h"
 #include "persistence.h"
 #include "bootloader.h"
@@ -1205,6 +1206,7 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
         command_id != id_lighting_front_get && command_id != id_lighting_front_set &&
         command_id != id_lighting_badge_get && command_id != id_lighting_badge_set &&
         command_id != id_lighting_led_get && command_id != id_lighting_capabilities &&
+        command_id != id_lighting_power_status &&
 #ifdef MODULE_EXTENSIVE_TEST
         command_id != id_lighting_test_status && command_id != id_lighting_test_keepalive &&
 #endif
@@ -1215,6 +1217,10 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
 #endif
 
     switch (command_id) {
+        case id_lighting_power_status:
+            lighting_power_status(data + 1);
+            err = module_ret_success;
+            break;
 #ifdef MODULE_EXTENSIVE_TEST
         case id_lighting_test_status:
             lighting_test_status(data + 1);
