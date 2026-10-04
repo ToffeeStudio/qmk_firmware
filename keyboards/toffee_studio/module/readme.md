@@ -6,6 +6,18 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**4 October latest follow-up — rescue stopped and new PCB photos reviewed.**
+On Ethan's explicit instruction, session `66996` received Ctrl+C and exited 0
+after observed ACK write 34288. No rescue process remains; no command restored
+brightness or saved settings. Do not automatically restart it. High saved startup
+is unchanged, so a reconnect/normal lighting setter can still bring it back.
+Ethan confirms direct MacBook Pro → USB meter → PCB, with no upstream hub.
+Downloads `IMG_7455.JPG`–`IMG_7460.JPG` were inspected. The last image clearly
+shows F1 marked `0`. BHFUSE's BSMD0603-100-6V (1 A hold) also has marking `0`
+(2025 datasheet p8): consistent with the archived fuse, not a confirmed bypass
+or unique fitted-part identification. No closer photo is needed to read F1.
+See the [photo-review log](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/README.md#4-october-follow-up-rescue-stopped-and-pcb-photo-review).
+
 **4 October — shared limiter and Debug telemetry implemented, NOT flashed.**
 The source now proportionally limits final RGB transmission across front/rear/
 badge, with a read-only `0x88` status API and companion configurator Debug panel.
@@ -20,8 +32,8 @@ Current root UF2: **175616 bytes**, SHA256
 [power-debug-unconfigured.uf2](../../../../ARCHIVE/firmware-recovery/20261004-power-debug-dQ3Ake/power-debug-unconfigured.uf2).
 Normal and temporary `0x26100401` builds pass; a final normal rebuild is byte-identical.
 Both candidates remain unflashed. The protected pre-change and startup-only images
-are unchanged. Rescue session `66996` remains active (observed ACK write 31088,
-truncated history); no new live setters, flash or powered ramps were performed.
+are unchanged. Rescue session `66996` was active at this software checkpoint
+and has since been stopped as recorded above; no new setters, flash or powered ramps.
 
 ASan/UBSan checks pass 20,000 randomized frames in each of two profile/driver
 variants, parser 4,581/4,584 attempts, startup, storage and rendering suites.

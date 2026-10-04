@@ -33,10 +33,15 @@ No safe current ceiling/calibrated coefficients have been established; 90 mA and
 turn the synthetic host-test profile into a deployed profile. `0x88` is read-only
 estimated-current telemetry, not a physical current sensor or budget override.
 The root `31cf12bf...` UF2 is built and archived, **not flashed**. The connected
-PCB still runs its previous normal firmware with the rescue loop active; saved
-high lighting is unsafe. Do not stop rescue or restore high settings as cleanup.
-Ethan confirmed board-only metering and secure support; do not ask again.
-Fitted fuse/source/thermal limits remain unresolved. Follow the P0/P1 gates in
+PCB still runs its previous normal firmware; saved high lighting is unsafe.
+Ethan explicitly requested stopping rescue later on 4 October: session `66996`
+exited cleanly, process absence verified, no restore/save command. **Do not
+automatically restart it.** Never restore high settings as routine cleanup.
+Ethan confirmed board-only metering, secure support and direct MacBook Pro →
+meter → PCB power (no hub); do not ask these again. New `IMG_7460.JPG` clearly
+shows F1 marked `0`, matching the candidate BHFUSE 1 A fuse's marking table;
+this does NOT establish a zero-ohm bypass or uniquely identify the fitted part.
+Exact fitted-part/source allowance/thermal limits remain unresolved. Follow P0/P1 in
 the [current research log](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/README.md).
 
 # Remote Machine Safety
