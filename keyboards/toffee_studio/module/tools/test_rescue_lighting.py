@@ -9,10 +9,11 @@ from unittest.mock import Mock, patch
 import rescue_lighting as rescue
 
 
-def reply(packet_id, status=0):
+def reply(packet_id, status=0, command=0x7C, payload=b""):
     data = bytearray(32)
     data[0] = status
-    data[26:28] = b"\xa5\x7c"
+    data[1:1 + len(payload)] = payload
+    data[26:28] = bytes((0xA5, command))
     data[28:32] = struct.pack("<I", packet_id)
     return bytes(data)
 
@@ -48,7 +49,7 @@ class RescueTests(unittest.TestCase):
         device = Mock()
         device.read.side_effect = [b"\x00", bytes(32), reply(99), reply(7), b""]
         pending = deque([7])
-        self.assertTrue(rescue.receive_ack(device, pending))
+        self.assertEqual(rescue.receive_ack(device, pending, deque()), (True, False, False))
         self.assertEqual(list(pending), [])
         self.assertTrue(all(call.kwargs == {"timeout": 0} for call in device.read.call_args_list))
 
@@ -56,15 +57,15 @@ class RescueTests(unittest.TestCase):
         device = Mock()
         device.read.return_value = reply(7, 0xEF)
         with self.assertRaisesRegex(ValueError, "rejected"):
-            rescue.receive_ack(device, deque([7]))
+            rescue.receive_ack(device, deque([7]), deque())
 
     def test_read_drain_is_bounded_and_no_reply_is_not_success(self):
         device = Mock()
         device.read.return_value = bytes(32)
-        self.assertFalse(rescue.receive_ack(device, deque([7])))
+        self.assertEqual(rescue.receive_ack(device, deque([7]), deque()), (False, False, False))
         self.assertEqual(device.read.call_count, 32)
         device.read.return_value = b""
-        self.assertFalse(rescue.receive_ack(device, deque([7])))
+        self.assertEqual(rescue.receive_ack(device, deque([7]), deque()), (False, False, False))
 
     def run_simulation(self, paths, devices, write_cost=0):
         now = [0.0]
@@ -100,7 +101,7 @@ class RescueTests(unittest.TestCase):
         opened.assert_called_once_with(path=b"a")
         device.close.assert_called_once()
         self.assertIn("Recovery NOT confirmed", output)
-        self.assertIn("startup is UNCHANGED", output)
+        self.assertIn("Permanent reset NOT confirmed", output)
         self.assertEqual(device.method_calls[0][0], "write")
 
     def test_reconnect_resolves_new_path(self):
@@ -140,6 +141,49 @@ class RescueTests(unittest.TestCase):
             rescue.main()
         enumerate_hid.assert_not_called()
         open_hid.assert_not_called()
+
+    def test_save_packet_has_explicit_zero_guard(self):
+        packet = rescue.save_off_report(17)
+        self.assertEqual(len(packet), 33)
+        self.assertEqual(packet[:11], b"\x00\x09\x8b\x11\x00\x00\x00ZERO")
+        self.assertEqual(packet[11:], bytes(22))
+
+    def test_save_ack_requires_verified_schema_and_matching_id(self):
+        device = Mock()
+        device.read.side_effect = [reply(8, command=0x8B, payload=b"\x01\x07\x00\x00\x00"), b""]
+        self.assertEqual(rescue.receive_ack(device, deque(), deque([7])), (False, False, False))
+        device.read.side_effect = [reply(7, command=0x8B, payload=b"\x01\x07\x00\x00\x00"), b""]
+        self.assertEqual(rescue.receive_ack(device, deque(), deque([7])), (False, True, False))
+
+    def test_unsupported_is_explicitly_not_permanent_success(self):
+        device = Mock()
+        device.read.side_effect = [reply(7, status=0xEF, command=0x8B), b""]
+        self.assertEqual(rescue.receive_ack(device, deque(), deque([7])), (False, False, True))
+
+    def test_failed_or_malformed_storage_ack_fails_closed(self):
+        for status, payload in [(0xEB, b""), (0, b""), (0, b"\x01\x03\x00\x00\x00"), (0, b"\x01\x07\x00\x01\x00")]:
+            with self.subTest(status=status, payload=payload):
+                device = Mock(); device.read.return_value = reply(7, status, 0x8B, payload)
+                with self.assertRaisesRegex(ValueError, "NOT verified"):
+                    rescue.receive_ack(device, deque(), deque([7]))
+
+    def test_live_sequence_blanks_before_save_and_does_not_repeat_saved_write(self):
+        device = Mock(); replies = []; commands = []
+        def write(data):
+            command = data[2]; packet_id = int.from_bytes(data[3:7], "little")
+            commands.append(command)
+            payload = b"\x01\x07\x00\x00\x00" if command == 0x8B else b""
+            replies.append(reply(packet_id, command=command, payload=payload))
+            return len(data)
+        device.write.side_effect = write
+        device.read.side_effect = lambda *args, **kwargs: replies.pop(0) if replies else b""
+        with patch.object(rescue, "module_path", side_effect=[b"a"] * 4 + [KeyboardInterrupt]), \
+             patch.object(rescue.hid, "Device", return_value=device), \
+             patch.object(rescue.time, "sleep"), patch("sys.stdout", new_callable=io.StringIO) as output:
+            rescue.rescue()
+        self.assertEqual(commands, [0x7C, 0x8B, 0x7C, 0x7C, 0x7C])
+        self.assertIn("SAVED OFF VERIFIED", output.getvalue())
+        self.assertIn("Saved zero brightness was verified", output.getvalue())
 
 
 if __name__ == "__main__":

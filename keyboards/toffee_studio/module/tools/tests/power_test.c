@@ -67,12 +67,11 @@ int main(void) {
     rgb_led_t input[201], original[201], output[201], repeated[201];
     module_power_frame_t result, repeat;
 #if !defined(MODULE_POWER_CALIBRATION) && !defined(POWER_TEST_PROFILE)
-    // The fitted product candidate must stay disabled until hardware qualification.
-    assert(module_power_profile.revision == 3 && !module_power_profile.configured);
+    // User-requested normal deployment: provisional, conservative 900 mA model.
+    assert(module_power_profile.revision == 4 && module_power_profile.configured);
     assert(module_power_profile.board_limit_ma == 900);
     assert(module_power_profile.base_ma == 120 && module_power_profile.margin_ma == 100);
     module_power_profile_t candidate = module_power_profile;
-    candidate.configured = true; // Local host-only copy, never flashed.
     assert(module_power_led_budget(&candidate) == 680);
     for (unsigned level = 0; level <= 255; level++) {
         memset(input, 0, sizeof(input));
@@ -196,12 +195,7 @@ int main(void) {
         for (unsigned i = 104; i < 201; i++) assert(!wire[i].r && !wire[i].g && !wire[i].b);
     }
     assert(transmissions == 1001);
-#if defined(POWER_TEST_PROFILE) || defined(MODULE_POWER_CALIBRATION)
     assert(wire[103].r > 0 && (status[2] & 1));
-#else
-    for (unsigned i = 0; i < 201; i++) assert(!wire[i].r && !wire[i].g && !wire[i].b);
-    assert(!(status[2] & 1));
-#endif
     unsigned before = transmissions;
     now += 100000;
     lighting_power_status(status + 1);

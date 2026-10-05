@@ -49,6 +49,35 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
+**Current normal deployment, 5 October:** normal UF2
+`6cbbc829dfca7f5d0a880dacf4678744ed3e909199a2834a703bc687021bf547`
+is now flashed at freshly verified USB `0x02100000`, RP2 serial `E0C9125B0D9B`.
+Enabled production profile4 retains provisional900 mA /120 mA baseline/100 mA
+margin/680 mA LED allowance and conservative coefficients. Explicit user normal-
+deployment instruction superseded the earlier hold below, NOT the unresolved
+source/thermal qualification. No test watchdog/calibration commands. Eight-second
+rear output without keepalive passed. New0x8B persistent zero passed storage
+verification; other saved preferences/66 overrides/private VIA preserved.
+Normal auto-save and1s-dark/1s-fade remain. No rescue/controller left running.
+Physical cold-power and typing remain untested. Camera unchanged, UI5173 running.
+[Deployment evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/normal-deployment-20261005-jtjo5A/README.md).
+Earlier installed-build/deployment-hold statements below are historical.
+
+**Explicit persistent rescue (5 October):** user authorised saving zero brightness
+for front/rear/badge. New command `0x8B` requires `ZERO`, transmits black first,
+preserves other saved preferences and verifies both storage records before success.
+This is the ONLY zero-only persistence exception for protected test firmware.
+Keep ordinary test setters/Save nonpersistent. Do not replace it with sequential
+normal setters, which could re-enable high output. Rear verification must reload
+EEPROM backing storage, not just read QMK's cached bytes. Preserve keymaps/macros.
+Candidate `0x26100501` is built, NOT FLASHED; native helper PID89525/session92444
+was STOPPED at Ethan's subsequent request and process exit verified. Old firmware
+acknowledged only temporary off and rejected persistence; permanent recovery
+unverified. Configurator now serves5173 (session84500). Do not restart rescue
+while the UI is in use. Recheck hardware before any later deployment.
+[Evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/persistent-rescue-20261005-wOY3vr/README.md).
+The later explicit stop supersedes this session's rescue-start authorisation.
+
 Ethan requires an **always-preserved rescue window before LEDs turn on**.
 Agreed 4 October 2026: keep every LED black for **1000 ms after USB is configured
 and the main task loop is servicing commands**, then fade the complete rendered
@@ -110,7 +139,8 @@ front 11/11/11, rear 13/14/13, badge 13/13/13; conservative source coefficients
 intended-range source/thermal qualification. Normal build is archived,
 **not flashed**, SHA256
 `11e8d49e6d00e3aa17856f93771c6a072df23b2d1b1f1d8d5fc11d14a29df692`.
-Do not enable it or substitute synthetic test coefficients as qualified data.
+That deployment hold was later superseded by the explicit normal-deployment
+instruction above; never describe provisional coefficients as qualified data.
 
 Historical temporary profile0x8002 kept a450 mA model ceiling,120 mA base,100 mA margin,
 20 mA/channel reference; saves disabled, startup-off, five-second watchdog.
@@ -130,8 +160,9 @@ temporary-calibration-only. No actual onboard current sensor.
 User confirmed direct MacBook Pro → meter → PCB, board-only metering and secure
 fixture. Do not repeat those questions or the 900 mA decision. Current documented
 USB allocation is500 mA; higher source entitlement and PCB/fuse thermal headroom
-are not verified. Need those physical/electrical checks and full-range validation
-before normal deployment; no trip-point hunting or fuse bypass. Controlled cold
+are not verified. Those physical/electrical checks and full-range validation
+remain qualification gaps after the requested normal deployment; no trip-point
+hunting or fuse bypass. Controlled cold
 power/physical typing and hardware startup timing remain pending.
 
 See [current evidence and next requirements](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/resumed-20261005-vftxHC/README.md).

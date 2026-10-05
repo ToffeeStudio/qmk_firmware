@@ -135,6 +135,17 @@ uint8_t lighting_discovery_show_front(void) {
     return sizeof(discovery_front_leds);
 }
 
+bool lighting_rescue_off(void) {
+    const uint8_t off[LIGHTING_DISCOVERY_LED_COUNT] = {NO_LED, NO_LED, NO_LED, NO_LED, NO_LED};
+    lighting_discovery_set_leds(off);
+    rgb_matrix_set_color_all(0, 0, 0);
+    rgb_matrix_driver.flush(); // Transmit black before any blocking flash/EEPROM writes.
+    bool groups_saved = lighting_groups_rescue_off();
+    bool rear_saved = underglow_rescue_off();
+    // Leave diagnostic blanking latched, including on either storage failure.
+    return groups_saved && rear_saved;
+}
+
 uint8_t lighting_discovery_show_all(void) {
     discovery_underglow_active = false;
     discovery_back_check = false;

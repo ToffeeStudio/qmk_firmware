@@ -1206,7 +1206,7 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
         command_id != id_lighting_front_get && command_id != id_lighting_front_set &&
         command_id != id_lighting_badge_get && command_id != id_lighting_badge_set &&
         command_id != id_lighting_led_get && command_id != id_lighting_capabilities &&
-        command_id != id_lighting_power_status &&
+        command_id != id_lighting_power_status && command_id != id_lighting_rescue_off &&
 #ifdef MODULE_EXTENSIVE_TEST
         command_id != id_lighting_test_status && command_id != id_lighting_test_keepalive &&
         command_id != id_lighting_test_rgb_sums &&
@@ -1221,6 +1221,20 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
 #endif
 
     switch (command_id) {
+#ifdef MODULE_LED_DISCOVERY
+        case id_lighting_rescue_off:
+            // Deliberate, idempotent persistence exception; never a slider setter.
+            if (memcmp(data + 6, "ZERO", 4) != 0) break;
+            if (!lighting_rescue_off()) {
+                err = module_ret_storage_failed;
+                break;
+            }
+            memset(data + 1, 0, 25);
+            data[1] = 1; // Rescue response schema.
+            data[2] = 7; // Front/rear/badge storage read-back all verified at zero.
+            err = module_ret_success;
+            break;
+#endif
 #ifdef MODULE_POWER_CALIBRATION
         case id_lighting_test_raw:
             err = lighting_test_raw(data + 6) ? module_ret_success : module_ret_invalid_command;

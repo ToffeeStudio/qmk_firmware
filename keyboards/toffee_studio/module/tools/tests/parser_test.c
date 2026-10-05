@@ -197,3 +197,37 @@ static void test_parser(void) {
     }
     printf("Parser PASS: %u attempts; actual production handlers/dispatcher and renderer; diagnostic bounds, duplicates, sentinel, lengths, denied commands, membership and clearing.\n", parser_attempts);
 }
+
+static void test_persistent_rescue(void) {
+    // Explicit rescue bypasses test-save suppression ONLY for saved zero brightness.
+    // Stored colours/effects/overrides win over temporary RAM changes.
+    module_lighting_state_t target = module_lighting_state;
+    target.front.brightness = 231; target.badge.brightness = 213;
+    target.front.hue = 37; target.badge.hue = 91;
+    saved = target; saved_available = true;
+    module_lighting_state.front.hue = 123;
+    module_lighting_state.badge.hue = 124;
+    unsigned flushes = rescue_flushes;
+    uint8_t rescue[32] = {9, id_lighting_rescue_off, 1, 2, 3, 4, 'Z', 'E', 'R', 'O'};
+    assert(module_raw_hid_parse_packet(rescue, sizeof(rescue)) == 0);
+    assert(memcmp(rescue + 1, (uint8_t[]){1, 7, 0, 0, 0}, 5) == 0);
+    assert(rescue[26] == 0xa5 && rescue[27] == id_lighting_rescue_off);
+    assert(memcmp(rescue + 28, (uint8_t[]){1, 2, 3, 4}, 4) == 0);
+    assert(rescue_flushes == flushes + 1);
+    target.front.brightness = target.badge.brightness = 0;
+    assert(memcmp(&target, &saved, sizeof(target)) == 0);
+    assert(memcmp(&target, &module_lighting_state, sizeof(target)) == 0);
+    assert(g_underglow_config.brightness == 0);
+    qmk_render();
+    for (unsigned i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+        RGB c = rgb_matrix_ws2812_array[i]; assert(!c.r && !c.g && !c.b);
+    }
+    lighting_groups_init(); // Reload the saved zero state, without host setters.
+    assert(memcmp(&target, &module_lighting_state, sizeof(target)) == 0);
+    storage_fail = true;
+    assert(packet(id_lighting_rescue_off, (const uint8_t *)"ZERO", 4) == module_ret_storage_failed);
+    storage_fail = false; rear_fail = true;
+    assert(packet(id_lighting_rescue_off, (const uint8_t *)"ZERO", 4) == module_ret_storage_failed);
+    rear_fail = false;
+    puts("Rescue PASS: black transmitted before saves; stored preferences retained; zero reload; correlated verified reply; failed saves never report success.");
+}

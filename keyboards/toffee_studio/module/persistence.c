@@ -6,6 +6,7 @@
 #include "string.h"
 #include "persistence.h"
 #include "eeconfig.h"
+#include "eeprom_driver.h"
 #include "display/animation.h"
 #include "display/ui.h"
 #include "animations/manager.h"
@@ -122,14 +123,8 @@ void underglow_persistence_task(void) {
     }
 }
 
-void save_underglow_config(void) {
-#ifdef MODULE_EXTENSIVE_TEST
-    return; // Test-only lighting changes remain in RAM, including explicit Save.
-#endif
-    uprintf("PERSIST: Saving underglow config...\n");
-    underglow_save_pending = false;
-
 #ifdef MODULE_LED_DISCOVERY
+static bool write_screenless_underglow(void) {
     screenless_underglow_storage_t stored = {
         .magic = UNDERGLOW_STORAGE_MAGIC,
         .version = UNDERGLOW_STORAGE_VERSION,
@@ -141,14 +136,45 @@ void save_underglow_config(void) {
     };
     screenless_underglow_storage_t previous;
     eeprom_read_block(&previous, EECONFIG_KEYBOARD, sizeof(previous));
-    if (memcmp(&stored, &previous, sizeof(stored)) == 0) return;
+    if (memcmp(&stored, &previous, sizeof(stored)) == 0) return true;
 
     // Commit the validity marker last so an interrupted write is not loaded.
     stored.magic = 0;
     eeprom_update_word((uint16_t *)EECONFIG_KEYBOARD, 0);
     eeprom_update_block(&stored, EECONFIG_KEYBOARD, sizeof(stored));
     eeprom_update_word((uint16_t *)EECONFIG_KEYBOARD, UNDERGLOW_STORAGE_MAGIC);
-    uprintf("PERSIST: Underglow saved to EEPROM.\n");
+    stored.magic = UNDERGLOW_STORAGE_MAGIC;
+    eeprom_read_block(&previous, EECONFIG_KEYBOARD, sizeof(previous));
+    return memcmp(&stored, &previous, sizeof(stored)) == 0;
+}
+
+bool underglow_rescue_off(void) {
+    // QMK's wear-levelled EEPROM reads a RAM cache. Reload the backing store
+    // before and after rescue so an accepted-but-failed write cannot look saved.
+    eeprom_driver_init();
+    load_underglow_config(); // Preserve saved colour/effect, not temporary test RAM.
+    g_underglow_config.brightness = 0;
+    underglow_save_pending = false;
+    bool written = write_screenless_underglow();
+    screenless_underglow_storage_t expected, actual;
+    eeprom_read_block(&expected, EECONFIG_KEYBOARD, sizeof(expected));
+    eeprom_driver_init();
+    eeprom_read_block(&actual, EECONFIG_KEYBOARD, sizeof(actual));
+    return written && memcmp(&expected, &actual, sizeof(expected)) == 0;
+}
+#endif
+
+void save_underglow_config(void) {
+#ifdef MODULE_EXTENSIVE_TEST
+    return; // Test-only lighting changes remain in RAM, including explicit Save.
+#endif
+    uprintf("PERSIST: Saving underglow config...\n");
+    underglow_save_pending = false;
+
+#ifdef MODULE_LED_DISCOVERY
+    bool saved = write_screenless_underglow();
+    uprintf("PERSIST: Underglow EEPROM %s\n", saved ? "verified" : "SAVE FAILED");
+    (void)saved;
 #else
 
     // 1. Prepare the data to be saved.

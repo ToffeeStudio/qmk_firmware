@@ -6,6 +6,42 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**5 October normal firmware deployed and verified.** User explicitly requested
+normal firmware after the temporary watchdog kept blanking configurator changes.
+UF2 SHA256 `6cbbc829dfca7f5d0a880dacf4678744ed3e909199a2834a703bc687021bf547`;
+USB `0x02100000`, boot serial `E0C9125B0D9B`, ordinary UF2 copy, no USB reset.
+Production profile4 is enabled: provisional900 mA total,120 mA baseline reserve,
+100 mA margin,680 mA LED allowance; conservative RGB coefficients unchanged.
+No temporary watchdog; normal debounced saves and1s-dark/1s-fade retained.
+Eight-second rear output without keepalive passed. `0x8B ZERO` now successfully
+saves and verifies all group brightness zero, retaining other saved preferences,
+66 overrides and private VIA. Final transmitted output estimate zero.
+Original recovery image and private preflash settings preserved. No rescue or
+test controller remains; configurator5173 running, camera unchanged.
+Source/thermal qualification and physical cold-power/typing remain unverified;
+explicit normal-deployment direction superseded the earlier hold, not those gaps.
+See [build, flash and verification record](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/normal-deployment-20261005-jtjo5A/README.md).
+
+## Earlier 5 October checkpoints (historical, superseded above)
+
+**5 October persistent-rescue update — implemented, built, NOT FLASHED.**
+Ethan explicitly authorised making rescue save zero front/rear/badge brightness.
+The native script was subsequently STOPPED at Ethan's request (old PID89525,
+session92444; process exit verified). Configurator is running at5173, session84500,
+and `/toffee-lighting` returns HTTP200. Do not restart rescue alongside the UI.
+A briefly connected PCB acknowledged temporary all-off but rejected new command
+`0x8B`, so **permanent reset has not happened**. It is disconnected at this
+checkpoint. Protected candidate `0x26100501` preserves the existing calibration
+profile/startup-dark/watchdog, with an explicit save-zero exception. SHA256:
+`1f920c896c0dcf755d8616f2bad8cc88e221611ab68ec889b74d630cd5b5fcec`.
+Archived at `ARCHIVE/firmware-recovery/20261005-persistent-rescue-o1cumb/`.
+No automatic firmware deployment. Stop rescue before the documented updater,
+preserve private settings, then restart it after flashing to perform the newly
+authorised saved-brightness change. Old measurement snapshots expect nonzero
+saved brightness and will intentionally differ after successful rescue.
+See [rescue instructions](#persistent-lighting-rescue) and
+[implementation/test log](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/persistent-rescue-20261005-wOY3vr/README.md).
+
 **Latest5 October — camera recovered; previous exact-output samples reach940 mA.**
 The sole Module freshly re-enumerated at USB`0x02100000` runs protected temporary
 **0x26100407**, profile0x8005, SHA256
@@ -220,7 +256,7 @@ gates remain open.
 **4 October follow-up — standalone plug-in rescue responding on hardware.**
 Ethan requested a native helper already waiting before he plugs in the sole
 Module, repeating all-off every 200 ms without a browser. See
-[temporary lighting rescue](#temporary-lighting-rescue). This is a host tool,
+[persistent lighting rescue](#persistent-lighting-rescue) for the later update. This was a host tool,
 not a firmware change or a current-budget implementation. Saved high startup
 settings are not yet repaired; the reported power-cycle failure remains open.
 Ethan authorised starting the loop, then reported "I think it's good now."
@@ -387,7 +423,7 @@ The meter is visible but currently soft in focus, so these frames do not qualify
 automated current readings. Camera-only test: no PCB commands or firmware flash.
 [Evidence and images](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/persistent-camera-20261004-yXj3aN/README.md).
 
-### Temporary lighting rescue
+### Persistent lighting rescue
 
 Run this **before plugging in the PCB**, with the configurator/other lighting
 controllers closed and only one Module connected:
@@ -411,17 +447,34 @@ arbitrary selection. No remembered port, browser permission or slider is needed.
 - Uses 32 firmware bytes plus HIDAPI's leading zero report ID. Nonblocking reads
   check tagged command/packet IDs; a write without a reply is **unconfirmed**.
   No legacy fallback: old firmware may reject it or give no tagged acknowledgement.
-- Ctrl+C sends **no restore command**. The override remains in RAM, but **saved
-  startup is unchanged**. A normal lighting setter or power cycle can reactivate
-  unsafe saved levels. Do not manipulate the configurator or reconnect casually.
-- Does not flash, reset EEPROM, modify keymaps/macros or write saved lighting.
+- After all-off is acknowledged, sends `0x8B` with literal payload `ZERO`.
+  Supporting firmware transmits black before storage work, zeros only the three
+  group brightness values and keeps diagnostic blanking latched. It preserves
+  saved colours, effects, speeds, badge enable and per-key levels (not temporary
+  test RAM preferences). Both storage records are read back; rear EEPROM cache
+  is reloaded from backing storage so cached writes alone cannot prove persistence.
+- Tagged success payload starts `[1,7,0,0,0]`: schema1, all three groups verified,
+  zero front/rear/badge. Storage failure is `0xEB`; old firmware returns `0xEF`.
+  Only verified success prints **SAVED OFF VERIFIED**. No setter fallback on old
+  firmware: it remains temporary-only and clearly requires a firmware update.
+- Save-zero is requested until acknowledged, then not repeated on that connection.
+  Firmware also avoids writing identical saved data. Hotplug clears connection
+  state; the next sole Module is handled afresh. Keep other controllers closed.
+- Ctrl+C sends **no restore command**. Once verified, zero brightness persists
+  until intentionally changed again. Before that acknowledgement, saved startup
+  may still be unsafe. A physical unplug/replug is still needed to confirm hardware
+  cold-start behaviour; storage verification is not that test.
+- Does not flash, erase EEPROM or modify keymaps/macros. Saved group brightness
+  is deliberately changed to zero under Ethan's explicit recovery authorisation.
   If the PCB still shuts down, unplug it and let it cool; do not deliberately
   repeat the power-failure cycle. Coordinate a supervised plug-in after arming.
 
-Persistence is separate, not a silent Ctrl+C side effect. Repeating group setters
-every 200 ms postpones their one-second save debounce; setters also exit diagnostic
-blanking and can re-enable still-high groups. The helper avoids both. Saving zero
-safely is not implemented in this version.
+The dedicated command avoids ordinary group setters, which cancel diagnostic
+blanking and could re-enable still-high groups. It is the sole deliberate
+zero-only persistence exception in temporary firmware; ordinary test changes
+and Save remain RAM-only. A power loss between the two records can leave a
+partial reset; no complete success is acknowledged until both verify. Retry
+after recovery rather than assuming all zeros from a lost reply.
 
 Offline checks (no USB writes), from the firmware root:
 
@@ -431,10 +484,10 @@ Offline checks (no USB writes), from the firmware root:
 sh keyboards/toffee_studio/module/tools/test_lighting_host.sh
 ```
 
-On 4 October, 12 mocked-USB tests and existing sanitizer-enabled production
-parser/rendering/persistence tests passed. The production parser test verifies
-that five unused slots clear every RGB address. Initially the read-only inventory
-found no Module; the later user-authorised live run is recorded in Current status.
+5 October:17 mocked-USB tests pass; production/temporary/calibration firmware
+host regressions pass, including new storage-readback failure, cached-only write,
+pre-save blackout and saved-preference preservation cases. Protected QMK build
+passes. Hardware currently confirms only old temporary all-off, not the new save.
 
 ## Next verification and remaining work
 

@@ -25,5 +25,6 @@ bool lighting_is_front_led(uint8_t index);
 uint8_t lighting_get_led_brightness(uint8_t index);
 void lighting_groups_schedule_save(void);
 void lighting_groups_persistence_task(void);
+bool lighting_groups_rescue_off(void);
 bool lighting_storage_load(module_lighting_state_t *state);
 bool lighting_storage_save(const module_lighting_state_t *state);

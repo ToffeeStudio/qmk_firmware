@@ -60,6 +60,20 @@ bool lighting_set_front(const front_config_t *config) {
     lighting_groups_schedule_save();
     return true;
 }
+// Explicit recovery only: unlike ordinary test setters, this may persist zeros.
+// Prefer stored preferences to temporary test colours/effects in RAM.
+bool lighting_groups_rescue_off(void) {
+    module_lighting_state_t target = module_lighting_state;
+    lighting_storage_load(&target);
+    target.front.brightness = 0;
+    target.badge.brightness = 0;
+    module_lighting_state = target;
+    apply_front();
+    save_pending = false;
+    if (!lighting_storage_save(&target)) return false;
+    module_lighting_state_t stored;
+    return lighting_storage_load(&stored) && memcmp(&target, &stored, sizeof(target)) == 0;
+}
 bool lighting_set_badge(const badge_config_t *config) {
     if (config->enabled > 1) return false;
     module_lighting_state.badge = *config;

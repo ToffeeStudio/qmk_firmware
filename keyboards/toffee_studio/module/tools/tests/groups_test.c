@@ -5,6 +5,7 @@
 #include "../../lighting/power.h"
 #include "../../animations/manager.h"
 #include "usb_device_state.h"
+#include "rgb_matrix.h"
 #include <lib/lib8tion/lib8tion.h>
 
 rgb_led_t rgb_matrix_ws2812_array[201];
@@ -15,6 +16,16 @@ static HSV qmk_hsv;
 static bool qmk_enabled, saved_available;
 static unsigned saves;
 static module_lighting_state_t saved;
+static bool storage_fail, rear_fail;
+static unsigned rescue_flushes;
+static void rescue_flush(void) {
+    for (unsigned i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
+        RGB c = rgb_matrix_ws2812_array[i]; assert(!c.r && !c.g && !c.b);
+    }
+    rescue_flushes++;
+}
+const rgb_matrix_driver_t rgb_matrix_driver = {.flush = rescue_flush};
+bool underglow_rescue_off(void) {g_underglow_config.brightness = 0; return !rear_fail;}
 enum usb_device_state usb_device_state = USB_DEVICE_STATE_CONFIGURED;
 void notify_usb_device_state_change_user(enum usb_device_state state) {(void)state;}
 uint32_t timer_read32(void) {return now;}
@@ -44,7 +55,10 @@ bool lighting_storage_load(module_lighting_state_t *s) {
     if (saved_available) *s = saved;
     return saved_available;
 }
-bool lighting_storage_save(const module_lighting_state_t *s) {saved = *s; saves++; saved_available = true; return true;}
+bool lighting_storage_save(const module_lighting_state_t *s) {
+    if (storage_fail) return false;
+    saved = *s; saves++; saved_available = true; return true;
+}
 
 static void qmk_render(void) {
     for (unsigned i = 0; i < 201; i++) {
@@ -134,4 +148,5 @@ int main(void) {
     puts("Groups PASS: 104-package map, 9 front modes, independent badge/rear, 16,896 per-key levels, debounce/reboot/timer wrap.");
     test_parser();
 #endif
+    test_persistent_rescue();
 }

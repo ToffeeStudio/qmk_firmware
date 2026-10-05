@@ -25,16 +25,17 @@ const module_power_profile_t module_power_profile = {
 };
 #else
 // Ethan's provisional whole-board budget, agreed 4 October 2026: 900 mA.
-// Provisional measured model, still disabled pending intended-range source and
-// thermal qualification. See AUTORESEARCH/04-09-2026 PCB Lacking Current/
+// Enabled for Ethan's explicit normal-firmware deployment request, 5 October.
+// Remains provisional, NOT source/thermal certification. Retain the conservative
+// coefficients and both reserves. See AUTORESEARCH/04-09-2026 PCB Lacking Current/
 // visual-calibration-20261004-lL59DO/model-fit.json (visually read meter, no OCR).
 // Nominal baseline 80 mA; coefficients front 11/11/11, rear 13/14/13,
 // badge 13/13/13 mA at full channel. Below: ceil(1.25 * nominal + 1),
 // with 120 mA electronics reserve and a separate 100 mA model margin.
 // Observed validation range is NOT a qualification for the full 900 mA budget.
 const module_power_profile_t module_power_profile = {
-    .revision = 3,
-    .configured = false,
+    .revision = 4,
+    .configured = true,
     .board_limit_ma = 900,
     .base_ma = 120,
     .margin_ma = 100,

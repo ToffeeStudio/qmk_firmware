@@ -50,6 +50,7 @@ enum module_command_id {
     id_lighting_power_status       = 0x88,
     id_lighting_test_rgb_sums      = 0x89,
     id_lighting_test_raw           = 0x8A,
+    id_lighting_rescue_off         = 0x8B,
     id_module_cmd_end               = 0xFF,
 };
 
@@ -68,6 +69,7 @@ enum module_return_codes {
     module_ret_flash_remaining        = 0xE9,
     module_ret_invalid_command        = 0xEF,
     module_ret_more_entries           = 0xEA,
+    module_ret_storage_failed         = 0xEB,
 };
 
 struct __attribute__((packed)) packet_header {

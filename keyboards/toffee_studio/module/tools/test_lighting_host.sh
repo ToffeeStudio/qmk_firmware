@@ -38,7 +38,7 @@ for mode in production temporary; do
   "$test_dir/rear-$mode"
 done
 printf 'Test executables retained at %s\n' "$test_dir"
-for profile in unconfigured synthetic calibration; do
+for profile in production synthetic calibration; do
   profile_sources="lighting/power_profile.c"
   profile_define=""
   if [ "$profile" = synthetic ]; then

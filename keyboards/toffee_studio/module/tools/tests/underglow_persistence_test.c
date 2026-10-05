@@ -9,6 +9,12 @@ const uint8_t UNDERGLOW_ANIMATION_COUNT = 10;
 static uint8_t memory[23];
 static uint32_t now;
 static unsigned writes;
+static bool fail_writes;
+static bool cache_only_writes;
+static uint8_t backing[23];
+static void eeprom_driver_init(void) {
+    if (cache_only_writes) memcpy(memory, backing, sizeof(memory));
+}
 uint32_t timer_read32(void) {return now;}
 uint32_t timer_elapsed32(uint32_t last) {return now - last;}
 void underglow_manager_set_anim(uint8_t id) {g_underglow_config.current_animation_id = id;}
@@ -18,13 +24,14 @@ static void eeprom_read_block(void *out, const void *address, size_t length) {
 }
 static void eeprom_update_block(const void *in, void *address, size_t length) {
     assert((uintptr_t)address == 15 && length == 8);
-    memcpy(memory + 15, in, length); writes++;
+    if (!fail_writes) memcpy(memory + 15, in, length); writes++;
 }
 static void eeprom_update_word(uint16_t *address, uint16_t value) {
     assert((uintptr_t)address == 15);
-    memcpy(memory + 15, &value, 2); writes++;
+    if (!fail_writes) memcpy(memory + 15, &value, 2); writes++;
 }
 void save_underglow_config(void);
+void load_underglow_config(void);
 #include "module_persistence.inc"
 
 int main(void) {
@@ -66,4 +73,24 @@ int main(void) {
     }
     puts("Production rear persistence PASS: saved startup; 1000ms debounce; unchanged-write suppression; timer wrap; invalid records; EEPROM boundary preservation.");
 #endif
+    memcpy(memory + 15, &initial, 8);
+    g_underglow_config.color.h = 123; // Unpersisted test preference must not leak.
+    assert(underglow_rescue_off());
+    assert(g_underglow_config.brightness == 0 && g_underglow_config.color.h == 36);
+    screenless_underglow_storage_t expected = initial; expected.brightness = 0;
+    assert(memcmp(memory + 15, &expected, 8) == 0);
+    unsigned before = writes;
+    assert(underglow_rescue_off() && writes == before);
+    g_underglow_config.brightness = 99;
+    load_underglow_config(); assert(g_underglow_config.brightness == 0);
+    memcpy(memory + 15, &initial, 8); fail_writes = true;
+    assert(!underglow_rescue_off());
+    assert(g_underglow_config.brightness == 0);
+    fail_writes = false;
+    memcpy(memory + 15, &initial, 8);
+    memcpy(backing, memory, sizeof(memory)); cache_only_writes = true;
+    assert(!underglow_rescue_off()); // RAM reads zero; backing store still high.
+    assert(memcmp(memory + 15, &initial, 8) == 0);
+    for (unsigned i = 0; i < 15; i++) assert(memory[i] == 0xa5);
+    puts("Rear rescue PASS: zero persisted even in test mode; stored preferences/EEPROM boundaries preserved; repeat has no writes; reload and failed-write detection.");
 }
