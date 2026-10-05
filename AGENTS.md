@@ -30,11 +30,11 @@ stale images stop the measurement. Reuse the existing `/frame.jpg` connection;
 do not reopen the phone camera for a snapshot. The old `read_meter` helper and
 OCR-based calibration runner must not be used for future meter readings.
 
-Latest4 October recovery: Ethan requested restart after the old bridge failed
-with AVFoundation -11808. Preview Node61821 / exec62718 owns helper61830;
+Latest5 October recovery: Ethan requested restart after phone unplug/replug.
+Preview Node52797 / exec55687 owns helper52806;
 use http://127.0.0.1:5174. All subsequent measurements reuse `/frame.jpg`.
-Fresh frame IDs advanced through48185; a5-minute underlying Continuity log
-query during the resumed white hold found no matching stop/disconnect events.
+Fresh frame IDs advanced through129822; a5-minute underlying Continuity log
+query found no matching start/stop/disconnect events in that bounded window.
 Earlier77553/77563 and53454/53464 are stopped/historical. The latter wireless
 session had transport reconnects that the helper's own counters missed.
 Do not use application session counters alone to claim the phone stayed connected.
@@ -61,29 +61,46 @@ when modifying initialization, rendering, USB lifecycle or adding output paths.
 This is startup behavior, **not a shared current limit**; the saved steady-state
 load can still be unsafe. Do not claim it resolves the underlying overcurrent risk.
 
-## Power-budget research checkpoint (4 October 2026)
+## Power-budget research checkpoint (5 October 2026)
 
-**Later continuation:** Ethan requests no silent dimming in calibration and says
-idle variation is expected; measurements toward800 mA are authorised.
-Installed0x26100406/profile0x8004 admits exact raw patterns within its provisional
-900 mA model (80 mA baseline,100 mA margin,720 mA LED allowance) or rejects them;
+**Later continuation:** Ethan explicitly authorised measurements toward1 A actual
+current and says temperature instruments are unavailable. Do not ask again for
+them or stop merely because idle readings vary; this is not thermal certification.
+Installed0x26100407/profile0x8005 admits exact raw patterns within its temporary
+1100 mA modeled envelope (80 mA baseline,100 mA margin,920 mA LED allowance),
+allowing nominal board demand up to1000 mA, or rejects them;
 startup-off, no saves,5s watchdog and final limiting of other paths remain.
 Controller rejects any reduced final RGB sums. Record idle ranges rather than
-requiring constant values. [Active evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/exact-output-20261004-gFljV8/README.md)
-is authoritative for build/flash progression. There are83 accepted manual
-readings; exact20-front-white255 output held146 s at750–770 mA,50-front-red255
-at660 mA,50-front-orangeR255/G51 at770 mA, and all104white46/RGB138 at630–750 mA.
+requiring constant values. [Extension evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/one-amp-20261004-kDqt5u/README.md)
+is authoritative for build07/flash progression. Earlier83 accepted readings
+through770 mA plus27 accepted extension readings give110 exact-output samples.
+Build07 delivered25-front-white255 at910–930 mA,50-front-orangeR255/G136 at
+900–940 mA, all104white58 at860–900 mA and all104red150 initially at800 mA.
 Nominal channel mA at255: front12/12/12,rear15/15/15,badge13/13/13 plus80 mA
 baseline. Observed-minus-estimate spans approximately-170 to+40 mA; retain100 mA
 margin and idle ranges. Do not claim source/thermal qualification from these
 provisional tests. Older checkpoint below is historical.
 
-Installed protected temporary build **0x26100406**, SHA256
-`622fdde701da4113f2f69efb245f4487e9511604beb957bc51a3169c0b75737b`,
+Installed protected temporary build **0x26100407**, SHA256
+`1133fd7b76e5a630deca92c019048da640c24150e7b2b24559589da71a2f1cf8`,
 at sole Module USB `0x02100000`; historical boot serial `E0C9125B0D9B` must be
 rechecked at next flash. Latest read-only preservation check after measurements
 confirms saved lighting, all66 overrides and private VIA match the baseline. Output is
 **dark**, no test/rescue controller remains. Keep the wired camera open.
+
+[5 October resumption](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/resumed-20261005-vftxHC/README.md)
+passes fresh identity and read-only preservation checks on the same build.
+Capture-then-blackout resolved slow image review:5–30-second requested holds,
+45-second active-pulse deadline, all-off/zero-output verification before image
+publication; firmware5-second heartbeat timeout unchanged. Captured readings
+may be reviewed within10 minutes while dark, with original timestamps logged.
+No OCR.19 additional observations (13 lit,6 off) bring the total to129, including
+repeats/baselines. All104 orangeR110/G65 held930 mA, blue150 held810, green150
+held820, red150 held800; front25 white255 held910. Previous940 mA remains maximum,
+not an observed1 A. Nominal residual across all data now spans−189 to+40 mA;
+rear mixed colours are especially overestimated.17 runner/numerical tests pass
+302 assertions. Final read-only settings check passes with output zero;
+controller stopped, camera open. No new flash or firmware logic change.
 
 Normal source profile **revision 3** records the agreed provisional **900 mA
 whole-board** budget, 120 mA electronics reserve and 100 mA margin (680 mA LED
@@ -117,7 +134,7 @@ are not verified. Need those physical/electrical checks and full-range validatio
 before normal deployment; no trip-point hunting or fuse bypass. Controlled cold
 power/physical typing and hardware startup timing remain pending.
 
-See [current evidence and next requirements](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/exact-output-20261004-gFljV8/README.md).
+See [current evidence and next requirements](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/resumed-20261005-vftxHC/README.md).
 Older deployment/runtime statements elsewhere are historical. Rescue was stopped
 by Ethan; **do not automatically restart it or restore high saved lighting**.
 

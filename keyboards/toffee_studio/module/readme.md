@@ -1,27 +1,32 @@
 # Toffee Studio Module — start here
 
-Last reviewed: **4 October 2026 (Australia/Sydney)**. This is the current board
+Last reviewed: **5 October 2026 (Australia/Sydney)**. This is the current board
 handover, not a live device-status feed. Read the repository's
 [agent safety instructions](../../../AGENTS.md) before working on hardware.
 
 ## Current status
 
-**Latest4 October — camera recovered; exact-output measurements up to770 mA.**
-The sole Module now at USB`0x02100000` runs protected temporary **0x26100406**,
-profile0x8004, SHA256
-`622fdde701da4113f2f69efb245f4487e9511604beb957bc51a3169c0b75737b`.
+**Latest5 October — camera recovered; previous exact-output samples reach940 mA.**
+The sole Module freshly re-enumerated at USB`0x02100000` runs protected temporary
+**0x26100407**, profile0x8005, SHA256
+`1133fd7b76e5a630deca92c019048da640c24150e7b2b24559589da71a2f1cf8`.
 Historical bootloader serial`E0C9125B0D9B` must be rechecked at the next flash.
 It is **dark**, startup-off, saves-disabled, with a five-second controller-loss
-timeout. No test/rescue loop remains. Its900 mA provisional measurement model
-reserves80 mA baseline plus100 mA margin, leaving720 mA LED allowance. Accepted
+timeout. No test/rescue loop remains. Its1100 mA temporary modeled envelope
+reserves80 mA baseline plus100 mA margin, leaving920 mA LED allowance (nominal
+board demand at most1000 mA). This enables the user's authorised samples toward
+1 A actual current, NOT a change to the900 mA product budget. Accepted
 raw patterns are transmitted unchanged; oversized patterns are rejected instead
 of silently dimmed. Ordinary render paths retain the final shared limiter.
 
-The latest exact-output campaign contains83 accepted visual readings and final
-RGB sums, including20 front white LEDs at255 (750–770 mA over146 seconds),
-50 front red255 (660 mA),50 front orangeR255/G51 (770 mA), and all104 atwhite46
-or isolated RGB138 (630–750 mA). Earlier build04 large requests were limited;
-these05/06 requests were not. Nominal baseline80 mA plus front/rear/badge R/G/B
+The earlier exact-output campaign has83 accepted visual readings through770 mA.
+Build07 added27 accepted readings, including25 front white255 (910–930 mA),
+50 front orangeR255/G136 (900–940 mA), all104white58 (860–900 mA) and all104
+red150 (800 mA initial sample). All originals and exact final RGB sums are
+retained; [every extension reading](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/one-amp-20261004-kDqt5u/measurements.md)
+is indexed. This is110 accepted observations, not110 unique test patterns or
+an observed1 A point. Earlier build04 large requests were limited;05/06/07
+exact-output requests were not. Nominal baseline80 mA plus front/rear/badge R/G/B
 coefficients12/12/12,15/15/15,13/13/13 mA at255 gives a simple byte-sum estimate.
 Observed minus estimate spans about-170 to+40 mA, with white overestimated.
 Idle0–120 mA and10 mA display resolution remain recorded uncertainties, not
@@ -42,13 +47,31 @@ The app labels temporary firmware and estimates. Host suites pass persistence,
 startup1 s black/1 s fade,104-map/raw boundaries, parser,60,000 randomized limiter
 frames plus profile 3 white-level sweeps.39 selected JS tests and Vite build pass.
 
-Build06 flash passed15 s USB/keyboard/VIA response; latest post-measurement
+Build07 flash passed15 s USB/keyboard/VIA response; latest post-measurement
 read-only checks match original saved lighting, all66 overrides and private
 keymap/macros/layout, with final RGB all zero. Protected original UF2 hash is
 unchanged. Human typing, controlled cold power and physical fade timing remain
-pending; software reboot is not a cold-power test. Camera stays open at 5174.
+pending; software reboot is not a cold-power test. No flash was needed5 October.
+Camera stays open at5174, Node52797/helper52806, exec55687. Ethan cannot supply
+temperature instruments; do not repeatedly ask for them or call this certification.
 
-See [complete current report and exact remaining requirements](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/exact-output-20261004-gFljV8/README.md).
+The5 October continuation added19 personally viewed readings (13 lit,6 off),
+bringing the total to129 including repeats/baselines. All104 orangeR110/G65
+held930 mA, blue150 held810, green150 held820 and red150 held800; front25
+white255 held910. Rear22 RGB255/255/200 held810 versus999 mA nominal: the
+simple additive model is conservative, not high-precision. Combined residual
+is now approximately−189 to+40 mA. The previous maximum remains940 mA, not1 A.
+
+The runner resolves review latency by holding5–30 seconds, capturing, then
+blanking and verifying zero output BEFORE publishing the image. Historical
+samples allow10-minute review while dark; capture/review times are explicit.
+Active-pulse deadline45 seconds and firmware5-second heartbeat timeout remain.
+No OCR, per-image camera restart or hidden dimming.17 runner/numerical tests
+pass302 assertions; final independent saved-lighting/66-override/private VIA
+comparison passes. Board dark, controller stopped, camera open. No new flash.
+
+See [current resumption](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/resumed-20261005-vftxHC/README.md)
+and [higher-current results](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/one-amp-20261004-kDqt5u/README.md).
 Root/firmware AGENTS contain the permanent **view images yourself, no OCR** rule.
 
 ## Historical checkpoints (superseded by Current status above)
@@ -294,12 +317,13 @@ not guarantee that a server is still running in a later session.
 
 ### Persistent iPhone meter camera
 
-**Latest recovery:** Ethan explicitly requested restart after AVFoundation
--11808 stopped the old bridge. Node61821 / exec62718 now owns helper61830.
+**Latest recovery (5 October):** Ethan explicitly requested restart after phone
+unplug/replug. Node52797 / exec55687 now owns helper52806.
 Meter images are fetched from the same `/frame.jpg` connection; fresh frame IDs
-advanced through48185. An underlying Continuity stop/disconnect query over a
-5-minute resumed-test window found no matching events. These are bounded
-observations; counters alone cannot prove continuity. Earlier77553/77563 and
+advanced through129822. An underlying Continuity start/stop/disconnect query over
+a5-minute window found no matching events. These are bounded observations;
+counters alone cannot prove continuity or absence of sounds. Earlier97034/97043,
+61821/61830,77553/77563 and
 other PID references below are historical/stopped. The wireless session DID reconnect
 despite unchanged local AVFoundation counters; those counters alone are insufficient.
 [Wired retry evidence](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/wired-camera-20261004-VJtE4v/README.md).
