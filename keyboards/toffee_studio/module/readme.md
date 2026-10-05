@@ -6,6 +6,17 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**Later5 October recovery and low handoff:** user reported swapping to an older
+PCB in an overload cycle. Native rescue blanked it; old persistent-reset command
+was unsupported. Reflashed the same normal image below and verified permanent
+zero, then set front/rear/badge to8/255 retaining colours/effects. Normal save
+interval elapsed; LED estimate31 mA at handoff. Rescue/controller stopped.
+Private VIA restored/verified; no physical cold-power/typing check yet. Fresh
+bootloader serialE0C9125B0D9B at0x02100000 matches the prior record, so distinct
+physical board identity is not established.900 mA model unchanged; no limiter
+removal or1 A/50 mA modification in this deployment.
+[Recovery evidence](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/second-pcb-recovery-20261005-6Tn4Ko/README.md).
+
 **5 October normal firmware deployed and verified.** User explicitly requested
 normal firmware after the temporary watchdog kept blanking configurator changes.
 UF2 SHA256 `6cbbc829dfca7f5d0a880dacf4678744ed3e909199a2834a703bc687021bf547`;

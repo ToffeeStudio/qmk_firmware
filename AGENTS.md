@@ -49,6 +49,13 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
+**Later5 October recovery:** user-reported older/different PCB rescued and flashed
+with the same normal `6cbbc829...` UF2. Fresh serialE0C9125B0D9B at0x02100000
+matches prior records; physical A/B identity unresolved. Private VIA preserved,
+0x8B permanent zero verified, then all groups set8/255 and auto-save delay elapsed.
+No rescue/handoff process remains.900 mA model unchanged. Physical restart/typing
+not tested. [Latest recovery](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/second-pcb-recovery-20261005-6Tn4Ko/README.md).
+
 **Current normal deployment, 5 October:** normal UF2
 `6cbbc829dfca7f5d0a880dacf4678744ed3e909199a2834a703bc687021bf547`
 is now flashed at freshly verified USB `0x02100000`, RP2 serial `E0C9125B0D9B`.
