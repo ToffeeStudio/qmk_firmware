@@ -6,7 +6,27 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
-**6 October unlimited manual-measurement candidate built, NOT FLASHED.** User
+**6 October manual-measurement firmware deployed; typing confirmed.** The archived
+UF2 below was copied using the documented updater to newly identified USB0x01100000,
+RP2 serialE0C9125B0D9B. No USB reset workaround;15 s keyboard/VIA stability passed.
+Updater restored/verified private keymap; macros/layout and all66 lighting overrides
+match the pre-flash snapshot. Independent read-only verification identifies
+0x26100601/profile0x8006 with no-limiter flag, RAM brightness zero, final RGB zero
+and unchanged non-brightness preferences. Ethan confirmed normal typing works.
+This is not a physical cold-power test, full-flash readback or current measurement.
+The initial updater report predates the later human typing confirmation.
+Original pre-change recovery image remains hash-identical. No rescue loop or camera
+interaction; no automated lit-pattern test was performed on the PCB this task.
+[Flash report](../../../../ARCHIVE/firmware-recovery/20261006T115956Z-00a395db/flash-report.json)
+and [full checkpoint](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/manual-checklist-flash-20261006-1f6iPy/README.md).
+
+Configurator `/toffee-debug` is now a fixed120-state checklist (4 groups ×RGB/white/
+orange ×6 levels), plus all-off baseline. Apply a row, manually enter amps, Save;
+no configurable lighting options or automatic advance. Levels are predetermined
+using earlier rough estimates toward1 A, not limited in firmware. User watches the
+meter and skips further states as needed. Local per-PCB records/export preserved.
+
+**Build details (the following candidate is now deployed):** User
 requested measurement without firmware dimming and confirmed: hold until changed,
 start dark, do not save test lighting. Production firmware is untouched. Build:
 
@@ -34,11 +54,11 @@ information, not meter readings or a claim that1 A is safe.0x89 final RGB sums,
 
 Configurator Debug now clearly says LIMITER DISABLED, no timeout/no saves, and
 accepts above-reference telemetry only when that flag is present. Normal profiles
-retain their validation. Existing lighting sliders can control the candidate;
-the requested dedicated manual preset/data-entry page is still a separate task.
+retain their validation. Existing lighting sliders can also control this build;
+the dedicated fixed-state manual checklist is now available as described above.
 Closing/disconnecting the browser does NOT switch manual output off. Restart
 does; returning to product firmware may reload the preserved saved preferences.
-No hardware writes, flashing, camera work or live current experiment this turn.
+The earlier build-only task did not access hardware; deployment is recorded above.
 [Offline tests/build evidence](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/manual-unlimited-20261006-z6b0VE/README.md).
 
 **Later5 October recovery and low handoff:** user reported swapping to an older

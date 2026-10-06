@@ -49,7 +49,21 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
-**6 October explicit manual-test exception (NOT FLASHED):** Ethan requested no
+**6 October manual build DEPLOYED:** explicit user request; UF2 SHA256
+`15e0697d67b2676b8fee687c9a9b774993a9a5efe3b19b746b399dd4deb434fa`,
+build0x26100601/profile0x8006, fresh USB0x01100000/RP2 serialE0C9125B0D9B.
+Updater archived/restored/verified private VIA and passed15 s response checks;
+post-flash read-only checks match VIA/66 overrides/non-brightness preferences,
+RAM brightness/final RGB zero. Ethan confirmed typing works. No cold-power test,
+new current samples or camera access. Pre-change recovery remains unchanged.
+UI `/toffee-debug` now uses120 fixed states plus baseline, row Apply/amps/Save,
+PCB-labelled local storage/export; source `DEBUG_ENABLED` gates all debug UI.
+No active current limiting: static endpoints approximate1 A using prior rough
+coefficients; user must watch the meter and may skip rows. No automated120-state
+hardware sweep authorised by this checklist task.
+[Deployment/checklist evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/manual-checklist-flash-20261006-1f6iPy/README.md).
+
+**6 October explicit manual-test exception:** Ethan requested no
 limiter and chose hold-until-changed, no five-second timeout, dark startup and no
 saved test lighting. `MODULE_MANUAL_MEASUREMENT=yes` requires both existing
 `MODULE_EXTENSIVE_TEST=yes` and `MODULE_POWER_CALIBRATION=yes` plus build ID.
@@ -69,7 +83,7 @@ matches prior records; physical A/B identity unresolved. Private VIA preserved,
 No rescue/handoff process remains.900 mA model unchanged. Physical restart/typing
 not tested. [Latest recovery](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/second-pcb-recovery-20261005-6Tn4Ko/README.md).
 
-**Current normal deployment, 5 October:** normal UF2
+**Previous normal deployment, 5 October (superseded above):** normal UF2
 `6cbbc829dfca7f5d0a880dacf4678744ed3e909199a2834a703bc687021bf547`
 is now flashed at freshly verified USB `0x02100000`, RP2 serial `E0C9125B0D9B`.
 Enabled production profile4 retains provisional900 mA /120 mA baseline/100 mA
