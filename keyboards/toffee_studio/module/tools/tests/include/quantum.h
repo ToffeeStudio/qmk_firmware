@@ -5,7 +5,11 @@
 #include <stdio.h>
 #include <string.h>
 #define RGB_MATRIX_LED_COUNT 201
+#ifdef MODULE_MANUAL_MEASUREMENT
+#define RGB_MATRIX_MAXIMUM_BRIGHTNESS 255
+#else
 #define RGB_MATRIX_MAXIMUM_BRIGHTNESS 160
+#endif
 #define MODULE_LED_DISCOVERY_BRIGHTNESS 18
 #define MATRIX_ROWS 9
 #define MATRIX_COLS 8

@@ -49,6 +49,19 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
+**6 October explicit manual-test exception (NOT FLASHED):** Ethan requested no
+limiter and chose hold-until-changed, no five-second timeout, dark startup and no
+saved test lighting. `MODULE_MANUAL_MEASUREMENT=yes` requires both existing
+`MODULE_EXTENSIVE_TEST=yes` and `MODULE_POWER_CALIBRATION=yes` plus build ID.
+Only this opt-in build removes current/package limiting, front160 scaling and
+raw population/current admission; startup gate,104-map and0x8B rescue retained.
+Candidate0x26100601/profile0x8006 has informational1000/120/50 mA values, not
+enforced ceilings. Production and earlier protected variants stay unchanged.
+Debug0x88 flags bit5 means manual/no limiting/no timeout; UI must label it honestly.
+Closing the UI does NOT blank it. Existing persistent preferences remain intact;
+returning to normal firmware can reload them. Never relabel this as safe product
+firmware or silently deploy it. [Candidate/tests](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/manual-unlimited-20261006-z6b0VE/README.md).
+
 **Later5 October recovery:** user-reported older/different PCB rescued and flashed
 with the same normal `6cbbc829...` UF2. Fresh serialE0C9125B0D9B at0x02100000
 matches prior records; physical A/B identity unresolved. Private VIA preserved,

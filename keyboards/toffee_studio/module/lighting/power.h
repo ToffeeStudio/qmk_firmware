@@ -1,6 +1,10 @@
 #pragma once
 #include "rgb_matrix.h"
 
+#if defined(MODULE_MANUAL_MEASUREMENT) && (!defined(MODULE_EXTENSIVE_TEST) || !defined(MODULE_POWER_CALIBRATION))
+#error "Manual measurement requires explicit temporary calibration firmware"
+#endif
+
 // Source-controlled profile, never writable from a lighting slider/HID command.
 // Group order: regular front, rear, badge. Coefficients are incremental uA at 255.
 typedef struct {

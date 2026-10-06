@@ -26,6 +26,11 @@ clang -std=c11 -O1 -g -fsanitize=address,undefined -DMODULE_LED_DISCOVERY \
   -I tools/tests/include -I ../../../tmk_core/protocol -I . -I "$test_dir" tools/tests/groups_test.c \
   lighting/groups.c lighting/lighting.c lighting/test_mode.c lighting/power.c lighting/power_profile.c -o "$test_dir/calibration-groups"
 "$test_dir/calibration-groups"
+clang -std=c11 -O1 -g -fsanitize=address,undefined -DMODULE_LED_DISCOVERY \
+  -DMODULE_EXTENSIVE_TEST -DMODULE_POWER_CALIBRATION -DMODULE_MANUAL_MEASUREMENT -DMODULE_TEST_BUILD_ID=0x26100601 \
+  -I tools/tests/include -I ../../../tmk_core/protocol -I . -I "$test_dir" tools/tests/groups_test.c \
+  lighting/groups.c lighting/lighting.c lighting/test_mode.c lighting/power.c lighting/power_profile.c -o "$test_dir/manual-groups"
+"$test_dir/manual-groups"
 # Compile the actual rear persistence functions, excluding unrelated display I/O.
 sed -n '/^extern animation_t\* underglow_animations\[\];/,$p' persistence.c > "$test_dir/module_persistence.inc"
 test -s "$test_dir/module_persistence.inc"
@@ -38,7 +43,7 @@ for mode in production temporary; do
   "$test_dir/rear-$mode"
 done
 printf 'Test executables retained at %s\n' "$test_dir"
-for profile in production synthetic calibration; do
+for profile in production synthetic calibration manual; do
   profile_sources="lighting/power_profile.c"
   profile_define=""
   if [ "$profile" = synthetic ]; then
@@ -47,6 +52,9 @@ for profile in production synthetic calibration; do
   fi
   if [ "$profile" = calibration ]; then
     profile_define="-DMODULE_EXTENSIVE_TEST -DMODULE_POWER_CALIBRATION"
+  fi
+  if [ "$profile" = manual ]; then
+    profile_define="-DMODULE_EXTENSIVE_TEST -DMODULE_POWER_CALIBRATION -DMODULE_MANUAL_MEASUREMENT"
   fi
   clang -std=c11 -O1 -g -fsanitize=address,undefined $profile_define \
     -I tools/tests/include -I ../../../tmk_core/protocol -I . \

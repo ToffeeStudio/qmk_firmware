@@ -1,10 +1,45 @@
 # Toffee Studio Module — start here
 
-Last reviewed: **5 October 2026 (Australia/Sydney)**. This is the current board
+Last reviewed: **6 October 2026 (Australia/Sydney)**. This is the current board
 handover, not a live device-status feed. Read the repository's
 [agent safety instructions](../../../AGENTS.md) before working on hardware.
 
 ## Current status
+
+**6 October unlimited manual-measurement candidate built, NOT FLASHED.** User
+requested measurement without firmware dimming and confirmed: hold until changed,
+start dark, do not save test lighting. Production firmware is untouched. Build:
+
+```sh
+make toffee_studio/module:via -j1 MODULE_EXTENSIVE_TEST=yes MODULE_POWER_CALIBRATION=yes MODULE_MANUAL_MEASUREMENT=yes MODULE_TEST_BUILD_ID=0x26100601
+```
+
+Candidate SHA256 `15e0697d67b2676b8fee687c9a9b774993a9a5efe3b19b746b399dd4deb434fa`,
+archived at `ARCHIVE/firmware-recovery/20261006-manual-unlimited-sHANVV/manual-measurement-26100601.uf2`.
+This is NOT the normal build or the previous watchdog-controlled calibration.
+All104 mapped LEDs can receive full0..255 RGB; no shared-current/package cap,
+front160 scaling, raw50/150 cap, current admission rejection or five-second timeout.
+The1s-dark/1s-fade startup gate, padding blackout and explicit permanent0x8B ZERO
+recovery are unchanged. RAM brightness starts zero for every group; ordinary
+setters/Save do not alter stored lighting. Colours/effects/per-key overrides still
+affect normal sliders;0x8A literal RGB/bitmap bypasses those for exact experiments.
+
+Telemetry0x88 remains schema1 with new flags bit5 (`0x20`) identifying manual
+measurement/no limiter/no timeout. Profile0x8006 shows the user's proposed1000 mA
+board reference,120 mA electronics reserve,50 mA margin and830 mA LED reference;
+NONE is enforced. `limited=false`, limiter multiplier1000, and effective current
+may exceed the reference budget. Existing estimates are uncalibrated comparison
+information, not meter readings or a claim that1 A is safe.0x89 final RGB sums,
+0x86 test/build status and0x8A literal patterns remain available.
+
+Configurator Debug now clearly says LIMITER DISABLED, no timeout/no saves, and
+accepts above-reference telemetry only when that flag is present. Normal profiles
+retain their validation. Existing lighting sliders can control the candidate;
+the requested dedicated manual preset/data-entry page is still a separate task.
+Closing/disconnecting the browser does NOT switch manual output off. Restart
+does; returning to product firmware may reload the preserved saved preferences.
+No hardware writes, flashing, camera work or live current experiment this turn.
+[Offline tests/build evidence](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/manual-unlimited-20261006-z6b0VE/README.md).
 
 **Later5 October recovery and low handoff:** user reported swapping to an older
 PCB in an overload cycle. Native rescue blanked it; old persistent-reset command

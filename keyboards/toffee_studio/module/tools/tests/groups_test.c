@@ -76,7 +76,9 @@ static void qmk_render(void) {
 }
 #include "parser_test.c"
 #include "startup_test.c"
-#ifdef MODULE_EXTENSIVE_TEST
+#ifdef MODULE_MANUAL_MEASUREMENT
+#include "manual_test.c"
+#elif defined(MODULE_EXTENSIVE_TEST)
 #include "test_mode_test.c"
 #endif
 int main(void) {
@@ -85,7 +87,9 @@ int main(void) {
     saved_available = false;
     saves = 0;
     now = 0;
-#ifdef MODULE_EXTENSIVE_TEST
+#ifdef MODULE_MANUAL_MEASUREMENT
+    test_manual_firmware();
+#elif defined(MODULE_EXTENSIVE_TEST)
     test_temporary_firmware();
 #else
     lighting_init();

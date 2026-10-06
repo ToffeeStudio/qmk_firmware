@@ -33,7 +33,11 @@ static void test_startup_lighting(void) {
     set_usb_state(USB_DEVICE_STATE_INIT);
     lighting_init();
     assert_black();
-    assert(memcmp(&saved, &module_lighting_state, sizeof(saved)) == 0);
+    module_lighting_state_t expected_startup = saved;
+#ifdef MODULE_MANUAL_MEASUREMENT
+    expected_startup.front.brightness = expected_startup.badge.brightness = 0;
+#endif
+    assert(memcmp(&expected_startup, &module_lighting_state, sizeof(saved)) == 0);
 
     // Even an all-white diagnostic cannot bypass the USB-ready/off gate.
     assert(packet(id_lighting_discovery_all, off, 0) == 0);

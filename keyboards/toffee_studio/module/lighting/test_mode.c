@@ -19,7 +19,9 @@ static uint8_t raw_mask[13];
 bool lighting_test_raw(const uint8_t *payload) {
     unsigned count = 0;
     uint8_t groups = 0;
+#ifndef MODULE_MANUAL_MEASUREMENT
     uint64_t weighted_request = 0;
+#endif
     for (unsigned i = 0; i < MODULE_MAPPED_LED_COUNT; i++) {
         if (!(payload[3 + i / 8] & (1u << (i % 8)))) continue;
         count++;
@@ -27,15 +29,19 @@ bool lighting_test_raw(const uint8_t *payload) {
         if (flags == LED_FLAG_KEYLIGHT) groups |= 1;
         if (flags == LED_FLAG_UNDERGLOW) groups |= 2;
         if (flags == LED_FLAG_INDICATOR) groups |= 4;
+#ifndef MODULE_MANUAL_MEASUREMENT
         unsigned group = flags == LED_FLAG_KEYLIGHT ? 0 : flags == LED_FLAG_UNDERGLOW ? 1 : 2;
         for (unsigned channel = 0; channel < 3; channel++)
             weighted_request += (uint64_t)payload[channel] * module_power_profile.channel_ua[group][channel];
+#endif
     }
-    // User's experiment endpoints: up to 50 packages at 255, otherwise <=150.
-    // Calibration is exact-output: reject excessive requests rather than silently
-    // measuring a dimmed substitute. Final limiting remains for other paths.
-    if (!count || (count > 50 && (payload[0] > 150 || payload[1] > 150 || payload[2] > 150))) return false;
+    // The earlier automated calibration retains population/current admission.
+    // Manual measurement accepts any nonempty mapped selection at full byte range.
+    if (!count) return false;
+#ifndef MODULE_MANUAL_MEASUREMENT
+    if (count > 50 && (payload[0] > 150 || payload[1] > 150 || payload[2] > 150)) return false;
     if (weighted_request > (uint64_t)module_power_led_budget(&module_power_profile) * 1000 * 255) return false;
+#endif
     raw_color = (RGB){.r = payload[0], .g = payload[1], .b = payload[2]};
     memcpy(raw_mask, payload + 3, sizeof(raw_mask));
     lighting_test_pattern(MODULE_TEST_RAW, groups);
@@ -44,11 +50,13 @@ bool lighting_test_raw(const uint8_t *payload) {
 #endif
 
 static void expire_deadline(void) {
+#ifndef MODULE_MANUAL_MEASUREMENT
     if (!blank && timer_elapsed32(last_keepalive) >= MODULE_TEST_TIMEOUT_MS) {
         blank = true;
         expired = true;
         uprintf("TEST: controller timeout; LEDs latched off\n");
     }
+#endif
 }
 
 void lighting_test_init(void) {
@@ -57,9 +65,20 @@ void lighting_test_init(void) {
     pattern = MODULE_TEST_OFF;
     commanded_groups = 0;
     last_keepalive = timer_read32();
+#ifdef MODULE_MANUAL_MEASUREMENT
+    // Do not restore saved high groups when the first ordinary UI setter arrives.
+    // Colours/effects/overrides remain in RAM; no storage writes here.
+    module_lighting_state.front.brightness = 0;
+    module_lighting_state.badge.brightness = 0;
+    g_underglow_config.brightness = 0;
+#endif
     rgb_matrix_sethsv_noeeprom(0, 0, 0);
     rgb_matrix_set_color_all(0, 0, 0);
+#ifdef MODULE_MANUAL_MEASUREMENT
+    uprintf("MANUAL TEST: no current/brightness limiter, no timeout; startup off, lighting saves disabled\n");
+#else
     uprintf("TEST: startup off, channel cap %u, keepalive timeout 5000ms; lighting saves disabled\n", MODULE_TEST_CHANNEL_CAP);
+#endif
 }
 void lighting_test_pattern(uint8_t value, uint8_t groups) {
     pattern = value;

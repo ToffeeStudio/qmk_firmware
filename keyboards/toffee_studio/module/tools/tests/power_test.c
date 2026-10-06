@@ -58,12 +58,19 @@ static uint64_t demand(const rgb_led_t *frame, const module_power_profile_t *pro
 static uint16_t u16(const uint8_t *p) {return p[0] | (uint16_t)p[1] << 8;}
 static uint32_t rng = 0x26100401;
 static uint32_t random32(void) {rng ^= rng << 13; rng ^= rng >> 17; rng ^= rng << 5; return rng;}
+#ifdef MODULE_MANUAL_MEASUREMENT
+#include "manual_power_test.c"
+#endif
 
 int main(void) {
     for (unsigned i = 0; i < 104; i++) g_led_config.flags[i] = LED_FLAG_UNDERGLOW;
     for (unsigned i = 0; i < ARRAY_SIZE(module_front_leds); i++) g_led_config.flags[module_front_leds[i].index] = LED_FLAG_KEYLIGHT;
     for (unsigned i = 0; i < ARRAY_SIZE(module_badge_leds); i++) g_led_config.flags[module_badge_leds[i]] = LED_FLAG_INDICATOR;
     assert(group(103) == 0); // Broken physical repair cannot reduce the accounting map.
+#ifdef MODULE_MANUAL_MEASUREMENT
+    test_manual_power();
+    return 0;
+#endif
     rgb_led_t input[201], original[201], output[201], repeated[201];
     module_power_frame_t result, repeat;
 #if !defined(MODULE_POWER_CALIBRATION) && !defined(POWER_TEST_PROFILE)

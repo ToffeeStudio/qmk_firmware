@@ -1,6 +1,18 @@
 #include "power.h"
 
-#ifdef MODULE_POWER_CALIBRATION
+#ifdef MODULE_MANUAL_MEASUREMENT
+// Informational proposal only: explicitly NOT enforced in this manual build.
+// Retain estimates for comparison, not as evidence of a measured safe ceiling.
+const module_power_profile_t module_power_profile = {
+    .revision = 0x8006,
+    .configured = true,
+    .board_limit_ma = 1000,
+    .base_ma = 120,
+    .margin_ma = 50,
+    .channel_ua = {{15000, 15000, 15000}, {18000, 19000, 18000}, {18000, 18000, 18000}},
+    .channel_ceiling = {255, 255, 255},
+};
+#elif defined(MODULE_POWER_CALIBRATION)
 #ifndef MODULE_EXTENSIVE_TEST
 #error "Calibration profile requires startup-off, watchdog, RAM-only test firmware"
 #endif

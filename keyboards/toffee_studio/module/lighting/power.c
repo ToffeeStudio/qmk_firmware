@@ -40,19 +40,23 @@ void module_power_limit(const module_power_profile_t *profile, const rgb_led_t *
         if (group < 0) continue;
         rgb_led_t c = input[i];
         requested += weighted(c, profile->channel_ua[group]);
+#ifndef MODULE_MANUAL_MEASUREMENT
         uint8_t maximum = c.r > c.g ? c.r : c.g;
         if (c.b > maximum) maximum = c.b;
         if (maximum > profile->channel_ceiling[group]) {
             uint32_t package_scale = (uint32_t)profile->channel_ceiling[group] * UINT16_MAX / maximum;
             if (package_scale < scale) scale = package_scale;
         }
+#endif
     }
+#ifndef MODULE_MANUAL_MEASUREMENT
     uint64_t available = (uint64_t)module_power_led_budget(profile) * 1000 * 255;
     if (!profile->configured || !available) scale = 0;
     else if (requested > available) {
         uint32_t budget_scale = available * UINT16_MAX / requested;
         if (budget_scale < scale) scale = budget_scale;
     }
+#endif
     // One common multiplier. Round drive down, current estimates up. The raw
     // render buffer is immutable here, so repeated flushes never compound dimming.
     for (uint16_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
@@ -123,6 +127,9 @@ void lighting_power_status(uint8_t *payload) {
                  (usb_device_state == USB_DEVICE_STATE_CONFIGURED ? 4 : 0) |
                  (last_frame.startup_permille < 1000 ? 8 : 0) |
                  (frame_valid ? 16 : 0);
+#ifdef MODULE_MANUAL_MEASUREMENT
+    payload[1] |= 32; // Manual measurement: reference budget ONLY, no limiter/timeout.
+#endif
     put16(payload + 2, module_power_profile.revision);
     put16(payload + 4, sequence);
     put16(payload + 6, age > UINT16_MAX ? UINT16_MAX : age);
