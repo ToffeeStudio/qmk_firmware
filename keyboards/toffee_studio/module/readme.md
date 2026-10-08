@@ -1,10 +1,24 @@
 # Toffee Studio Module — start here
 
-Last reviewed: **6 October 2026 (Australia/Sydney)**. This is the current board
+Last reviewed: **8 October 2026 (Australia/Sydney)**. This is the current board
 handover, not a live device-status feed. Read the repository's
 [agent safety instructions](../../../AGENTS.md) before working on hardware.
 
 ## Current status
+
+**8 October: unlimited test firmware flashed to the user-identified PCB-B.**
+Fresh enumeration found one Module at USB `0x00100000`; the updater verified
+RP2 serial `E0C9125B0D9B` at the same connection before copying the archived
+`0x26100601` / profile `0x8006` image described below. No rebuild or USB-reset
+workaround was needed. Keyboard/VIA remained responsive for 15 seconds.
+Private keymap/macros/layout, all 66 overrides and non-brightness lighting
+preferences match the pre-flash snapshot. Independent read-only checks confirm
+the exact build, no-limiter flag, zero RAM brightness and all-zero final RGB.
+Physical typing and cold-power behavior for this deployment remain unconfirmed.
+Configurator `/toffee-debug` is serving; reconnect, Check firmware, use the PCB-B
+label and begin with baseline. No rescue loop, camera or lit-pattern sweep.
+[Flash report](../../../../ARCHIVE/firmware-recovery/20261008T113532Z-dd7e65e3/flash-report.json)
+and [session evidence](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/pcb-b-unlimited-20261008-fMdDqY/README.md).
 
 **6 October manual-measurement firmware deployed; typing confirmed.** The archived
 UF2 below was copied using the documented updater to newly identified USB0x01100000,

@@ -49,6 +49,17 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
+**8 October PCB-B deployment:** user explicitly identified the connected board
+as PCB-B and requested the same unlimited test firmware. Fresh sole Module
+USB `0x00100000`, RP2 serial `E0C9125B0D9B` verified before UF2 copy. Archived
+build `0x26100601` / profile `0x8006`, SHA256
+`15e0697d67b2676b8fee687c9a9b774993a9a5efe3b19b746b399dd4deb434fa`.
+15-second VIA/keyboard stability and read-only settings comparison passed;
+all 66 overrides/non-brightness preferences preserved, RAM brightness and final
+RGB zero, manual no-limiter flag confirmed. Physical typing/cold-power checks
+for this deployment remain pending. No firmware code changes or new lit tests.
+[Flash evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/pcb-b-unlimited-20261008-fMdDqY/README.md).
+
 **6 October manual build DEPLOYED:** explicit user request; UF2 SHA256
 `15e0697d67b2676b8fee687c9a9b774993a9a5efe3b19b746b399dd4deb434fa`,
 build0x26100601/profile0x8006, fresh USB0x01100000/RP2 serialE0C9125B0D9B.
