@@ -6,6 +6,25 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**8 October fitted normal profile 5 — built, NOT FLASHED.** Ethan requested fitting
+the manually saved data and limiting **estimated whole-board current to900 mA**.
+176 records: A121/B55,174 lit states plus measured all-off baselines A80/B110 mA.
+Shared RGB microamp coefficients per full channel: front[11106,11049,11300],
+rear[12506,12279,12360],badge[11931,11610,10486]. Withheld brightness-level MAE
+14.55 mA (old model146.41); errors−37..+66 mA. Normal source explicitly targets
+B's110 mA idle baseline, leaving790 mA LEDs, without the old padded coefficients,
+extra margin or front160 cap. One proportional final-transmission multiplier
+enforces that estimate; requested/saved lighting and1s-dark/1s-fade are retained.
+Host regressions/normal build pass. Candidate SHA256
+`445c807fc63432669f78c20f67bca7e0f181d855168f607d4fb2025622105f37`:
+[archived UF2](../../../../ARCHIVE/firmware-recovery/20261008-fitted-normal-sEWg7y/normal-profile5-pcb-b.uf2).
+**Installed unlimited0x26100601/profile0x8006 is unchanged**, as are its old
+live estimates, all manual records and measurement-page compatibility. Choice
+whether to switch to normal limiting firmware is pending. No HID/camera/flash
+commands or physical tests this fitting task. Actual current may differ from
+the estimate; B badge/combined data are incomplete, not hardware qualification.
+[Preserved data, model, validation and commands](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/fitted-model-20261008-IuYfWL/README.md).
+
 **8 October: unlimited test firmware flashed to the user-identified PCB-B.**
 Fresh enumeration found one Module at USB `0x00100000`; the updater verified
 RP2 serial `E0C9125B0D9B` at the same connection before copying the archived

@@ -36,22 +36,23 @@ const module_power_profile_t module_power_profile = {
     .channel_ceiling = {255, 255, 255},
 };
 #else
-// Ethan's provisional whole-board budget, agreed 4 October 2026: 900 mA.
-// Enabled for Ethan's explicit normal-firmware deployment request, 5 October.
-// Remains provisional, NOT source/thermal certification. Retain the conservative
-// coefficients and both reserves. See AUTORESEARCH/04-09-2026 PCB Lacking Current/
-// visual-calibration-20261004-lL59DO/model-fit.json (visually read meter, no OCR).
-// Nominal baseline 80 mA; coefficients front 11/11/11, rear 13/14/13,
-// badge 13/13/13 mA at full channel. Below: ceil(1.25 * nominal + 1),
-// with 120 mA electronics reserve and a separate 100 mA model margin.
-// Observed validation range is NOT a qualification for the full 900 mA budget.
+// 8 October 2026: fit to 174 manually entered lit observations, using actual
+// final RGB sums and measured idle baselines (A:80 mA, B:110 mA). Shared RGB
+// coefficients; this normal candidate explicitly uses PCB-B's 110 mA baseline.
+// Hold out levels 3/5: mean absolute error 14.6 mA, error -37..+66 mA.
+// See AUTORESEARCH/04-09-2026 PCB Lacking Current/
+// fitted-model-20261008-IuYfWL/model-fit.json for data/provenance/limitations.
+// Ethan requests estimated BOARD current <=900 mA, including idle consumption.
+// No coefficient padding, extra margin or separate front160 cap: one common
+// final-boundary scale limits LED demand to 790 mA. Saved requests stay intact.
+// This caps an ESTIMATE, not sensed current or a certified hardware-safe load.
 const module_power_profile_t module_power_profile = {
-    .revision = 4,
+    .revision = 5,
     .configured = true,
     .board_limit_ma = 900,
-    .base_ma = 120,
-    .margin_ma = 100,
-    .channel_ua = {{15000, 15000, 15000}, {18000, 19000, 18000}, {18000, 18000, 18000}},
-    .channel_ceiling = {160, 255, 255},
+    .base_ma = 110,
+    .margin_ma = 0,
+    .channel_ua = {{11106, 11049, 11300}, {12506, 12279, 12360}, {11931, 11610, 10486}},
+    .channel_ceiling = {255, 255, 255},
 };
 #endif

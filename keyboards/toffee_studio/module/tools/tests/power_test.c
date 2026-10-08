@@ -74,18 +74,49 @@ int main(void) {
     rgb_led_t input[201], original[201], output[201], repeated[201];
     module_power_frame_t result, repeat;
 #if !defined(MODULE_POWER_CALIBRATION) && !defined(POWER_TEST_PROFILE)
-    // User-requested normal deployment: provisional, conservative 900 mA model.
-    assert(module_power_profile.revision == 4 && module_power_profile.configured);
+    // Fitted normal candidate for PCB-B; 900 mA includes measured idle current.
+    assert(module_power_profile.revision == 5 && module_power_profile.configured);
     assert(module_power_profile.board_limit_ma == 900);
-    assert(module_power_profile.base_ma == 120 && module_power_profile.margin_ma == 100);
+    assert(module_power_profile.base_ma == 110 && module_power_profile.margin_ma == 0);
     module_power_profile_t candidate = module_power_profile;
-    assert(module_power_led_budget(&candidate) == 680);
+    assert(module_power_led_budget(&candidate) == 790);
+    // These unscaled predictions reproduce the recorded model-fit.json values.
+    // Requested demand remains visible even when final output must be limited.
+    const struct {int group; uint8_t r, g, b; uint16_t estimate_ma;} samples[] = {
+        {0, 26, 0, 0, 185},    // PCB-B front red: measured 220 mA.
+        {0, 255, 0, 0, 843},   // PCB-B front red: measured 830 mA.
+        {0, 9, 9, 9, 188},     // PCB-B front white: measured 200 mA.
+        {1, 220, 220, 220, 816}, // PCB-B rear white: measured 800 mA.
+        {-1, 110, 55, 0, 883}, // PCB-A all orange: 853 mA with A's 80 mA base.
+    };
+    for (unsigned s = 0; s < ARRAY_SIZE(samples); s++) {
+        memset(input, 0, sizeof(input));
+        for (unsigned i = 0; i < 104; i++)
+            if (samples[s].group == -1 || group(i) == samples[s].group)
+                input[i] = (RGB){.r=samples[s].r, .g=samples[s].g, .b=samples[s].b};
+        module_power_limit(&candidate, input, g_led_config.flags, 1000, output, &result);
+        assert(candidate.base_ma + (result.requested_ua + 999) / 1000 == samples[s].estimate_ma);
+        assert(memcmp(input, output, sizeof(input)) == 0 && !result.limited);
+    }
+    // Exact integer boundary with a synthetic 100 uA per byte: 789.9/790/790.1
+    // mA LED demand. Below/at the cap passes unchanged; one byte over scales.
+    candidate.channel_ua[0][0] = 25500;
+    memset(input, 0, sizeof(input));
+    for (unsigned i = 0; i < 7899; i++) input[module_front_leds[i / 255].index].r++;
+    for (unsigned step = 0; step < 3; step++) {
+        if (step) input[module_front_leds[31].index].r++;
+        module_power_limit(&candidate, input, g_led_config.flags, 1000, output, &result);
+        assert(result.limited == (step == 2));
+        assert(candidate.base_ma + (result.effective_ua + 999) / 1000 <= 900);
+        if (step < 2) assert(memcmp(input, output, sizeof(input)) == 0);
+    }
+    candidate = module_power_profile;
     for (unsigned level = 0; level <= 255; level++) {
         memset(input, 0, sizeof(input));
         for (unsigned i = 0; i < 104; i++) input[i] = (RGB){.r=level, .g=level, .b=level};
         memcpy(original, input, sizeof(input));
         module_power_limit(&candidate, input, g_led_config.flags, 1000, output, &result);
-        assert(result.effective_ua <= 680000);
+        assert(candidate.base_ma + (result.effective_ua + 999) / 1000 <= 900);
         assert(result.effective_ua == (demand(output, &candidate) + 254) / 255);
         assert(memcmp(input, original, sizeof(input)) == 0);
         if (level == 255) assert(result.limited);

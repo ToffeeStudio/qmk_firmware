@@ -49,6 +49,18 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
+**8 October fitted normal source — NOT FLASHED:** profile5 now fits the user's
+176 manual records (174 lit + two baselines), using actual final RGB sums.
+Shared channel microamps: front[11106,11049,11300], rear[12506,12279,12360],
+badge[11931,11610,10486]. Explicit B baseline110 mA;900 mA estimated whole-board
+cap,790 mA LED allowance, no padding/extra margin/front160 cap. Held-out MAE14.55
+mA versus146.41 previously. Full host suite and normal build pass; UF2 archived.
+The currently installed unlimited0x26100601/profile0x8006 remains unchanged:
+pending user choice whether to switch measurement mode, no hardware commands.
+Do not auto-select A/B from a port/label; A's recorded baseline is80 mA, and B's
+badge/combined coverage remains incomplete. This is an estimate, not a sensor or
+hardware-safe certification. [Evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/fitted-model-20261008-IuYfWL/README.md).
+
 **8 October PCB-B deployment:** user explicitly identified the connected board
 as PCB-B and requested the same unlimited test firmware. Fresh sole Module
 USB `0x00100000`, RP2 serial `E0C9125B0D9B` verified before UF2 copy. Archived
