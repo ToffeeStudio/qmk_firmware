@@ -75,7 +75,7 @@ int main(void) {
     module_power_frame_t result, repeat;
 #if !defined(MODULE_POWER_CALIBRATION) && !defined(POWER_TEST_PROFILE)
     // Fitted normal candidate for PCB-B; 900 mA includes measured idle current.
-    assert(module_power_profile.revision == 5 && module_power_profile.configured);
+    assert(module_power_profile.revision == 6 && module_power_profile.configured);
     assert(module_power_profile.board_limit_ma == 900);
     assert(module_power_profile.base_ma == 110 && module_power_profile.margin_ma == 0);
     module_power_profile_t candidate = module_power_profile;
@@ -83,11 +83,11 @@ int main(void) {
     // These unscaled predictions reproduce the recorded model-fit.json values.
     // Requested demand remains visible even when final output must be limited.
     const struct {int group; uint8_t r, g, b; uint16_t estimate_ma;} samples[] = {
-        {0, 26, 0, 0, 185},    // PCB-B front red: measured 220 mA.
-        {0, 255, 0, 0, 843},   // PCB-B front red: measured 830 mA.
-        {0, 9, 9, 9, 188},     // PCB-B front white: measured 200 mA.
-        {1, 220, 220, 220, 816}, // PCB-B rear white: measured 800 mA.
-        {-1, 110, 55, 0, 883}, // PCB-A all orange: 853 mA with A's 80 mA base.
+        {0, 26, 0, 0, 186},    // PCB-B front red: measured 220 mA.
+        {0, 255, 0, 0, 848},   // PCB-B front red: measured 830 mA.
+        {0, 9, 9, 9, 189},     // PCB-B front white: measured 200 mA.
+        {1, 220, 220, 220, 826}, // PCB-B rear white: measured 800 mA.
+        {-1, 110, 55, 0, 899}, // PCB-B all orange: measured 890 mA.
     };
     for (unsigned s = 0; s < ARRAY_SIZE(samples); s++) {
         memset(input, 0, sizeof(input));

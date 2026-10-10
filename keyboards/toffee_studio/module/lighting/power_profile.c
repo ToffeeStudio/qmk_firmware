@@ -36,23 +36,26 @@ const module_power_profile_t module_power_profile = {
     .channel_ceiling = {255, 255, 255},
 };
 #else
-// 8 October 2026: fit to 174 manually entered lit observations, using actual
+// 10 October 2026: fit to 240 manually entered lit observations, using actual
 // final RGB sums and measured idle baselines (A:80 mA, B:110 mA). Shared RGB
 // coefficients; this normal candidate explicitly uses PCB-B's 110 mA baseline.
-// Hold out levels 3/5: mean absolute error 14.6 mA, error -37..+66 mA.
+// Hold out levels 3/5: per-board-idle MAE 17.8 mA (previous fit 18.8 mA).
+// With this B baseline: B MAE 19.7 mA; A MAE 36.6 mA. Do not claim both
+// boards share an idle current. B has a reported broken front LED; retain all
+// mapped positions and treat the fitted coefficients as sample averages.
 // See AUTORESEARCH/04-09-2026 PCB Lacking Current/
-// fitted-model-20261008-IuYfWL/model-fit.json for data/provenance/limitations.
+// refit-20261010-XsgK38/model-fit.json for data/provenance/limitations.
 // Ethan requests estimated BOARD current <=900 mA, including idle consumption.
 // No coefficient padding, extra margin or separate front160 cap: one common
 // final-boundary scale limits LED demand to 790 mA. Saved requests stay intact.
 // This caps an ESTIMATE, not sensed current or a certified hardware-safe load.
 const module_power_profile_t module_power_profile = {
-    .revision = 5,
+    .revision = 6,
     .configured = true,
     .board_limit_ma = 900,
     .base_ma = 110,
     .margin_ma = 0,
-    .channel_ua = {{11106, 11049, 11300}, {12506, 12279, 12360}, {11931, 11610, 10486}},
+    .channel_ua = {{11175, 11182, 11416}, {12706, 12536, 12435}, {12862, 12370, 11788}},
     .channel_ceiling = {255, 255, 255},
 };
 #endif

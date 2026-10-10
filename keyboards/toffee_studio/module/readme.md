@@ -6,6 +6,18 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**10 October complete-data refit — normal profile6 built, NOT FLASHED.**
+All240 lit observations from both boards now inform the RGB coefficients.
+One whole-board limit remains `board_limit_ma=900`, margin0. The candidate
+retains PCB-B's measured110 mA baseline (790 mA LED allowance). New per-full-channel
+microamps: front[11175,11182,11416],rear[12706,12536,12435],badge[12862,12370,11788].
+With per-board idle values, held-out MAE17.75 versus18.80 mA on the same complete
+data. With firmware's B baseline, B improves24.30→19.725 mA, but A's error worsens
+30.55→36.575 mA. This is not a universal improvement or an actual current sensor.
+Host tests/build pass; no hardware commands or firmware deployment this refit.
+Installed manual0x26100601/profile0x8006 remains unlimited for measurements.
+[Data, formula and archived image](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/refit-20261010-XsgK38/README.md).
+
 **10 October: unlimited test firmware reflashed; measurement UI restarted.**
 User selected continued manual measurement. Fresh sole Module USB0x00100000,
 verified RP2 serialE0C9125B0D9B; archived build0x26100601/profile0x8006 below was

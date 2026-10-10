@@ -49,6 +49,15 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
+**10 October complete-data refit:** normal source profile6, built/archived NOT
+FLASHED. Single `board_limit_ma=900`, margin0, existing PCB-B idle110 mA and790
+mA LED allowance.240 lit observations fit shared RGB microamps front[11175,
+11182,11416], rear[12706,12536,12435], badge[12862,12370,11788]. Held-out B MAE
+24.30→19.725 mA with this idle value; A accuracy worsens when using B's idle.
+Do not describe this as a universal model improvement. Startup and all104 mapping
+unchanged; full host suite/normal build pass. Installed manual0x26100601/0x8006
+remains unlimited. [Evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/refit-20261010-XsgK38/README.md).
+
 **10 October latest deployment:** explicit request to resume manual measurements.
 Archived unlimited0x26100601/profile0x8006 reflashed to fresh sole USB0x00100000,
 RP2 serialE0C9125B0D9B verified before copy.15 s VIA stability and independent
