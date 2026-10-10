@@ -49,6 +49,16 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
+**10 October latest — PCB-B unlimited mixed build0x26101001 DEPLOYED.**
+Manual-only0x8C atomically applies literal front/rear/badge RGB (9 bytes) to all
+104 mapped positions. Original0x8A and informational model0x8006 unchanged.
+No limiter/timeout, starts dark, no ordinary test saves; startup/rescue intact.
+USB0x00100000/RP2 E0C9125B0D9B verified,15 s uptime and independent low-drive
+RGB/hold checks pass, final dark. VIA/66 overrides/non-brightness prefs preserved.
+PCB-A stays normal6; physical typing/cold-power pending.145-state UI includes
+25 mixed cases, requires this build for mixed output, preserves older records.
+[Evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/mixed-checklist-20261010-uLN8o3/README.md).
+
 **10 October latest — official profile6 deployed to user-identified PCB-A.**
 Fresh USB0x01100000/RP2 E0C9125B0D9B; archived c6197102... UF2 copied once.
 15 s VIA stability and independent normal-profile/preservation checks pass.

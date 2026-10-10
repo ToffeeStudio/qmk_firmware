@@ -6,6 +6,19 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**10 October latest: PCB-B unlimited mixed-colour build0x26101001 FLASHED.**
+Manual-only0x8C receives nine literal RGB bytes, front/rear/badge in that order,
+and applies all three groups atomically. Production/protected variants reject it.
+Original0x8A and read-only0x88/0x89 are unchanged; informational model0x8006
+retains its OLD coefficients (not normal6). No limiter/timeout or ordinary test
+saves; startup dark,1s gate/1s fade and explicit rescue retained.
+Archived UF2 SHA256 `2d1ad86167bbbcc7a1cd40d5e7499cd743ab2cee6ae5fd1882f3462516e68850`.
+Fresh USB0x00100000/RP2 E0C9125B0D9B,15 s VIA stability, exact low-drive mixed RGB
+and >5s hold verified. Final dark; private VIA/66 overrides/non-brightness prefs
+preserved. Physical typing/cold-power pending. A remains normal6, not modified.
+UI145 cases + baseline; mixed121–145 require new build. Prior120 keys/records
+unchanged. [Full evidence](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/mixed-checklist-20261010-uLN8o3/README.md).
+
 **10 October latest: official normal profile6 FLASHED to user-identified PCB-A.**
 Same archived c6197102... image; fresh USB0x01100000/RP2 E0C9125B0D9B checked.
 Updater restored/verified this board's keymap and passed15 s stability. Independent
