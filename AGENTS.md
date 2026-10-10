@@ -49,6 +49,12 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
+**10 October newest — PCB-B unlimited build0x26101002 flashed.** Same mixed0x8C
+implementation/profile0x8006 as01, rebuilt for five UI high-current cases146–150.
+No limiter/timeout/saves; startup contract unchanged. Standard UF2 copy to fresh
+USB0x00100000/RP2 E0C9125B0D9B,15 s stability passes. No high-current automated
+hardware sweep. PCB-A remains normal6. [Evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/high-mixed-20261010-Ad4Mie/README.md).
+
 **10 October latest — PCB-B unlimited mixed build0x26101001 DEPLOYED.**
 Manual-only0x8C atomically applies literal front/rear/badge RGB (9 bytes) to all
 104 mapped positions. Original0x8A and informational model0x8006 unchanged.

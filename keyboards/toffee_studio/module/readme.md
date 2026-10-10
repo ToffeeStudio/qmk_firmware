@@ -6,6 +6,15 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**10 October newest: PCB-B unlimited0x26101002 FLASHED.** Same firmware behavior
+as01; new build ID, no new cap/protocol/model change. UI now150 cases + baseline,
+appending five mixed states with fitted estimates903/925/941/960/979 mA. Prior145
+states/records intact. Unlimited model0x8006 still uses OLD informational weights.
+Fresh USB0x00100000/RP2 E0C9125B0D9B; standard UF2 copy and15 s checks passed.
+SHA256 `d5c464123806a9b4c6dd9783a18bcb4809ad786192e773dad042268718d04f42`.
+No high-current patterns applied automatically; physical typing/cold power pending.
+A remains normal6. [Evidence](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/high-mixed-20261010-Ad4Mie/README.md).
+
 **10 October latest: PCB-B unlimited mixed-colour build0x26101001 FLASHED.**
 Manual-only0x8C receives nine literal RGB bytes, front/rear/badge in that order,
 and applies all three groups atomically. Production/protected variants reject it.
