@@ -6,6 +6,14 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**10 October newest: PCB-A flashed with unlimited0x26101002 at user request.**
+Same d5c46412... UF2 below. Fresh USB0x00100000/RP2 E0C9125B0D9B verified; one
+copy and15-second stability checks pass. Independent read-only checks confirm
+build/no-limiter, zero final RGB, unchanged VIA/66 overrides/colours/effects.
+No lit patterns or settings writes. Both boards now have latest manual02; this
+supersedes A's normal6 status. Physical typing/cold-power pending.
+[Evidence](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/pcb-a-test-20261010-Z5pCeR/README.md).
+
 **10 October newest: PCB-B unlimited0x26101002 FLASHED.** Same firmware behavior
 as01; new build ID, no new cap/protocol/model change. UI now150 cases + baseline,
 appending five mixed states with fitted estimates903/925/941/960/979 mA. Prior145

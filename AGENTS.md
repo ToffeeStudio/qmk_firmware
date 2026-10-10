@@ -49,6 +49,12 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
+**10 October newest: PCB-A explicitly switched to unlimited0x26101002 too.**
+Same archived d5c46412... image, fresh USB0x00100000/RP2 E0C9125B0D9B.15 s USB
+checks/read-only verification pass; correct build, dark output, preferences/VIA
+preserved. No lit tests. Supersedes A-normal6 statements below. Physical typing/
+cold-power pending. [Evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/pcb-a-test-20261010-Z5pCeR/README.md).
+
 **10 October newest — PCB-B unlimited build0x26101002 flashed.** Same mixed0x8C
 implementation/profile0x8006 as01, rebuilt for five UI high-current cases146–150.
 No limiter/timeout/saves; startup contract unchanged. Standard UF2 copy to fresh
