@@ -27,7 +27,7 @@ clang -std=c11 -O1 -g -fsanitize=address,undefined -DMODULE_LED_DISCOVERY \
   lighting/groups.c lighting/lighting.c lighting/test_mode.c lighting/power.c lighting/power_profile.c -o "$test_dir/calibration-groups"
 "$test_dir/calibration-groups"
 clang -std=c11 -O1 -g -fsanitize=address,undefined -DMODULE_LED_DISCOVERY \
-  -DMODULE_EXTENSIVE_TEST -DMODULE_POWER_CALIBRATION -DMODULE_MANUAL_MEASUREMENT -DMODULE_TEST_BUILD_ID=0x26100601 \
+  -DMODULE_EXTENSIVE_TEST -DMODULE_POWER_CALIBRATION -DMODULE_MANUAL_MEASUREMENT -DMODULE_TEST_BUILD_ID=0x26101001 \
   -I tools/tests/include -I ../../../tmk_core/protocol -I . -I "$test_dir" tools/tests/groups_test.c \
   lighting/groups.c lighting/lighting.c lighting/test_mode.c lighting/power.c lighting/power_profile.c -o "$test_dir/manual-groups"
 "$test_dir/manual-groups"

@@ -1207,6 +1207,9 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
         command_id != id_lighting_badge_get && command_id != id_lighting_badge_set &&
         command_id != id_lighting_led_get && command_id != id_lighting_capabilities &&
         command_id != id_lighting_power_status && command_id != id_lighting_rescue_off &&
+#ifdef MODULE_MANUAL_MEASUREMENT
+        command_id != id_lighting_test_mixed &&
+#endif
 #ifdef MODULE_EXTENSIVE_TEST
         command_id != id_lighting_test_status && command_id != id_lighting_test_keepalive &&
         command_id != id_lighting_test_rgb_sums &&
@@ -1221,6 +1224,12 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
 #endif
 
     switch (command_id) {
+#ifdef MODULE_MANUAL_MEASUREMENT
+        case id_lighting_test_mixed:
+            lighting_test_mixed(data + 6);
+            err = module_ret_success;
+            break;
+#endif
 #ifdef MODULE_LED_DISCOVERY
         case id_lighting_rescue_off:
             // Deliberate, idempotent persistence exception; never a slider setter.

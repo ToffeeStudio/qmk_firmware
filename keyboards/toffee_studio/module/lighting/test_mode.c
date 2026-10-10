@@ -12,6 +12,14 @@ extern rgb_led_t rgb_matrix_ws2812_array[RGB_MATRIX_LED_COUNT];
 static bool blank, expired;
 static uint8_t pattern, commanded_groups;
 static uint32_t last_keepalive;
+#ifdef MODULE_MANUAL_MEASUREMENT
+static RGB mixed_colors[3];
+void lighting_test_mixed(const uint8_t *payload) {
+    for (unsigned group = 0; group < 3; group++)
+        mixed_colors[group] = (RGB){.r = payload[group * 3], .g = payload[group * 3 + 1], .b = payload[group * 3 + 2]};
+    lighting_test_pattern(MODULE_TEST_MIXED, 7);
+}
+#endif
 #ifdef MODULE_POWER_CALIBRATION
 static RGB raw_color;
 static uint8_t raw_mask[13];
@@ -97,6 +105,17 @@ void lighting_test_apply_limits(void) {
     expire_deadline();
     for (uint16_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
         RGB c = rgb_matrix_ws2812_array[i];
+#ifdef MODULE_MANUAL_MEASUREMENT
+        if (pattern == MODULE_TEST_MIXED) {
+            uint8_t flags = g_led_config.flags[i];
+            c = (RGB){0, 0, 0};
+            if (i < MODULE_MAPPED_LED_COUNT) {
+                if (flags == LED_FLAG_KEYLIGHT) c = mixed_colors[0];
+                else if (flags == LED_FLAG_UNDERGLOW) c = mixed_colors[1];
+                else if (flags == LED_FLAG_INDICATOR) c = mixed_colors[2];
+            }
+        }
+#endif
 #ifdef MODULE_POWER_CALIBRATION
         if (pattern == MODULE_TEST_RAW)
             c = i < MODULE_MAPPED_LED_COUNT && (raw_mask[i / 8] & (1u << (i % 8))) ? raw_color : (RGB){0, 0, 0};

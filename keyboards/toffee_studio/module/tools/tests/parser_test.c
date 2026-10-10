@@ -150,6 +150,9 @@ static void test_parser(void) {
         free(data);
     }
     for (unsigned command = 0; command <= 255; command++) {
+#ifdef MODULE_MANUAL_MEASUREMENT
+        if (command == id_lighting_test_mixed) continue; // Exact mixed-output tests below.
+#endif
 #ifdef MODULE_POWER_CALIBRATION
         if (command == id_lighting_test_raw) continue; // Exercised by raw-pattern boundary tests.
 #endif

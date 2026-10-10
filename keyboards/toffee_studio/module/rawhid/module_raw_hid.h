@@ -51,6 +51,7 @@ enum module_command_id {
     id_lighting_test_rgb_sums      = 0x89,
     id_lighting_test_raw           = 0x8A,
     id_lighting_rescue_off         = 0x8B,
+    id_lighting_test_mixed         = 0x8C,
     id_module_cmd_end               = 0xFF,
 };
 

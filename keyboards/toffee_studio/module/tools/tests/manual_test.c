@@ -9,6 +9,33 @@ static void test_manual_firmware(void) {
     now = 10000; qmk_render(); assert_black();
     assert(MODULE_TEST_CHANNEL_CAP == 255 && RGB_MATRIX_MAXIMUM_BRIGHTNESS == 255);
 
+    // Atomic mixed groups: exact final bytes, all 104 positions, and no timeout.
+    for (unsigned level = 0; level <= 255; level++) {
+        uint8_t mixed[9] = {level, 255-level, 17, 41, level, 255-level, 255-level, 73, level};
+        assert(packet(id_lighting_test_mixed, mixed, sizeof(mixed)) == 0);
+        now += 6000;
+        lighting_task();
+        rgb_led_t output[201];
+        lighting_power_prepare(rgb_matrix_ws2812_array, output);
+        for (unsigned i = 0; i < 201; i++) {
+            unsigned group = g_led_config.flags[i] == LED_FLAG_KEYLIGHT ? 0 :
+                             g_led_config.flags[i] == LED_FLAG_UNDERGLOW ? 1 : 2;
+            RGB expected = i < 104 ? (RGB){.r=mixed[group*3], .g=mixed[group*3+1], .b=mixed[group*3+2]} : (RGB){0};
+            assert(memcmp(&output[i], &expected, sizeof(RGB)) == 0);
+        }
+    }
+    assert(packet(id_lighting_discovery, (uint8_t[]){255,255,255,255,255}, 5) == 0);
+    now += 6000; lighting_task(); assert_black();
+    // Commands during startup are accepted, but cannot bypass dark/fade gating.
+    lighting_init(); qmk_render();
+    assert(packet(id_lighting_test_mixed, (uint8_t[]){255,0,0,0,255,0,0,0,255}, 9) == 0);
+    qmk_render(); assert_black();
+    now += 1500; qmk_render();
+    assert(rgb_matrix_ws2812_array[0].r == 127);
+    now += 500; qmk_render();
+    assert(rgb_matrix_ws2812_array[0].r == 255);
+    lighting_init(); qmk_render(); now += 2000; qmk_render(); assert_black();
+
     // Standard configurator front values are not rescaled to the production160 cap.
     for (unsigned level = 0; level <= 255; level++) {
         front_config_t front = {1, 100, level, 30, 200};
@@ -61,5 +88,5 @@ static void test_manual_firmware(void) {
     assert(!g_underglow_config.brightness);
     test_parser();
     lighting_groups_persistence_task(); assert(saves == 0);
-    puts("Manual PASS: 26,624 exact raw patterns, 256 front values, no current/package cap or timeout, startup dark, no saves, rescue and parser; NO hardware.");
+    puts("Manual PASS: 256 mixed frames, mixed startup/fade/stop, 26,624 exact raw patterns, 256 front values, no current/package cap or timeout, startup dark, no saves, rescue and parser; NO hardware.");
 }
