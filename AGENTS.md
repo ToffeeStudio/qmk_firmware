@@ -49,6 +49,15 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
+**10 October latest — official profile6 deployed to user-identified PCB-A.**
+Fresh USB0x01100000/RP2 E0C9125B0D9B; archived c6197102... UF2 copied once.
+15 s VIA stability and independent normal-profile/preservation checks pass.
+900 mA estimated total, unchanged110 mA baseline,790 mA LED allowance; no source
+change. Physical typing/cold-power pending. Supersedes historical unflashed or
+manual-installed statements below.25 mixed-colour test cases/extended unlimited
+firmware are authorised for PCB-B AFTER the user reconnects it, not A.
+[Evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/pcb-a-normal-20261010-ElLC0a/README.md).
+
 **10 October complete-data refit:** normal source profile6, built/archived NOT
 FLASHED. Single `board_limit_ma=900`, margin0, existing PCB-B idle110 mA and790
 mA LED allowance.240 lit observations fit shared RGB microamps front[11175,

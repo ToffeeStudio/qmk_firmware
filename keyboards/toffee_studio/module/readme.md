@@ -6,6 +6,18 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**10 October latest: official normal profile6 FLASHED to user-identified PCB-A.**
+Same archived c6197102... image; fresh USB0x01100000/RP2 E0C9125B0D9B checked.
+Updater restored/verified this board's keymap and passed15 s stability. Independent
+read-only checks confirm preserved VIA/66 overrides/non-brightness preferences,
+normal profile6,900 mA limit,110 mA baseline,790 mA allowance and startup complete.
+Baseline remains the existing B-calibrated110 mA (A's recorded idle80 mA was not
+substituted). Physical typing/cold-power unconfirmed. This supersedes unflashed/
+manual-installed statements below. Prior same-image flash at0x00100000 also
+passed updater checks. Await user reconnection of B before deploying extended
+unlimited test firmware for the pending25 mixed-colour checklist cases.
+[Deployment evidence](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/pcb-a-normal-20261010-ElLC0a/README.md).
+
 **10 October complete-data refit — normal profile6 built, NOT FLASHED.**
 All240 lit observations from both boards now inform the RGB coefficients.
 One whole-board limit remains `board_limit_ma=900`, margin0. The candidate
