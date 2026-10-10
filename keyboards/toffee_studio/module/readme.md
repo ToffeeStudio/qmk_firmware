@@ -1,10 +1,22 @@
 # Toffee Studio Module — start here
 
-Last reviewed: **8 October 2026 (Australia/Sydney)**. This is the current board
+Last reviewed: **10 October 2026 (Australia/Sydney)**. This is the current board
 handover, not a live device-status feed. Read the repository's
 [agent safety instructions](../../../AGENTS.md) before working on hardware.
 
 ## Current status
+
+**10 October: unlimited test firmware reflashed; measurement UI restarted.**
+User selected continued manual measurement. Fresh sole Module USB0x00100000,
+verified RP2 serialE0C9125B0D9B; archived build0x26100601/profile0x8006 below was
+copied once, with no USB reset or retry.15 s VIA stability and independent
+read-only checks passed: VIA/66 overrides/non-brightness preferences unchanged,
+RAM brightness/final RGB zero, manual build and no-limiter flag confirmed.
+Normal fitted profile5 remains unflashed. Configurator runs detached at
+http://127.0.0.1:5173/toffee-debug (PID79755); checklist and page module HTTP200.
+Existing manual records are untouched. No rescue loop, camera or lit-pattern
+sweep. Physical typing/cold-power checks for this flash remain unconfirmed.
+[Deployment, snapshots and server log](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/manual-resume-20261010-zDWOjw/README.md).
 
 **8 October fitted normal profile 5 — built, NOT FLASHED.** Ethan requested fitting
 the manually saved data and limiting **estimated whole-board current to900 mA**.

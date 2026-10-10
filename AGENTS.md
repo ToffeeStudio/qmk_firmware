@@ -49,6 +49,15 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
+**10 October latest deployment:** explicit request to resume manual measurements.
+Archived unlimited0x26100601/profile0x8006 reflashed to fresh sole USB0x00100000,
+RP2 serialE0C9125B0D9B verified before copy.15 s VIA stability and independent
+read-only preservation/build/output checks pass; RAM brightness/final RGB zero.
+No limiter/timeout, no test-lighting saves. Normal fitted profile5 stays unflashed.
+Configurator restarted detached on5173 (PID79755), checklist/module HTTP200.
+Original recovery intact; physical typing/cold-power unconfirmed for this flash.
+[Evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/manual-resume-20261010-zDWOjw/README.md).
+
 **8 October fitted normal source — NOT FLASHED:** profile5 now fits the user's
 176 manual records (174 lit + two baselines), using actual final RGB sums.
 Shared channel microamps: front[11106,11049,11300], rear[12506,12279,12360],
