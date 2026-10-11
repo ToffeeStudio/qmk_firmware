@@ -36,26 +36,25 @@ const module_power_profile_t module_power_profile = {
     .channel_ceiling = {255, 255, 255},
 };
 #else
-// 10 October 2026: fit to 240 manually entered lit observations, using actual
-// final RGB sums and measured idle baselines (A:80 mA, B:110 mA). Shared RGB
-// coefficients; this normal candidate explicitly uses PCB-B's 110 mA baseline.
-// Hold out levels 3/5: per-board-idle MAE 17.8 mA (previous fit 18.8 mA).
-// With this B baseline: B MAE 19.7 mA; A MAE 36.6 mA. Do not claim both
-// boards share an idle current. B has a reported broken front LED; retain all
-// mapped positions and treat the fitted coefficients as sample averages.
+// 11 October 2026: balanced shared fit to 302 manual observations from A/B,
+// using actual final RGB sums. One fitted intercept and nine RGB weights;
+// no PCB-specific correction. Held-out MAE A25.68/B29.36 mA (100 readings).
+// Normal6 was better on B (17.52 mA) but worse on A (39.84 mA); user accepted
+// this balance. The 103 mA intercept is fitted, not a measured idle guarantee.
+// B has a reported broken front LED; retain all104 mapped positions.
 // See AUTORESEARCH/04-09-2026 PCB Lacking Current/
-// refit-20261010-XsgK38/model-fit.json for data/provenance/limitations.
+// shared-fit-20261011-tSgJXg/fit.json for data/provenance/limitations.
 // Ethan requests estimated BOARD current <=900 mA, including idle consumption.
 // No coefficient padding, extra margin or separate front160 cap: one common
-// final-boundary scale limits LED demand to 790 mA. Saved requests stay intact.
+// final-boundary scale limits LED demand to 797 mA. Saved requests stay intact.
 // This caps an ESTIMATE, not sensed current or a certified hardware-safe load.
 const module_power_profile_t module_power_profile = {
-    .revision = 6,
+    .revision = 7,
     .configured = true,
     .board_limit_ma = 900,
-    .base_ma = 110,
+    .base_ma = 103,
     .margin_ma = 0,
-    .channel_ua = {{11175, 11182, 11416}, {12706, 12536, 12435}, {12862, 12370, 11788}},
+    .channel_ua = {{10992, 11016, 11185}, {12294, 12044, 12203}, {12447, 11937, 11456}},
     .channel_ceiling = {255, 255, 255},
 };
 #endif
