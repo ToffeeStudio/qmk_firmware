@@ -49,6 +49,16 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
+**11 October source checkpoint — profile9 front/badge rescaling, NOT FLASHED.**
+Normal `front_badge_max=200` maps each front/badge RGB byte through floor(x*200/255)
+before shared940 mA current limiting; rear unchanged. All output paths use final
+transmission boundary; saved/UI0–255 values unchanged. Normal0x88 schema2 reports
+the front/badge maximum in byte24; test variants stay schema1/unlimited unchanged.
+Debug reads the field; `DEBUG_ENABLED=false` hides UI/routes and stops polling.
+Host/protocol/browser tests and builds pass. Source `af994d79b5`. Connected board
+was NOT touched; last installed normal8/940 has no200 cap yet.
+[Evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/front-badge-cap-20261011-3JyyKB/README.md).
+
 **11 October latest — normal profile8 /940 mA DEPLOYED.** User explicitly raised
 the whole-board ESTIMATE limit from900 to940. Shared RGB weights/base103 unchanged,
 margin0/837 mA LEDs; limiter/startup/save behavior retained. Source `08941ea794`.

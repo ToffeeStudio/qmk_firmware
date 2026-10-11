@@ -6,6 +6,23 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**11 October source checkpoint — profile9 built, NOT FLASHED.** Normal profile
+`front_badge_max=200` rescales each final front/badge RGB byte as floor(x*200/255).
+Rear stays0–255. Rescaling happens BEFORE the940 mA current-budget calculation,
+then the common limiter and startup fade are applied. Requested buffer/saved
+brightness stay unchanged; all104 mapped LEDs, including102/103, are retained.
+Normal0x88 telemetry schema2 retains existing offsets and uses byte24 for the
+shared front/badge maximum (rear255). Requested current remains pre-rescaling;
+effective current is calculated from actual final output. Debug reports these
+caps and distinguishes pre-rescaling demand; normal controls remain unchanged.
+Test/calibration variants stay schema1, and unlimited output remains unchanged.
+Older v1 firmware works in updated UI but does not report output caps. Older UI
+rejects v2 telemetry; update/reload the configurator with this candidate.
+Source `af994d79b5`, full host tests/build pass, candidate SHA256
+`78d05883df9de9fcee88d9c216aa744be6ef1d4a55eeffbf2504b500f61f282b`.
+No physical board commands/flash this task; installed normal8/940 remains.
+[Implementation/tests/candidate](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/front-badge-cap-20261011-3JyyKB/README.md).
+
 **11 October latest — NORMAL profile8 /940 mA FLASHED at explicit request.**
 This supersedes900 mA. `lighting/power_profile.c` now sets `board_limit_ma=940`;
 same balanced shared baseline103/RGB coefficients, margin0,837 mA LEDs. Limiter
