@@ -6,6 +6,27 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**11 October — debug updater catalogue / normal current-unlimited variant,
+NOT FLASHED.** `MODULE_CURRENT_UNLIMITED=yes` builds normal profile10: only
+current-budget scaling is bypassed. Front/badge rescaling to200, rear255,
+normal persistence and1s-dark/1s-fade remain. Normal default stays profile9/940mA.
+0x88 schema2 flag0x40 explicitly marks the informational-only current budget;
+it is distinct from manual-test flag0x20. Never allow profile10 to masquerade
+as manual measurement firmware. Host tests cover20,000 output frames, startup,
+parser/persistence and final transmission; both normal variants build.
+Candidate SHA256 `900c0d67e20557ed904c88dec8fa98a064f9904f84ba912fa21b8fd1640d9d22`.
+
+Configurator `/toffee-firmware` is debug-gated and isolated from normal VIA
+polling. Catalogue: archived normal9, manual0x26101002, and normal10 without
+current limiting. Downloadable macOS Python updater is copied verbatim with
+`led_discovery.py`, dependencies/instructions and all three UF2s; no private
+settings are bundled. Browser workflow preserves/downloads VIA settings,
+requests bootloader, guides one manual UF2 copy, then checks expected mode/
+profile (manual build ID too),15s uptime and restores/verifies VIA settings.
+These are protocol checks, not exact-image readback or physical typing tests.
+No connected board was flashed or accessed for this implementation.
+[Updater evidence](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/web-updater-20261011-2RRx7Z/README.md).
+
 **11 October latest — normal profile9 front/badge200 FLASHED.** Supersedes the
 candidate-only status below. Fresh sole USB0x01100000/RP2 E0C9125B0D9B, one UF2
 copy and15 s stability pass. Same archived78d05883... candidate, no code changes.

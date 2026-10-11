@@ -49,6 +49,13 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
+**11 October updater candidate:** normal profile10 (`MODULE_CURRENT_UNLIMITED=yes`)
+disables ONLY current-budget scaling, preserves front/badge200, saves/startup;
+0x88 schema2 flag0x40 identifies it. Default production stays normal9/940mA.
+Candidate built/host-tested and bundled in debug updater; NOT flashed. Manual
+test remains distinct0x26101002/0x8006. Do not infer installed firmware from the
+catalogue. See board README and web-updater-20261011-2RRx7Z evidence.
+
 **11 October latest — normal profile9 front/badge200 DEPLOYED.** User requested
 flashing candidate78d05883... to current PCB (A/B unspecified). Fresh sole USB
 0x01100000/RP2 E0C9125B0D9B; copy/15 s uptime/preservation/telemetry checks pass.

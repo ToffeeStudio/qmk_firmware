@@ -51,7 +51,11 @@ const module_power_profile_t module_power_profile = {
 // final-boundary scale limits LED demand to 837 mA. Saved requests stay intact.
 // This caps an ESTIMATE, not sensed current or a certified hardware-safe load.
 const module_power_profile_t module_power_profile = {
+#ifdef MODULE_CURRENT_UNLIMITED
+    .revision = 10, // Normal saves/startup/output caps; current estimate only.
+#else
     .revision = 9,
+#endif
     .front_badge_max = 200,
     .configured = true,
     .board_limit_ma = 940,

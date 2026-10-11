@@ -64,7 +64,7 @@ void module_power_limit(const module_power_profile_t *profile, const rgb_led_t *
         }
 #endif
     }
-#ifndef MODULE_MANUAL_MEASUREMENT
+#if !defined(MODULE_MANUAL_MEASUREMENT) && !defined(MODULE_CURRENT_UNLIMITED)
     uint64_t available = (uint64_t)module_power_led_budget(profile) * 1000 * 255;
     if (!profile->configured || !available) scale = 0;
     else if (capped > available) {
@@ -152,6 +152,9 @@ void lighting_power_status(uint8_t *payload) {
                  (frame_valid ? 16 : 0);
 #ifdef MODULE_MANUAL_MEASUREMENT
     payload[1] |= 32; // Manual measurement: reference budget ONLY, no limiter/timeout.
+#endif
+#ifdef MODULE_CURRENT_UNLIMITED
+    payload[1] |= 64; // Normal behavior/output caps; current budget NOT enforced.
 #endif
     put16(payload + 2, module_power_profile.revision);
     put16(payload + 4, sequence);

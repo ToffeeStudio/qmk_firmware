@@ -62,12 +62,19 @@ static uint32_t random32(void) {rng ^= rng << 13; rng ^= rng >> 17; rng ^= rng <
 #ifdef MODULE_MANUAL_MEASUREMENT
 #include "manual_power_test.c"
 #endif
+#ifdef MODULE_CURRENT_UNLIMITED
+#include "current_unlimited_power_test.c"
+#endif
 
 int main(void) {
     for (unsigned i = 0; i < 104; i++) g_led_config.flags[i] = LED_FLAG_UNDERGLOW;
     for (unsigned i = 0; i < ARRAY_SIZE(module_front_leds); i++) g_led_config.flags[module_front_leds[i].index] = LED_FLAG_KEYLIGHT;
     for (unsigned i = 0; i < ARRAY_SIZE(module_badge_leds); i++) g_led_config.flags[module_badge_leds[i]] = LED_FLAG_INDICATOR;
     assert(group(103) == 0); // Broken physical repair cannot reduce the accounting map.
+#ifdef MODULE_CURRENT_UNLIMITED
+    test_current_unlimited_power();
+    return 0;
+#endif
 #ifdef MODULE_MANUAL_MEASUREMENT
     test_manual_power();
     return 0;

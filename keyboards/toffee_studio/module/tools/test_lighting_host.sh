@@ -16,6 +16,10 @@ clang -std=c11 -O1 -g -fsanitize=address,undefined -DMODULE_LED_DISCOVERY \
   -I tools/tests/include -I ../../../tmk_core/protocol -I . -I "$test_dir" tools/tests/groups_test.c lighting/groups.c lighting/lighting.c \
   lighting/power.c lighting/power_profile.c -o "$test_dir/groups"
 "$test_dir/groups"
+clang -std=c11 -O1 -g -fsanitize=address,undefined -DMODULE_LED_DISCOVERY -DMODULE_CURRENT_UNLIMITED \
+  -I tools/tests/include -I ../../../tmk_core/protocol -I . -I "$test_dir" tools/tests/groups_test.c lighting/groups.c lighting/lighting.c \
+  lighting/power.c lighting/power_profile.c -o "$test_dir/current-unlimited-groups"
+"$test_dir/current-unlimited-groups"
 clang -std=c11 -O1 -g -fsanitize=address,undefined -DMODULE_LED_DISCOVERY \
   -DMODULE_EXTENSIVE_TEST -DMODULE_TEST_BUILD_ID=0x26100202 \
   -I tools/tests/include -I ../../../tmk_core/protocol -I . -I "$test_dir" tools/tests/groups_test.c \
@@ -34,18 +38,20 @@ clang -std=c11 -O1 -g -fsanitize=address,undefined -DMODULE_LED_DISCOVERY \
 # Compile the actual rear persistence functions, excluding unrelated display I/O.
 sed -n '/^extern animation_t\* underglow_animations\[\];/,$p' persistence.c > "$test_dir/module_persistence.inc"
 test -s "$test_dir/module_persistence.inc"
-for mode in production temporary; do
+for mode in production temporary current-unlimited; do
   mode_define=""
   if [ "$mode" = temporary ]; then mode_define="-DMODULE_EXTENSIVE_TEST"; fi
+  if [ "$mode" = current-unlimited ]; then mode_define="-DMODULE_CURRENT_UNLIMITED"; fi
   clang -std=c11 -O1 -g -fsanitize=address,undefined -DMODULE_LED_DISCOVERY $mode_define \
     -I tools/tests/include -I . -I "$test_dir" tools/tests/underglow_persistence_test.c \
     -o "$test_dir/rear-$mode"
   "$test_dir/rear-$mode"
 done
 printf 'Test executables retained at %s\n' "$test_dir"
-for profile in production synthetic calibration manual; do
+for profile in production synthetic calibration manual current-unlimited; do
   profile_sources="lighting/power_profile.c"
   profile_define=""
+  if [ "$profile" = current-unlimited ]; then profile_define="-DMODULE_CURRENT_UNLIMITED"; fi
   if [ "$profile" = synthetic ]; then
     profile_sources=""
     profile_define="-DPOWER_TEST_PROFILE"
