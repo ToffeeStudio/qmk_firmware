@@ -79,7 +79,12 @@ static void test_parser(void) {
         uint8_t packet_id[4]; memcpy(packet_id, data + 2, 4);
         assert(module_raw_hid_parse_packet(data, sizeof(data)) == 0);
         parser_attempts++;
-        assert(data[0] == 0 && data[1] == 1 && data[25] == 0);
+        assert(data[0] == 0);
+#ifdef MODULE_EXTENSIVE_TEST
+        assert(data[1] == 1 && data[25] == 0);
+#else
+        assert(data[1] == 2 && data[25] == module_power_profile.front_badge_max);
+#endif
         assert(data[26] == 0xA5 && data[27] == id_lighting_power_status);
         assert(memcmp(packet_id, data + 28, 4) == 0);
         assert(memcmp(&settings_before, &module_lighting_state, sizeof(settings_before)) == 0);

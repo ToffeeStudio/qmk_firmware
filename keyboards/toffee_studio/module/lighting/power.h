@@ -11,6 +11,7 @@ typedef struct {
     uint16_t revision, board_limit_ma, base_ma, margin_ma;
     uint16_t channel_ua[3][3];
     uint8_t channel_ceiling[3];
+    uint8_t front_badge_max; // Full-range rescaling: RGB * max /255; rear unchanged.
     bool configured;
 } module_power_profile_t;
 
@@ -28,7 +29,7 @@ void module_power_limit(const module_power_profile_t *profile, const rgb_led_t *
                         rgb_led_t *output, module_power_frame_t *result);
 uint16_t module_power_led_budget(const module_power_profile_t *profile);
 void lighting_power_prepare(const rgb_led_t *input, rgb_led_t *output);
-void lighting_power_status(uint8_t *payload); // 25 bytes, little-endian protocol v1.
+void lighting_power_status(uint8_t *payload); // 25 bytes; normal v2 adds front/badge max at byte24.
 #ifdef MODULE_EXTENSIVE_TEST
 void lighting_power_rgb_sums(uint8_t *payload); // Test-only final-output sums, 25 bytes.
 #endif

@@ -5,6 +5,7 @@
 // Retain estimates for comparison, not as evidence of a measured safe ceiling.
 const module_power_profile_t module_power_profile = {
     .revision = 0x8006,
+    .front_badge_max = 255,
     .configured = true,
     .board_limit_ma = 1000,
     .base_ma = 120,
@@ -28,6 +29,7 @@ const module_power_profile_t module_power_profile = {
 // Other render paths retain the final limiter; startup-off/watchdog still apply.
 const module_power_profile_t module_power_profile = {
     .revision = 0x8005,
+    .front_badge_max = 255,
     .configured = true,
     .board_limit_ma = 1100,
     .base_ma = 80,
@@ -49,7 +51,8 @@ const module_power_profile_t module_power_profile = {
 // final-boundary scale limits LED demand to 837 mA. Saved requests stay intact.
 // This caps an ESTIMATE, not sensed current or a certified hardware-safe load.
 const module_power_profile_t module_power_profile = {
-    .revision = 8,
+    .revision = 9,
+    .front_badge_max = 200,
     .configured = true,
     .board_limit_ma = 940,
     .base_ma = 103,

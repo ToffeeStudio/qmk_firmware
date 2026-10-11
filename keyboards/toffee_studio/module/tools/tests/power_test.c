@@ -23,6 +23,7 @@ const module_power_profile_t module_power_profile = {
     .revision = 42, .configured = true, .board_limit_ma = 350, .base_ma = 90, .margin_ma = 35,
     .channel_ua = {{13000, 14000, 15000}, {11000, 12000, 13000}, {9000, 10000, 11000}},
     .channel_ceiling = {160, 255, 255},
+    .front_badge_max = 255,
 };
 #endif
 
@@ -75,10 +76,12 @@ int main(void) {
     module_power_frame_t result, repeat;
 #if !defined(MODULE_POWER_CALIBRATION) && !defined(POWER_TEST_PROFILE)
     // Balanced shared A/B model; 940 mA includes the fitted baseline.
-    assert(module_power_profile.revision == 8 && module_power_profile.configured);
+    assert(module_power_profile.revision == 9 && module_power_profile.configured);
+    assert(module_power_profile.front_badge_max == 200);
     assert(module_power_profile.board_limit_ma == 940);
     assert(module_power_profile.base_ma == 103 && module_power_profile.margin_ma == 0);
     module_power_profile_t candidate = module_power_profile;
+    candidate.front_badge_max = 255; // Isolate unchanged estimator and budget boundary.
     assert(module_power_led_budget(&candidate) == 837);
     // These unscaled predictions reproduce the recorded model-fit.json values.
     // Requested demand remains visible even when final output must be limited.
@@ -112,6 +115,30 @@ int main(void) {
         if (step < 2) assert(memcmp(input, output, sizeof(input)) == 0);
     }
     candidate = module_power_profile;
+    // One pixel per group stays below the budget: exact remap across all256
+    // values, rear independence, index103, mixed hues and no cumulative dimming.
+    for (unsigned level = 0; level <= 255; level++) {
+        memset(input, 0, sizeof(input));
+        for (unsigned g = 0; g < 3; g++) {
+            unsigned index = g == 0 ? 103 : g == 2 ? module_badge_leds[0] : 0;
+            if (g == 1) while (group(index) != 1) index++;
+            input[index] = (RGB){.r=level, .g=level / 2, .b=255 - level};
+        }
+        memcpy(original, input, sizeof(input));
+        module_power_limit(&candidate, input, g_led_config.flags, 1000, output, &result);
+        assert(!result.limited && result.limit_scale == UINT16_MAX);
+        assert(result.requested_ua == (demand(input, &candidate) + 254) / 255);
+        assert(result.effective_ua == (demand(output, &candidate) + 254) / 255);
+        for (unsigned i = 0; i < 104; i++) {
+            unsigned max = group(i) == 1 ? 255 : 200;
+            assert(output[i].r == input[i].r * max / 255);
+            assert(output[i].g == input[i].g * max / 255);
+            assert(output[i].b == input[i].b * max / 255);
+        }
+        module_power_limit(&candidate, input, g_led_config.flags, 1000, repeated, &repeat);
+        assert(memcmp(input, original, sizeof(input)) == 0);
+        assert(memcmp(output, repeated, sizeof(output)) == 0);
+    }
     for (unsigned level = 0; level <= 255; level++) {
         memset(input, 0, sizeof(input));
         for (unsigned i = 0; i < 104; i++) input[i] = (RGB){.r=level, .g=level, .b=level};
@@ -143,6 +170,7 @@ int main(void) {
         .configured = true, .board_limit_ma = 500, .base_ma = 100, .margin_ma = 50,
         .channel_ua = {{12000, 15000, 18000}, {10000, 9000, 8000}, {20000, 19000, 18000}},
         .channel_ceiling = {160, 255, 255},
+        .front_badge_max = 255,
     };
     memset(input, 0, sizeof(input));
     module_power_limit(&profile, input, g_led_config.flags, 1000, output, &result);
@@ -165,6 +193,7 @@ int main(void) {
     // 20,000 frames: channel extremes, mixed colours, huge coefficients, tiny
     // headroom, zero budget, unknown profile, every startup phase and integer bounds.
     for (unsigned trial = 0; trial < 20000; trial++) {
+        profile.front_badge_max = random32() % 256;
         for (unsigned g = 0; g < 3; g++) {
             for (unsigned c = 0; c < 3; c++) profile.channel_ua[g][c] = 1 + random32() % 65535;
             profile.channel_ceiling[g] = random32() % 256;
@@ -189,6 +218,10 @@ int main(void) {
             int g = group(i);
             RGB o = output[i], c = input[i];
             if (g < 0) {assert(!o.r && !o.g && !o.b); continue;}
+            unsigned max = g == 1 ? 255 : profile.front_badge_max;
+            c.r = (uint16_t)c.r * max / 255;
+            c.g = (uint16_t)c.g * max / 255;
+            c.b = (uint16_t)c.b * max / 255;
             uint64_t numerator = (uint64_t)result.limit_scale * fade;
             assert(o.r == c.r * numerator / (65535U * 1000U));
             assert(o.g == c.g * numerator / (65535U * 1000U));
@@ -200,7 +233,12 @@ int main(void) {
     // flush repeatedly, inspect transmitted pixels and read-only telemetry.
     uint8_t status[27]; memset(status, 0xCC, sizeof(status));
     lighting_power_status(status + 1);
-    assert(status[0] == 0xCC && status[26] == 0xCC && status[1] == 1);
+    assert(status[0] == 0xCC && status[26] == 0xCC);
+#ifdef MODULE_EXTENSIVE_TEST
+    assert(status[1] == 1 && status[25] == 0);
+#else
+    assert(status[1] == 2 && status[25] == module_power_profile.front_badge_max);
+#endif
     assert(!(status[2] & 16));
     rgb_matrix_driver.init();
     rgb_matrix_driver.set_color_all(255, 255, 255);
@@ -218,6 +256,10 @@ int main(void) {
         assert(u16(status + 17) == (demand(wire, &module_power_profile) + 254999) / 255000);
         assert(u16(status + 21) == elapsed);
         assert(u16(status + 23) == module_power_led_budget(&module_power_profile));
+        for (unsigned i = 0; i < 104; i++) {
+            unsigned max = group(i) == 1 ? 255 : module_power_profile.front_badge_max;
+            assert(wire[i].r <= max && wire[i].g <= max && wire[i].b <= max);
+        }
 #ifdef MODULE_EXTENSIVE_TEST
         uint8_t sums[27]; memset(sums, 0xCC, sizeof(sums));
         lighting_power_rgb_sums(sums + 1);

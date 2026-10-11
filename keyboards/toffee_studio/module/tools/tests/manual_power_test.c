@@ -5,6 +5,7 @@ static void test_manual_power(void) {
     assert(module_power_led_budget(&module_power_profile) == 830); // Informational only.
     module_power_profile_t ignored_limits = module_power_profile;
     ignored_limits.board_limit_ma = 1;
+    ignored_limits.front_badge_max = 0; // Unlimited means the new normal cap is ignored too.
     memset(ignored_limits.channel_ceiling, 0, sizeof(ignored_limits.channel_ceiling));
     rgb_led_t input[201], output[201], original[201];
     module_power_frame_t result;

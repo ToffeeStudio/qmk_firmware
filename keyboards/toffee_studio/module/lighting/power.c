@@ -24,6 +24,19 @@ static uint64_t weighted(rgb_led_t c, const uint16_t *coefficients) {
            (uint64_t)c.b * coefficients[2];
 }
 
+static rgb_led_t rescale(rgb_led_t c, int group, const module_power_profile_t *profile) {
+#ifndef MODULE_MANUAL_MEASUREMENT
+    if (group == 0 || group == 2) {
+        c.r = (uint16_t)c.r * profile->front_badge_max / 255;
+        c.g = (uint16_t)c.g * profile->front_badge_max / 255;
+        c.b = (uint16_t)c.b * profile->front_badge_max / 255;
+    }
+#else
+    (void)group; (void)profile;
+#endif
+    return c;
+}
+
 uint16_t module_power_led_budget(const module_power_profile_t *profile) {
     uint32_t reserve = (uint32_t)profile->base_ma + profile->margin_ma;
     if (!profile->configured || profile->board_limit_ma <= reserve) return 0;
@@ -33,13 +46,15 @@ uint16_t module_power_led_budget(const module_power_profile_t *profile) {
 void module_power_limit(const module_power_profile_t *profile, const rgb_led_t *input,
                         const uint8_t *flags, uint16_t startup_permille,
                         rgb_led_t *output, module_power_frame_t *result) {
-    uint64_t requested = 0, effective = 0;
+    uint64_t requested = 0, capped = 0, effective = 0;
     uint32_t scale = UINT16_MAX;
     for (uint16_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
         int group = group_for(i, flags[i]);
         if (group < 0) continue;
         rgb_led_t c = input[i];
         requested += weighted(c, profile->channel_ua[group]);
+        c = rescale(c, group, profile);
+        capped += weighted(c, profile->channel_ua[group]);
 #ifndef MODULE_MANUAL_MEASUREMENT
         uint8_t maximum = c.r > c.g ? c.r : c.g;
         if (c.b > maximum) maximum = c.b;
@@ -52,22 +67,26 @@ void module_power_limit(const module_power_profile_t *profile, const rgb_led_t *
 #ifndef MODULE_MANUAL_MEASUREMENT
     uint64_t available = (uint64_t)module_power_led_budget(profile) * 1000 * 255;
     if (!profile->configured || !available) scale = 0;
-    else if (requested > available) {
-        uint32_t budget_scale = available * UINT16_MAX / requested;
+    else if (capped > available) {
+        uint32_t budget_scale = available * UINT16_MAX / capped;
         if (budget_scale < scale) scale = budget_scale;
     }
+#else
+    (void)capped;
 #endif
-    // One common multiplier. Round drive down, current estimates up. The raw
+    // Rescale front/badge first, then one common current/startup multiplier.
+    // Round drive down, current estimates up. The raw
     // render buffer is immutable here, so repeated flushes never compound dimming.
     for (uint16_t i = 0; i < RGB_MATRIX_LED_COUNT; i++) {
         int group = group_for(i, flags[i]);
         rgb_led_t c = {0};
         if (group >= 0) {
+            c = rescale(input[i], group, profile);
             const uint64_t numerator = (uint64_t)scale * startup_permille;
             const uint32_t denominator = (uint32_t)UINT16_MAX * 1000;
-            c.r = input[i].r * numerator / denominator;
-            c.g = input[i].g * numerator / denominator;
-            c.b = input[i].b * numerator / denominator;
+            c.r = c.r * numerator / denominator;
+            c.g = c.g * numerator / denominator;
+            c.b = c.b * numerator / denominator;
             effective += weighted(c, profile->channel_ua[group]);
         }
         output[i] = c;
@@ -122,6 +141,10 @@ void lighting_power_status(uint8_t *payload) {
     uint32_t age = timer_elapsed32(captured_at);
     memset(payload, 0, 25);
     payload[0] = 1;
+#ifndef MODULE_EXTENSIVE_TEST
+    payload[0] = 2; // v2: unchanged fields, byte24 = front/badge rescaling maximum.
+    payload[24] = module_power_profile.front_badge_max;
+#endif
     payload[1] = (module_power_profile.configured ? 1 : 0) |
                  (last_frame.limited ? 2 : 0) |
                  (usb_device_state == USB_DEVICE_STATE_CONFIGURED ? 4 : 0) |
