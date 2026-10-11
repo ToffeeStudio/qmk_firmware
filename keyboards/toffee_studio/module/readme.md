@@ -6,6 +6,14 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**11 October latest follow-up — connected PCB flashed with the same normal7.**
+User did not specify A/B; fresh sole USB0x01100000, verified RP2 E0C9125B0D9B.
+Same89f81f36... UF2 below, one copy and15 s stability pass. Independent read-only
+check confirms normal7,900 mA estimate limit, preserved VIA/66 overrides/
+non-brightness preferences, startup complete and791 mA estimated total.
+No firmware code changes. Physical typing/cold power pending.
+[Deployment report](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/normal-repeat-20261011-1ZfXCP/README.md).
+
 **11 October newest — NORMAL balanced shared profile7 FLASHED.** User accepted
 the shared A/B fit and explicitly rejected retaining unlimited test mode. Fitted
 baseline103 mA; channel microamps front[10992,11016,11185],

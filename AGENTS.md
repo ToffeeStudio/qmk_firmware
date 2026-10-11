@@ -49,6 +49,12 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
+**11 October latest follow-up:** same archived normal profile7 flashed to fresh
+sole USB0x01100000/RP2 E0C9125B0D9B; user did not specify A/B this request.
+15 s USB stability and read-only preservation/profile checks pass;900 mA limit,
+791 mA estimate after startup. Physical typing/cold power pending.
+[Deployment](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/normal-repeat-20261011-1ZfXCP/README.md).
+
 **11 October newest — NORMAL balanced shared profile7 DEPLOYED.** User explicitly
 rejected unlimited mode. Shared A/B baseline103 mA,900 mA estimated whole-board
 limit, margin0/797 mA LEDs. Normal saves and1s-dark/1s-fade retained. Fresh sole
