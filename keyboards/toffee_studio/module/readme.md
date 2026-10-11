@@ -1,10 +1,27 @@
 # Toffee Studio Module — start here
 
-Last reviewed: **10 October 2026 (Australia/Sydney)**. This is the current board
+Last reviewed: **11 October 2026 (Australia/Sydney)**. This is the current board
 handover, not a live device-status feed. Read the repository's
 [agent safety instructions](../../../AGENTS.md) before working on hardware.
 
 ## Current status
+
+**11 October newest — NORMAL balanced shared profile7 FLASHED.** User accepted
+the shared A/B fit and explicitly rejected retaining unlimited test mode. Fitted
+baseline103 mA; channel microamps front[10992,11016,11185],
+rear[12294,12044,12203], badge[12447,11937,11456]. One900 mA estimated total
+limit, margin0/797 mA LED allowance. Held-out MAE A25.68/B29.36 mA; B worsens
+versus normal6's17.52 mA (accepted trade-off).103 is fitted, not measured idle.
+Source `df4b31ace1`, full host suite and normal build pass. UF2 SHA256
+`89f81f36345f795efa6a6b07fe931ab2e6d4e8591f804ed43949dc1b26bcb3ac`.
+Fresh sole USB0x00100000/RP2 E0C9125B0D9B, one copy/no reset,15 s stability;
+read-only verification confirms normal profile7, preserved VIA/66 overrides/
+non-brightness preferences and799 mA estimated total, multiplier1000/1000.
+Normal startup reloads saved brightness; auto-save,1s-dark/1s-fade and104-map
+unchanged. Physical typing/cold-power untested; last physical user label was A.
+Use http://127.0.0.1:5173/toffee-lighting . Unlimited checklist intentionally
+rejects normal firmware; browser records unchanged. Manual source/old0x8006
+formula unchanged. [Fit, checks and deployment](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/shared-fit-20261011-tSgJXg/README.md).
 
 **10 October newest: PCB-A flashed with unlimited0x26101002 at user request.**
 Same d5c46412... UF2 below. Fresh USB0x00100000/RP2 E0C9125B0D9B verified; one

@@ -49,6 +49,15 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
+**11 October newest — NORMAL balanced shared profile7 DEPLOYED.** User explicitly
+rejected unlimited mode. Shared A/B baseline103 mA,900 mA estimated whole-board
+limit, margin0/797 mA LEDs. Normal saves and1s-dark/1s-fade retained. Fresh sole
+USB0x00100000/RP2 E0C9125B0D9B; UF2 copy/15 s stability/read-only verification
+pass. VIA/66 overrides/non-brightness preferences unchanged;799 mA estimated total.
+Physical typing/cold power pending; last user board label A, not reidentified.
+Source checkpoint `df4b31ace1`; manual branch/old estimator unchanged.
+[Evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/shared-fit-20261011-tSgJXg/README.md).
+
 **10 October newest: PCB-A explicitly switched to unlimited0x26101002 too.**
 Same archived d5c46412... image, fresh USB0x00100000/RP2 E0C9125B0D9B.15 s USB
 checks/read-only verification pass; correct build, dark output, preferences/VIA
