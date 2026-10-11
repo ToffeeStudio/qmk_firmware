@@ -6,6 +6,16 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**11 October latest — normal profile9 front/badge200 FLASHED.** Supersedes the
+candidate-only status below. Fresh sole USB0x01100000/RP2 E0C9125B0D9B, one UF2
+copy and15 s stability pass. Same archived78d05883... candidate, no code changes.
+Read-only post-check confirms normal profile9/schema2/front-badge max200/940 mA
+estimated limit; VIA,66 overrides and ALL lighting preferences preserved.
+Estimated total934 mA with budget multiplier886/1000 at verification; startup
+complete. No physical meter measurement, lighting setter or camera use. Physical
+typing/cold-power remain pending. Debug on `/toffee-lighting` reports cap200.
+[Deployment evidence](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/front-badge-flash-20261011-TlZZYB/README.md).
+
 **11 October source checkpoint — profile9 built, NOT FLASHED.** Normal profile
 `front_badge_max=200` rescales each final front/badge RGB byte as floor(x*200/255).
 Rear stays0–255. Rescaling happens BEFORE the940 mA current-budget calculation,

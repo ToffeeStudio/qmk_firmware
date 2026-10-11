@@ -49,6 +49,13 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
+**11 October latest — normal profile9 front/badge200 DEPLOYED.** User requested
+flashing candidate78d05883... to current PCB (A/B unspecified). Fresh sole USB
+0x01100000/RP2 E0C9125B0D9B; copy/15 s uptime/preservation/telemetry checks pass.
+Schema2 reports cap200 and940 mA limit; VIA/66 overrides/all preferences unchanged.
+Estimated934 mA, additional budget multiplier886/1000. Physical checks pending.
+[Evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/front-badge-flash-20261011-TlZZYB/README.md).
+
 **11 October source checkpoint — profile9 front/badge rescaling, NOT FLASHED.**
 Normal `front_badge_max=200` maps each front/badge RGB byte through floor(x*200/255)
 before shared940 mA current limiting; rear unchanged. All output paths use final
