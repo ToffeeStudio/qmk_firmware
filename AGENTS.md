@@ -374,6 +374,15 @@ Rules:
 
 ## Local Module flashing and recovery
 
+- **11 October browser experiment:** real WebHID backup/reboot and browser read
+  of RPI-RP2 succeeded, but File System Access `write()` stalled before close.
+  No automatic retry. Test browser stopped; one identity-checked USB reset
+  cleared drive I/O, then the native updater separately copied the SAME normal9
+  image successfully. USB0x01100000/RP2 E0C9125B0D9B,15s stability and independent
+  VIA/all66 overrides/all lighting preferences preserved. Do not claim browser
+  end-to-end flashing works from this test, or infer that all browser transports
+  are impossible. [Evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/browser-flash-20261011-VWIF2M/README.md).
+
 - **3 October 2026 update:** Ethan explicitly authorised the sole connected PCB
   at `0x02140000`; normal image `bfda11cf...` was copied successfully. Its measured
   bootloader serial was `E0C9125B0D9B`, previously assigned to B. Port/keymap-based

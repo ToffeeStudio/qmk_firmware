@@ -6,6 +6,17 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**11 October browser-copy experiment — native recovery verified.** Actual Chrome
+WebHID backup/reboot and selected RPI-RP2 INFO reading passed. Browser filesystem
+write stalled before completion; no browser retry, no claimed browser flash.
+One verified-target USB reset cleared drive I/O after the test context closed;
+the native updater then copied the SAME normal9/940mA image once. Fresh
+USB0x01100000/RP2 E0C9125B0D9B,15s stability and independent VIA/66 overrides/
+ALL lighting preferences comparison pass. Physical typing/cold-power untested.
+Production web updater still requires manual UF2 copy; this single failed
+filesystem experiment does not rule out other browser transports.
+[Experiment and recovery](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/browser-flash-20261011-VWIF2M/README.md).
+
 **11 October — debug updater catalogue / normal current-unlimited variant,
 NOT FLASHED.** `MODULE_CURRENT_UNLIMITED=yes` builds normal profile10: only
 current-budget scaling is bypassed. Front/badge rescaling to200, rear255,
