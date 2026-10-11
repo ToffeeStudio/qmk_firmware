@@ -49,6 +49,14 @@ frames rather than treating these recorded PIDs as permanent identifiers.
 
 ## Permanent Module lighting startup contract
 
+**11 October latest — normal profile8 /940 mA DEPLOYED.** User explicitly raised
+the whole-board ESTIMATE limit from900 to940. Shared RGB weights/base103 unchanged,
+margin0/837 mA LEDs; limiter/startup/save behavior retained. Source `08941ea794`.
+Fresh USB0x01100000/RP2 E0C9125B0D9B, host/build/flash/15 s USB and independent
+verification pass. VIA/66 overrides/all lighting prefs including brightness
+preserved;851 mA estimated total. Physical typing/cold power pending.
+[Evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/normal-940-20261011-o0SBRQ/README.md).
+
 **11 October latest follow-up:** same archived normal profile7 flashed to fresh
 sole USB0x01100000/RP2 E0C9125B0D9B; user did not specify A/B this request.
 15 s USB stability and read-only preservation/profile checks pass;900 mA limit,

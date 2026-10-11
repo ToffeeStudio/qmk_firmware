@@ -6,6 +6,19 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**11 October latest — NORMAL profile8 /940 mA FLASHED at explicit request.**
+This supersedes900 mA. `lighting/power_profile.c` now sets `board_limit_ma=940`;
+same balanced shared baseline103/RGB coefficients, margin0,837 mA LEDs. Limiter
+enabled;1s-dark/1s-fade, all104 mapped LEDs and normal saves unchanged.
+Source `08941ea794`, full host suite/normal build pass. UF2 SHA256
+`52344ab86ae8fa7f36e7da861b22441403d1fcf23759b7b735be64293643f697`.
+Fresh sole USB0x01100000/RP2 E0C9125B0D9B; UF2 copy/15 s stability pass.
+Read-only verification confirms profile8/940 mA limit and unchanged VIA,66
+overrides and all lighting preferences including brightness. Estimated total
+851 mA, scale1000/1000. A/B label unspecified; physical typing/cold power pending.
+This is an estimated limit, not a current sensor or hardware rating.
+[Deployment evidence](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/normal-940-20261011-o0SBRQ/README.md).
+
 **11 October latest follow-up — connected PCB flashed with the same normal7.**
 User did not specify A/B; fresh sole USB0x01100000, verified RP2 E0C9125B0D9B.
 Same89f81f36... UF2 below, one copy and15 s stability pass. Independent read-only
