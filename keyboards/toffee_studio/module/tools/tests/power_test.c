@@ -74,12 +74,12 @@ int main(void) {
     rgb_led_t input[201], original[201], output[201], repeated[201];
     module_power_frame_t result, repeat;
 #if !defined(MODULE_POWER_CALIBRATION) && !defined(POWER_TEST_PROFILE)
-    // Balanced shared A/B model; 900 mA includes the fitted baseline.
-    assert(module_power_profile.revision == 7 && module_power_profile.configured);
-    assert(module_power_profile.board_limit_ma == 900);
+    // Balanced shared A/B model; 940 mA includes the fitted baseline.
+    assert(module_power_profile.revision == 8 && module_power_profile.configured);
+    assert(module_power_profile.board_limit_ma == 940);
     assert(module_power_profile.base_ma == 103 && module_power_profile.margin_ma == 0);
     module_power_profile_t candidate = module_power_profile;
-    assert(module_power_led_budget(&candidate) == 797);
+    assert(module_power_led_budget(&candidate) == 837);
     // These unscaled predictions reproduce the recorded model-fit.json values.
     // Requested demand remains visible even when final output must be limited.
     const struct {int group; uint8_t r, g, b; uint16_t estimate_ma;} samples[] = {
@@ -98,7 +98,7 @@ int main(void) {
         assert(candidate.base_ma + (result.requested_ua + 999) / 1000 == samples[s].estimate_ma);
         assert(memcmp(input, output, sizeof(input)) == 0 && !result.limited);
     }
-    // Exact integer boundary with a synthetic 100 uA per byte: 796.9/797/797.1
+    // Exact integer boundary with a synthetic 100 uA per byte: 836.9/837/837.1
     // mA LED demand. Below/at the cap passes unchanged; one byte over scales.
     candidate.channel_ua[0][0] = 25500;
     memset(input, 0, sizeof(input));
@@ -108,7 +108,7 @@ int main(void) {
         if (step) input[module_front_leds[(byte_boundary + step - 2) / 255].index].r++;
         module_power_limit(&candidate, input, g_led_config.flags, 1000, output, &result);
         assert(result.limited == (step == 2));
-        assert(candidate.base_ma + (result.effective_ua + 999) / 1000 <= 900);
+        assert(candidate.base_ma + (result.effective_ua + 999) / 1000 <= candidate.board_limit_ma);
         if (step < 2) assert(memcmp(input, output, sizeof(input)) == 0);
     }
     candidate = module_power_profile;
@@ -117,7 +117,7 @@ int main(void) {
         for (unsigned i = 0; i < 104; i++) input[i] = (RGB){.r=level, .g=level, .b=level};
         memcpy(original, input, sizeof(input));
         module_power_limit(&candidate, input, g_led_config.flags, 1000, output, &result);
-        assert(candidate.base_ma + (result.effective_ua + 999) / 1000 <= 900);
+        assert(candidate.base_ma + (result.effective_ua + 999) / 1000 <= candidate.board_limit_ma);
         assert(result.effective_ua == (demand(output, &candidate) + 254) / 255);
         assert(memcmp(input, original, sizeof(input)) == 0);
         if (level == 255) assert(result.limited);

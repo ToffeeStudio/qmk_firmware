@@ -23,7 +23,7 @@ const module_power_profile_t module_power_profile = {
 // Ethan explicitly authorised a separate staged measurement toward 1 A.
 // 1100 mA modeled envelope minus baseline/margin admits up to 1000 mA
 // nominal board demand. Host observations stop at 1000 mA; not a sensor/cutoff.
-// This test-only envelope does not change the 900 mA product budget below.
+// This test-only envelope does not change the product budget below.
 // Raw calibration requests must fit this budget unchanged or are rejected.
 // Other render paths retain the final limiter; startup-off/watchdog still apply.
 const module_power_profile_t module_power_profile = {
@@ -44,14 +44,14 @@ const module_power_profile_t module_power_profile = {
 // B has a reported broken front LED; retain all104 mapped positions.
 // See AUTORESEARCH/04-09-2026 PCB Lacking Current/
 // shared-fit-20261011-tSgJXg/fit.json for data/provenance/limitations.
-// Ethan requests estimated BOARD current <=900 mA, including idle consumption.
+// Ethan requests estimated BOARD current <=940 mA, including idle consumption.
 // No coefficient padding, extra margin or separate front160 cap: one common
-// final-boundary scale limits LED demand to 797 mA. Saved requests stay intact.
+// final-boundary scale limits LED demand to 837 mA. Saved requests stay intact.
 // This caps an ESTIMATE, not sensed current or a certified hardware-safe load.
 const module_power_profile_t module_power_profile = {
-    .revision = 7,
+    .revision = 8,
     .configured = true,
-    .board_limit_ma = 900,
+    .board_limit_ma = 940,
     .base_ma = 103,
     .margin_ma = 0,
     .channel_ua = {{10992, 11016, 11185}, {12294, 12044, 12203}, {12447, 11937, 11456}},
