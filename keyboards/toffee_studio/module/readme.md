@@ -1,10 +1,25 @@
 # Toffee Studio Module — start here
 
-Last reviewed: **11 October 2026 (Australia/Sydney)**. This is the current board
+Last reviewed: **13 October 2026 (Australia/Sydney)**. This is the current board
 handover, not a live device-status feed. Read the repository's
 [agent safety instructions](../../../AGENTS.md) before working on hardware.
 
 ## Current status
+
+**12 October direct browser WebUSB flash VERIFIED (handover13 October).** Real
+Chrome PICOBOOT read, erased/programmed and byte-compared all90112 affected flash
+bytes, then rebooted. SAME normal profile9/940mA/front-badge200 UF2 below; original
+sector tail preserved, no EEPROM/storage erase. Fresh sole RP2 E0C9125B0D9B at
+USB0x00100000. Initial read timeouts reproduced natively; EXIT_XIP before
+ENTER_CMD_XIP fixed the flash-read initialization. Browser and native15s uptime
+and independent VIA/all66 overrides/ALL lighting preferences checks pass.
+Ethan confirmed physical typing; cold-power untested. Original sectors/private
+VIA backups archived. Native diagnostics and reboots were used during investigation;
+the successful erase/program/readback/reboot used actual browser WebUSB without
+a native flashing bridge or filesystem write. Browser permission selections remain
+necessary, including Module again after reconnect in this run. Main web updater
+still uses manual UF2 copy; direct WebUSB is an experimental page, not integrated.
+[Full evidence and limitations](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/webusb-20261012-1waEAk/README.md).
 
 **11 October browser-copy experiment — native recovery verified.** Actual Chrome
 WebHID backup/reboot and selected RPI-RP2 INFO reading passed. Browser filesystem

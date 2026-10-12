@@ -374,6 +374,17 @@ Rules:
 
 ## Local Module flashing and recovery
 
+- **12 October direct WebUSB experiment succeeded (handover13 October).** Actual
+  Chrome PICOBOOT read/erase/program/readback/reboot restored the SAME normal9
+  image, all90112 affected bytes verified. Fresh USB0x00100000/RP2 E0C9125B0D9B;
+  original sectors/private VIA archived, native/browser15s uptime and complete
+  preference/VIA/66-override comparisons pass. Ethan confirmed typing; cold-power
+  untested. Flash reads require EXIT_XIP before ENTER_CMD_XIP after soft BOOTSEL;
+  use descriptor-derived vendor bulk endpoints (OUT3/IN4 here), not MSD endpoints.
+  No native flash write in this run. This is an experiment, not integrated into
+  the production web updater; keep the documented native UF2 recovery path.
+  [Evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/webusb-20261012-1waEAk/README.md).
+
 - **11 October browser experiment:** real WebHID backup/reboot and browser read
   of RPI-RP2 succeeded, but File System Access `write()` stalled before close.
   No automatic retry. Test browser stopped; one identity-checked USB reset
