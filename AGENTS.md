@@ -1,13 +1,19 @@
 # Module documentation entry point
 
-**15 October — built/host-tested, NOT FLASHED.** Protocol3 exposes45 front modes
+**15 October — normal lighting-v3 FLASHED locally.** Protocol3 exposes45 front modes
 and six independent badge choices including Off. New0x8D/0x8E transfer badge
 enabled/brightness/hue/saturation/effect/speed;0x82/0x83 remain solid-only.
 Storage v2 appends two bytes and migrates v1 without writes. Modifier metadata
 retains KEYLIGHT/current accounting and all104 indices.940mA/200 caps,
 startup/rescue/persistence unchanged. Normal/current-unlimited candidates built;
 manual UF2 unchanged. Firmware checkpoints03d5cb1c3f/f84ac7bb85 are local.
-No USB/camera access or physical effect validation. Render explicitly deferred.
+Sole fresh USB0x01100000/RP2 E0C9125B0D9B, normal UF2 `ecf6ed3a...` copied once;
+15s uptime and read-only protocol3/normal9/940mA/cap200 verification pass.
+Private VIA, all lighting preferences and66 overrides match the pre-flash copy;
+updater restored/verified the keymap. Badge v1 migrates to Solid/speed100.
+No lighting setters/camera; physical typing/effects/cold-power pending.
+Render explicitly deferred; no source pushes/web deployment this flash.
+[Flash evidence](../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/effects-flash-20261015-PJQnXx/README.md).
 
 Read [keyboards/toffee_studio/module/readme.md](keyboards/toffee_studio/module/readme.md)
 first for the current screenless board, local project locations, USB identity,

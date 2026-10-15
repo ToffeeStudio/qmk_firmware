@@ -1,12 +1,12 @@
 # Toffee Studio Module — start here
 
-Last reviewed: **13 October 2026 (Australia/Sydney)**. This is the current board
+Last reviewed: **15 October 2026 (Australia/Sydney)**. This is the current board
 handover, not a live device-status feed. Read the repository's
 [agent safety instructions](../../../AGENTS.md) before working on hardware.
 
 ## Current status
 
-**15 October lighting expansion — built/host-tested, NOT FLASHED.** Lighting
+**15 October lighting expansion — normal firmware FLASHED locally.** Lighting
 protocol3 exposes45 front options (Off plus44 effects), preserving IDs0–8.
 Native reactive/splash/heatmap/digital-rain modes use QMK's existing keypress
 pipeline. Base-layout modifier flags retain KEYLIGHT membership/current accounting.
@@ -16,8 +16,16 @@ New correlated0x8D/0x8E read/write six bytes: enabled/brightness/hue/saturation/
 effect/speed. Legacy0x82/0x83 stay solid-only. Storage v2 appends two bytes,
 reads/migrates v1 without writes, preserves colours/overrides and journal sectors.
 940mA estimate,200 front/badge output scaling, startup/rescue and normal saves
-are unchanged. Full sanitizer host suite and normal QMK build pass; real
-typing/lighting verification remains pending. No USB/camera access or flash.
+are unchanged. Full sanitizer host suite and normal QMK build pass. At Ethan's
+explicit request, UF2 `ecf6ed3af92a1b6bc4d2afd595bbff03bffa9202f5409fae9df18c270ff9f03b`
+was copied once to freshly verified sole USB0x01100000/RP2 E0C9125B0D9B.
+15s stability and read-only protocol3/45-front/6-badge/normal9/940mA/cap200
+checks pass. All lighting preferences and66 overrides including103 match;
+private VIA matches after updater keymap restoration/readback. Badge v1 migrated
+to Solid/speed100. No lighting setters, new current measurements or camera use.
+Physical typing/effects/cold-power remain pending; no full-flash readback claimed.
+Reload/reconnect local `/toffee-lighting` for the new menus. No web deployment.
+[Flash and preservation evidence](../../../../AUTORESEARCH/04-09-2026%20PCB%20Lacking%20Current/effects-flash-20261015-PJQnXx/README.md).
 
 **12 October direct browser WebUSB flash VERIFIED (handover13 October).** Real
 Chrome PICOBOOT read, erased/programmed and byte-compared all90112 affected flash
