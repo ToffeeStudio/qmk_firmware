@@ -13,7 +13,7 @@ static uint16_t transmitted_sums[3][3];
 
 static int group_for(uint16_t index, uint8_t flags) {
     if (index >= MODULE_MAPPED_LED_COUNT) return -1;
-    if (flags == LED_FLAG_KEYLIGHT) return 0;
+    if (flags == LED_FLAG_KEYLIGHT || flags == (LED_FLAG_KEYLIGHT | LED_FLAG_MODIFIER)) return 0;
     if (flags == LED_FLAG_UNDERGLOW) return 1;
     if (flags == LED_FLAG_INDICATOR) return 2;
     return -1;

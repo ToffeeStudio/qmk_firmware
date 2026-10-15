@@ -3,6 +3,7 @@
 #include "display/ui.h"
 #include "display/cdc_handler.h"
 #include "lighting/lighting.h"
+#include "lighting/groups.h"
 #include "display/wpm_indicator.h"
 #include "quantum.h" // Includes core QMK functionality, ChibiOS, config files etc.
 #include "rgb_matrix.h"
@@ -11,6 +12,11 @@
 #include "ch.h"
 
 // --- Feature Includes ---
+bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
+    if (record->event.pressed) lighting_badge_keypress();
+    return process_record_user(keycode, record);
+}
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h> // For memset, strlen etc. <--- Added/Ensured this include

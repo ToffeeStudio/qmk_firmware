@@ -1205,6 +1205,7 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
         command_id != id_lighting_set_led_brightness &&
         command_id != id_lighting_front_get && command_id != id_lighting_front_set &&
         command_id != id_lighting_badge_get && command_id != id_lighting_badge_set &&
+        command_id != id_lighting_badge_animation_get && command_id != id_lighting_badge_animation_set &&
         command_id != id_lighting_led_get && command_id != id_lighting_capabilities &&
         command_id != id_lighting_power_status && command_id != id_lighting_rescue_off &&
 #ifdef MODULE_MANUAL_MEASUREMENT
@@ -1297,14 +1298,27 @@ int module_raw_hid_parse_packet(uint8_t *data, uint8_t length) {
             err = module_ret_success;
             break;
         case id_lighting_capabilities:
-            data[1] = 2; // Versioned lighting protocol with correlated replies.
+            data[1] = 3; // Appended front effects and independent badge animations.
             data[2] = 66;
             data[3] = 22;
             data[4] = 16;
             data[5] = MODULE_MAPPED_LED_COUNT;
             data[6] = MODULE_FRONT_EFFECT_COUNT;
+            data[7] = MODULE_BADGE_EFFECT_COUNT;
             err = module_ret_success;
             break;
+        case id_lighting_badge_animation_get:
+            memcpy(data + 1, &module_lighting_state.badge, sizeof(badge_config_t));
+            data[5] = module_lighting_state.badge_effect;
+            data[6] = module_lighting_state.badge_speed;
+            err = module_ret_success;
+            break;
+        case id_lighting_badge_animation_set: {
+            badge_config_t config;
+            memcpy(&config, data + 6, sizeof(config));
+            err = lighting_set_badge_animation(&config, data[10], data[11]) ? module_ret_success : module_ret_invalid_command;
+            break;
+        }
         case id_module_cmd_ls:
             err = parse_ls(data, length);
             break;

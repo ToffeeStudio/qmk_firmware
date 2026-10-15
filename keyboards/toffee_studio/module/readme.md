@@ -6,6 +6,19 @@ handover, not a live device-status feed. Read the repository's
 
 ## Current status
 
+**15 October lighting expansion — built/host-tested, NOT FLASHED.** Lighting
+protocol3 exposes45 front options (Off plus44 effects), preserving IDs0–8.
+Native reactive/splash/heatmap/digital-rain modes use QMK's existing keypress
+pipeline. Base-layout modifier flags retain KEYLIGHT membership/current accounting.
+Badge has independent Off/Solid/Breathing/Rainbow Cycle/Chase/Typing Pulse and
+speed; chase follows electrical address order, not an unverified spatial map.
+New correlated0x8D/0x8E read/write six bytes: enabled/brightness/hue/saturation/
+effect/speed. Legacy0x82/0x83 stay solid-only. Storage v2 appends two bytes,
+reads/migrates v1 without writes, preserves colours/overrides and journal sectors.
+940mA estimate,200 front/badge output scaling, startup/rescue and normal saves
+are unchanged. Full sanitizer host suite and normal QMK build pass; real
+typing/lighting verification remains pending. No USB/camera access or flash.
+
 **12 October direct browser WebUSB flash VERIFIED (handover13 October).** Real
 Chrome PICOBOOT read, erased/programmed and byte-compared all90112 affected flash
 bytes, then rebooted. SAME normal profile9/940mA/front-badge200 UF2 below; original

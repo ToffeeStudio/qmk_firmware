@@ -362,6 +362,10 @@ void lighting_init(void) {
         g_led_config.flags[index] = LED_FLAG_KEYLIGHT;
         g_led_config.point[index] = (led_point_t){module_front_leds[i].x, module_front_leds[i].y};
     }
+    // Base-layout modifiers (including Caps/Fn); membership remains KEYLIGHT.
+    const uint8_t modifiers[] = {47, 18, 29, 17, 15, 13, 7, 6};
+    for (uint8_t i = 0; i < ARRAY_SIZE(modifiers); i++)
+        g_led_config.flags[modifiers[i]] |= LED_FLAG_MODIFIER;
     for (uint8_t i = 0; i < ARRAY_SIZE(module_badge_leds); i++)
         g_led_config.flags[module_badge_leds[i]] = LED_FLAG_INDICATOR;
     for (uint8_t i = 0; i < ARRAY_SIZE(module_key_map); i++)

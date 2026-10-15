@@ -34,11 +34,11 @@ bool lighting_test_raw(const uint8_t *payload) {
         if (!(payload[3 + i / 8] & (1u << (i % 8)))) continue;
         count++;
         uint8_t flags = g_led_config.flags[i];
-        if (flags == LED_FLAG_KEYLIGHT) groups |= 1;
+        if (HAS_FLAGS(flags, LED_FLAG_KEYLIGHT)) groups |= 1;
         if (flags == LED_FLAG_UNDERGLOW) groups |= 2;
         if (flags == LED_FLAG_INDICATOR) groups |= 4;
 #ifndef MODULE_MANUAL_MEASUREMENT
-        unsigned group = flags == LED_FLAG_KEYLIGHT ? 0 : flags == LED_FLAG_UNDERGLOW ? 1 : 2;
+        unsigned group = HAS_FLAGS(flags, LED_FLAG_KEYLIGHT) ? 0 : flags == LED_FLAG_UNDERGLOW ? 1 : 2;
         for (unsigned channel = 0; channel < 3; channel++)
             weighted_request += (uint64_t)payload[channel] * module_power_profile.channel_ua[group][channel];
 #endif
@@ -110,7 +110,7 @@ void lighting_test_apply_limits(void) {
             uint8_t flags = g_led_config.flags[i];
             c = (RGB){0, 0, 0};
             if (i < MODULE_MAPPED_LED_COUNT) {
-                if (flags == LED_FLAG_KEYLIGHT) c = mixed_colors[0];
+                if (HAS_FLAGS(flags, LED_FLAG_KEYLIGHT)) c = mixed_colors[0];
                 else if (flags == LED_FLAG_UNDERGLOW) c = mixed_colors[1];
                 else if (flags == LED_FLAG_INDICATOR) c = mixed_colors[2];
             }

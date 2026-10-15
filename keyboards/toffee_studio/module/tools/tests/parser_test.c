@@ -166,7 +166,8 @@ static void test_parser(void) {
         if (command == id_lighting_test_status || command == id_lighting_test_keepalive || command == id_lighting_test_rgb_sums) continue;
 #endif
         if ((command >= 0x71 && command <= 0x76 && command != 0x73) ||
-            (command >= 0x79 && command <= 0x85)) continue;
+            (command >= 0x79 && command <= 0x85) ||
+            command == id_lighting_badge_animation_get || command == id_lighting_badge_animation_set) continue;
         reject_packet(command, off, sizeof(off));
     }
     uint8_t bad_magic[32] = {0, id_lighting_discovery};
@@ -186,7 +187,20 @@ static void test_parser(void) {
             reject_packet(id_lighting_led_get, value, 1);
         }
     }
-    reject_packet(id_lighting_front_set, (uint8_t[]){9, 100, 18, 0, 255}, 5);
+    reject_packet(id_lighting_front_set, (uint8_t[]){MODULE_FRONT_EFFECT_COUNT, 100, 18, 0, 255}, 5);
+    reject_packet(id_lighting_badge_animation_set, (uint8_t[]){1, 18, 0, 255, MODULE_BADGE_EFFECT_COUNT, 100}, 6);
+    reject_packet(id_lighting_badge_animation_set, (uint8_t[]){2, 18, 0, 255, 1, 100}, 6);
+    for (uint8_t effect = 0; effect < MODULE_BADGE_EFFECT_COUNT; effect++) {
+        uint8_t config[] = {1, 18, 33, 255, effect, 180};
+        assert(packet(id_lighting_badge_animation_set, config, sizeof(config)) == 0);
+        uint8_t reply[32] = {9, id_lighting_badge_animation_get};
+        assert(module_raw_hid_parse_packet(reply, 32) == 0);
+        assert(memcmp(reply + 1, config, sizeof(config)) == 0);
+        assert(reply[26] == 0xa5 && reply[27] == id_lighting_badge_animation_get);
+    }
+    uint8_t caps[32] = {9, id_lighting_capabilities};
+    assert(module_raw_hid_parse_packet(caps, 32) == 0);
+    assert(memcmp(caps + 1, (uint8_t[]){3, 66, 22, 16, 104, MODULE_FRONT_EFFECT_COUNT, MODULE_BADGE_EFFECT_COUNT}, 7) == 0);
     reject_packet(id_lighting_badge_set, (uint8_t[]){2, 18, 0, 255}, 4);
     reject_packet(id_lighting_set_animation, (uint8_t[]){10}, 1);
     reject_packet(id_lighting_discovery_back, (uint8_t[]){2, 64}, 2);

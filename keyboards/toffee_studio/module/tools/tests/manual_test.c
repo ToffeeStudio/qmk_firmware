@@ -18,7 +18,7 @@ static void test_manual_firmware(void) {
         rgb_led_t output[201];
         lighting_power_prepare(rgb_matrix_ws2812_array, output);
         for (unsigned i = 0; i < 201; i++) {
-            unsigned group = g_led_config.flags[i] == LED_FLAG_KEYLIGHT ? 0 :
+            unsigned group = HAS_FLAGS(g_led_config.flags[i], LED_FLAG_KEYLIGHT) ? 0 :
                              g_led_config.flags[i] == LED_FLAG_UNDERGLOW ? 1 : 2;
             RGB expected = i < 104 ? (RGB){.r=mixed[group*3], .g=mixed[group*3+1], .b=mixed[group*3+2]} : (RGB){0};
             assert(memcmp(&output[i], &expected, sizeof(RGB)) == 0);

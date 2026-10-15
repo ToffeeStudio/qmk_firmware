@@ -28,7 +28,8 @@ void lighting_flash_erase(uint32_t offset) {
 }
 static module_lighting_state_t state(uint32_t number) {
     module_lighting_state_t s = {.front = {number % 9, number >> 8, number, number >> 16, 255},
-                                 .badge = {number % 2, number + 1, number >> 8, 200}};
+                                 .badge = {number % 2, number + 1, number >> 8, 200},
+                                 .badge_effect = number % MODULE_BADGE_EFFECT_COUNT, .badge_speed = number};
     for (unsigned i = 0; i < 104; i++) s.overrides[i] = number + i;
     return s;
 }
@@ -45,6 +46,23 @@ static void reset(void) {
 }
 
 int main(void) {
+    // A real v1 record has the same prefix and 0xFF padding where v2 appends fields.
+    reset();
+    module_lighting_state_t legacy = state(123);
+    legacy.badge_effect = 1; legacy.badge_speed = 100;
+    lighting_record_t v1;
+    memset(&v1, 255, sizeof(v1));
+    v1.magic = LIGHTING_MAGIC; v1.sequence = 1; v1.version = 1;
+    memcpy(&v1.state, &legacy, offsetof(module_lighting_state_t, badge_effect));
+    v1.crc = checksum((uint8_t *)&v1, 252);
+    memcpy(flash_bytes, &v1, 256);
+    expect_loaded(&legacy);
+    assert(programs == 0 && erases == 0); // Loading never changes flash.
+    module_lighting_state_t migrated = legacy;
+    migrated.badge_effect = 5; migrated.badge_speed = 220;
+    assert(lighting_storage_save(&migrated));
+    expect_loaded(&migrated);
+    assert(memcmp(flash_bytes, &v1, 256) == 0); // Old recovery record remains intact.
     reset();
     // Append/rollover endurance, rebooted after every save, and unchanged-state wear avoidance.
     for (unsigned i = 0; i < 10000; i++) {
@@ -69,13 +87,14 @@ int main(void) {
         expect_loaded(&first);
     }
     // Valid CRC but unknown version/invalid state must be rejected too.
-    for (unsigned field = 0; field < 3; field++) {
+    for (unsigned field = 0; field < 4; field++) {
         memcpy(flash_bytes, baseline, sizeof(baseline));
         lighting_record_t record;
         memcpy(&record, flash_bytes + 256, 256);
-        if (field == 0) record.version = 2;
-        if (field == 1) record.state.front.effect = 9;
+        if (field == 0) record.version = 3;
+        if (field == 1) record.state.front.effect = MODULE_FRONT_EFFECT_COUNT;
         if (field == 2) record.state.badge.enabled = 2;
+        if (field == 3) record.state.badge_effect = MODULE_BADGE_EFFECT_COUNT;
         record.crc = checksum((uint8_t *)&record, 252);
         memcpy(flash_bytes + 256, &record, 256);
         expect_loaded(&first);

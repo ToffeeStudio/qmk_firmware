@@ -12,7 +12,7 @@
 #define LIGHTING_PAGE_SIZE 256
 #define LIGHTING_SECTOR_SIZE 4096
 #define LIGHTING_MAGIC 0x544C4954
-#define LIGHTING_VERSION 1
+#define LIGHTING_VERSION 2
 
 typedef struct __attribute__((packed)) {
     uint32_t magic;
@@ -64,10 +64,15 @@ bool lighting_storage_load(module_lighting_state_t *state) {
     for (int page = 0; page < LIGHTING_SECTORS * LIGHTING_SECTOR_SIZE / LIGHTING_PAGE_SIZE; page++) {
         lighting_record_t record;
         memcpy(&record, lighting_flash_read(page * LIGHTING_PAGE_SIZE), sizeof(record));
-        if (record.magic != LIGHTING_MAGIC || record.version != LIGHTING_VERSION ||
-            record.crc != checksum((const uint8_t *)&record, 252) ||
-            record.state.front.effect >= MODULE_FRONT_EFFECT_COUNT || record.state.badge.enabled > 1)
+        if (record.magic != LIGHTING_MAGIC || (record.version != 1 && record.version != LIGHTING_VERSION) ||
+            record.crc != checksum((const uint8_t *)&record, 252))
             continue;
+        if (record.version == 1) {
+            record.state.badge_effect = 1;
+            record.state.badge_speed = 100;
+        }
+        if (record.state.front.effect >= MODULE_FRONT_EFFECT_COUNT || record.state.badge.enabled > 1 ||
+            record.state.badge_effect >= MODULE_BADGE_EFFECT_COUNT) continue;
         if (latest_page < 0 || (int32_t)(record.sequence - latest_sequence) > 0) {
             *state = record.state;
             latest_page = page;

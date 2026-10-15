@@ -62,7 +62,7 @@ bool lighting_storage_save(const module_lighting_state_t *s) {
 
 static void qmk_render(void) {
     for (unsigned i = 0; i < 201; i++) {
-        if (g_led_config.flags[i] == LED_FLAG_KEYLIGHT) rgb_matrix_set_color(i, 120, 80, 40);
+        if (HAS_FLAGS(g_led_config.flags[i], LED_FLAG_KEYLIGHT)) rgb_matrix_set_color(i, 120, 80, 40);
         else rgb_matrix_set_color(i, 255, 255, 255); // Must be cleared/overwritten.
     }
     lighting_task();
@@ -76,6 +76,7 @@ static void qmk_render(void) {
 }
 #include "parser_test.c"
 #include "startup_test.c"
+#include "badge_animation_test.c"
 #ifdef MODULE_MANUAL_MEASUREMENT
 #include "manual_test.c"
 #elif defined(MODULE_EXTENSIVE_TEST)
@@ -83,6 +84,9 @@ static void qmk_render(void) {
 #endif
 int main(void) {
     test_startup_lighting();
+#ifndef MODULE_EXTENSIVE_TEST
+    test_badge_animations();
+#endif
     // Start the pre-existing regression suites with a clean persistence fixture.
     saved_available = false;
     saves = 0;
@@ -99,17 +103,17 @@ int main(void) {
     now = 0; // Existing debounce tests below use a zero-based clock.
     unsigned front = 0, badge = 0, rear = 0;
     for (unsigned i = 0; i < 201; i++) {
-        if (g_led_config.flags[i] == LED_FLAG_KEYLIGHT) front++;
+        if (HAS_FLAGS(g_led_config.flags[i], LED_FLAG_KEYLIGHT)) front++;
         if (g_led_config.flags[i] == LED_FLAG_INDICATOR) badge++;
         if (g_led_config.flags[i] == LED_FLAG_UNDERGLOW) rear++;
-        assert(lighting_is_front_led(i) == (g_led_config.flags[i] == LED_FLAG_KEYLIGHT));
+        assert(lighting_is_front_led(i) == (HAS_FLAGS(g_led_config.flags[i], LED_FLAG_KEYLIGHT)));
     }
     assert(front == 66 && badge == 16 && rear == 22);
     assert(g_led_config.matrix_co[0][6] == 103); // Repaired top-row package.
     assert(g_led_config.matrix_co[0][7] == 83 && g_led_config.matrix_co[1][6] == 83);
     assert(g_led_config.matrix_co[7][0] == 18 && g_led_config.matrix_co[6][0] == 18);
     assert(qmk_enabled && qmk_flags == LED_FLAG_KEYLIGHT && qmk_hsv.v == scale8(18, 160));
-    for (uint8_t effect = 0; effect < 9; effect++) {
+    for (uint8_t effect = 0; effect < MODULE_FRONT_EFFECT_COUNT; effect++) {
         front_config_t f = {effect, 200, 37, 80, 190};
         badge_config_t b = {1, 25, 170, 255};
         assert(lighting_set_front(&f));
@@ -137,7 +141,7 @@ int main(void) {
         }
     }
     module_lighting_state_t previous = module_lighting_state;
-    front_config_t invalid_front = {9, 1, 2, 3, 4};
+    front_config_t invalid_front = {MODULE_FRONT_EFFECT_COUNT, 1, 2, 3, 4};
     badge_config_t invalid_badge = {2, 1, 2, 3};
     assert(!lighting_set_front(&invalid_front) && !lighting_set_badge(&invalid_badge));
     assert(memcmp(&previous, &module_lighting_state, sizeof(previous)) == 0);
@@ -149,7 +153,7 @@ int main(void) {
     now = UINT32_MAX - 500; lighting_groups_schedule_save();
     now = 498; lighting_groups_persistence_task(); assert(saves == 1);
     now = 499; lighting_groups_persistence_task(); assert(saves == 2);
-    puts("Groups PASS: 104-package map, 9 front modes, independent badge/rear, 16,896 per-key levels, debounce/reboot/timer wrap.");
+    puts("Groups PASS: 104-package map, 45 front modes, independent badge/rear, 16,896 per-key levels, debounce/reboot/timer wrap.");
     test_parser();
 #endif
     test_persistent_rescue();
