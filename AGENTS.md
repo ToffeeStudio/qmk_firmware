@@ -1,5 +1,14 @@
 # Module documentation entry point
 
+**15 October — built/host-tested, NOT FLASHED.** Protocol3 exposes45 front modes
+and six independent badge choices including Off. New0x8D/0x8E transfer badge
+enabled/brightness/hue/saturation/effect/speed;0x82/0x83 remain solid-only.
+Storage v2 appends two bytes and migrates v1 without writes. Modifier metadata
+retains KEYLIGHT/current accounting and all104 indices.940mA/200 caps,
+startup/rescue/persistence unchanged. Normal/current-unlimited candidates built;
+manual UF2 unchanged. Firmware checkpoints03d5cb1c3f/f84ac7bb85 are local.
+No USB/camera access or physical effect validation. Render explicitly deferred.
+
 Read [keyboards/toffee_studio/module/readme.md](keyboards/toffee_studio/module/readme.md)
 first for the current screenless board, local project locations, USB identity,
 lighting support, verification gaps, recovery images and detailed references.
