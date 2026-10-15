@@ -67,6 +67,19 @@ static uint32_t random32(void) {rng ^= rng << 13; rng ^= rng >> 17; rng ^= rng <
 #endif
 
 int main(void) {
+    // Modifier metadata must never drop a lit front package from current accounting.
+    rgb_led_t modifier_input[RGB_MATRIX_LED_COUNT] = {0}, normal[RGB_MATRIX_LED_COUNT], modifier[RGB_MATRIX_LED_COUNT];
+    uint8_t flags[RGB_MATRIX_LED_COUNT] = {0};
+    modifier_input[17] = (rgb_led_t){.r=255,.g=200,.b=180};
+    flags[17] = LED_FLAG_KEYLIGHT;
+    module_power_frame_t normal_frame, modifier_frame;
+    module_power_limit(&module_power_profile,modifier_input,flags,1000,normal,&normal_frame);
+    flags[17] |= LED_FLAG_MODIFIER;
+    module_power_limit(&module_power_profile,modifier_input,flags,1000,modifier,&modifier_frame);
+    assert(normal_frame.requested_ua > 0);
+    assert(normal_frame.requested_ua == modifier_frame.requested_ua);
+    assert(normal_frame.effective_ua == modifier_frame.effective_ua);
+    assert(memcmp(normal,modifier,sizeof(normal)) == 0);
     for (unsigned i = 0; i < 104; i++) g_led_config.flags[i] = LED_FLAG_UNDERGLOW;
     for (unsigned i = 0; i < ARRAY_SIZE(module_front_leds); i++) g_led_config.flags[module_front_leds[i].index] = LED_FLAG_KEYLIGHT;
     for (unsigned i = 0; i < ARRAY_SIZE(module_badge_leds); i++) g_led_config.flags[module_badge_leds[i]] = LED_FLAG_INDICATOR;
