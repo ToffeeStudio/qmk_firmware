@@ -38,30 +38,32 @@ const module_power_profile_t module_power_profile = {
     .channel_ceiling = {255, 255, 255},
 };
 #else
-// 11 October 2026: balanced shared fit to 302 manual observations from A/B,
-// using actual final RGB sums. One fitted intercept and nine RGB weights;
-// no PCB-specific correction. Held-out MAE A25.68/B29.36 mA (100 readings).
-// Normal6 was better on B (17.52 mA) but worse on A (39.84 mA); user accepted
-// this balance. The 103 mA intercept is fitted, not a measured idle guarantee.
-// B has a reported broken front LED; retain all104 mapped positions.
+// 21 October 2026: user-selected fit for repaired PCB-B, using all 157 held
+// attempts/baselines (785 personally transcribed photos) from 20 October.
+// One median per attempt; repeated final outputs stay together in five-fold
+// validation. MAE 12.56 mA versus 30.55 mA for normal9 on the same observations.
+// The retained over-limit attempt is included; its 1.13 A sample is not erased
+// by using a median for fitting. The 75 mA intercept is fitted, not sensed idle.
+// All104 mapped positions remain. This is not a universal A/B calibration:
+// older, unrepaired B records have greater underprediction with this model.
 // See AUTORESEARCH/04-09-2026 PCB Lacking Current/
-// shared-fit-20261011-tSgJXg/fit.json for data/provenance/limitations.
+// repaired-b-fit-20261021/fit.json for data/provenance/limitations.
 // Ethan requests estimated BOARD current <=940 mA, including idle consumption.
-// No coefficient padding, extra margin or separate front160 cap: one common
-// final-boundary scale limits LED demand to 837 mA. Saved requests stay intact.
+// No coefficient padding or extra margin: one common final-boundary scale
+// limits LED demand to 865 mA. Existing render/output caps and saves stay intact.
 // This caps an ESTIMATE, not sensed current or a certified hardware-safe load.
 const module_power_profile_t module_power_profile = {
 #ifdef MODULE_CURRENT_UNLIMITED
-    .revision = 10, // Normal saves/startup/output caps; current estimate only.
+    .revision = 12, // Normal saves/startup/output caps; current estimate only.
 #else
-    .revision = 9,
+    .revision = 11,
 #endif
     .front_badge_max = 200,
     .configured = true,
     .board_limit_ma = 940,
-    .base_ma = 103,
+    .base_ma = 75,
     .margin_ma = 0,
-    .channel_ua = {{10992, 11016, 11185}, {12294, 12044, 12203}, {12447, 11937, 11456}},
+    .channel_ua = {{11262, 10049, 11020}, {12994, 12869, 13131}, {11021, 11398, 11652}},
     .channel_ceiling = {255, 255, 255},
 };
 #endif
