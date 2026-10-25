@@ -17,7 +17,9 @@ void underglow_manager_set_color_hs(uint8_t h, uint8_t s) {g_underglow_config.co
 void underglow_manager_save(void) {}
 void wpm_indicator_set_anim(const char *value, wpm_mode_t mode) {abort();}
 void wpm_indicator_set_config(uint8_t a, uint8_t b, uint8_t c) {abort();}
-void bootloader_jump(void) {abort();}
+static bool bootloader_expected;
+static unsigned bootloader_entries;
+void bootloader_jump(void) {assert(bootloader_expected); bootloader_entries++;}
 
 #define FORBIDDEN_HANDLER(name) static int name(uint8_t *data, uint8_t length) {abort();}
 FORBIDDEN_HANDLER(parse_ls)

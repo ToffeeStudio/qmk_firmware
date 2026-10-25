@@ -20,6 +20,35 @@ static bool startup_waiting = true;
 static bool startup_done;
 static uint32_t startup_started;
 
+#ifdef MODULE_LED_DISCOVERY
+#ifndef BOOTMAGIC_LITE
+#error "Module startup lighting reset requires BOOTMAGIC_ENABLE=yes"
+#endif
+static bool startup_rescue_requested;
+
+// Check physical switches before keymap processing or RGB initialization.
+// Positions come from info.json / the base LAYOUT, independent of VIA mappings.
+void bootmagic_lite(void) {
+    startup_rescue_requested = false;
+    matrix_scan();
+#if defined(DEBOUNCE) && DEBOUNCE > 0
+    wait_ms(DEBOUNCE * 2);
+#else
+    wait_ms(30);
+#endif
+    matrix_scan();
+    if (matrix_is_on(7, 0) && matrix_is_on(6, 6)) { // Left and right Shift.
+        startup_rescue_requested = true;
+        return;
+    }
+    // Preserve QMK's existing Escape-only EEPROM reset and bootloader entry.
+    if (matrix_is_on(BOOTMAGIC_LITE_ROW, BOOTMAGIC_LITE_COLUMN)) {
+        eeconfig_disable();
+        bootloader_jump();
+    }
+}
+#endif
+
 void notify_usb_device_state_change_kb(enum usb_device_state state) {
     if (state != USB_DEVICE_STATE_CONFIGURED) {
         startup_waiting = true;
@@ -383,6 +412,10 @@ void lighting_init(void) {
 #ifdef MODULE_EXTENSIVE_TEST
     lighting_test_init();
 #endif
+    if (startup_rescue_requested) {
+        bool saved = lighting_rescue_off();
+        uprintf("Lighting: startup reset %s\n", saved ? "saved all brightness zero" : "ERROR saving; output remains off");
+    }
     uprintf("Screenless lighting: %u verified rear LEDs ready\n", (unsigned)ARRAY_SIZE(discovery_back_leds));
     return;
 #endif

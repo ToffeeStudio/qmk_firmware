@@ -13,6 +13,9 @@
 #define MODULE_LED_DISCOVERY_BRIGHTNESS 18
 #define MATRIX_ROWS 9
 #define MATRIX_COLS 8
+#define BOOTMAGIC_LITE
+#define BOOTMAGIC_LITE_ROW 0
+#define BOOTMAGIC_LITE_COLUMN 0
 #define NO_LED 255
 #define SAFE_RANGE 0x5F00
 #define LED_FLAG_KEYLIGHT 4
@@ -33,6 +36,12 @@ typedef struct {
 } led_config_t;
 typedef struct {struct {bool pressed;} event;} keyrecord_t;
 extern led_config_t g_led_config;
+uint8_t matrix_scan(void);
+bool matrix_is_on(uint8_t row, uint8_t col);
+void wait_ms(uint16_t milliseconds);
+void eeconfig_disable(void);
+void bootloader_jump(void);
+void bootmagic_lite(void);
 uint32_t timer_read32(void);
 uint32_t timer_elapsed32(uint32_t last);
 void rgb_matrix_enable_noeeprom(void);

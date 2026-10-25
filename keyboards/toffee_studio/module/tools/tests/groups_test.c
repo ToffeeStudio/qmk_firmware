@@ -76,6 +76,7 @@ static void qmk_render(void) {
 }
 #include "parser_test.c"
 #include "startup_test.c"
+#include "boot_reset_test.c"
 #include "badge_animation_test.c"
 #ifdef MODULE_MANUAL_MEASUREMENT
 #include "manual_test.c"
@@ -83,6 +84,7 @@ static void qmk_render(void) {
 #include "test_mode_test.c"
 #endif
 int main(void) {
+    test_boot_lighting_reset();
     test_startup_lighting();
 #ifndef MODULE_EXTENSIVE_TEST
     test_badge_animations();
