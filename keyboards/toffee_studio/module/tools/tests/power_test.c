@@ -96,8 +96,8 @@ int main(void) {
     module_power_frame_t result, repeat;
 #if !defined(MODULE_POWER_CALIBRATION) && !defined(POWER_TEST_PROFILE)
     // Repaired PCB-B model; 940 mA includes the fitted baseline.
-    assert(module_power_profile.revision == 11 && module_power_profile.configured);
-    assert(module_power_profile.front_badge_max == 200);
+    assert(module_power_profile.revision == 13 && module_power_profile.configured);
+    assert(module_power_profile.front_badge_max == 190);
     assert(module_power_profile.board_limit_ma == 940);
     assert(module_power_profile.base_ma == 75 && module_power_profile.margin_ma == 0);
     module_power_profile_t candidate = module_power_profile;
@@ -150,7 +150,7 @@ int main(void) {
         assert(result.requested_ua == (demand(input, &candidate) + 254) / 255);
         assert(result.effective_ua == (demand(output, &candidate) + 254) / 255);
         for (unsigned i = 0; i < 104; i++) {
-            unsigned max = group(i) == 1 ? 255 : 200;
+            unsigned max = group(i) == 1 ? 255 : 190;
             assert(output[i].r == input[i].r * max / 255);
             assert(output[i].g == input[i].g * max / 255);
             assert(output[i].b == input[i].b * max / 255);

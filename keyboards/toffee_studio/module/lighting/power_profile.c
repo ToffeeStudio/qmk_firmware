@@ -54,11 +54,11 @@ const module_power_profile_t module_power_profile = {
 // This caps an ESTIMATE, not sensed current or a certified hardware-safe load.
 const module_power_profile_t module_power_profile = {
 #ifdef MODULE_CURRENT_UNLIMITED
-    .revision = 12, // Normal saves/startup/output caps; current estimate only.
+    .revision = 14, // Normal saves/startup/output caps; current estimate only.
 #else
-    .revision = 11,
+    .revision = 13,
 #endif
-    .front_badge_max = 200,
+    .front_badge_max = 190, // 25 October: user-requested shared front/badge cap.
     .configured = true,
     .board_limit_ma = 940,
     .base_ma = 75,
