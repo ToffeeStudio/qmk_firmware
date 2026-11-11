@@ -16,6 +16,10 @@ clang -std=c11 -O1 -g -fsanitize=address,undefined -DMODULE_LED_DISCOVERY \
   -I tools/tests/include -I ../../../tmk_core/protocol -I . -I "$test_dir" tools/tests/groups_test.c lighting/groups.c lighting/lighting.c \
   lighting/power.c lighting/power_profile.c -o "$test_dir/groups"
 "$test_dir/groups"
+clang -std=c11 -O1 -g -fsanitize=address,undefined -DMODULE_LED_DISCOVERY -DMODULE_USB_500MA \
+  -I tools/tests/include -I ../../../tmk_core/protocol -I . -I "$test_dir" tools/tests/groups_test.c lighting/groups.c lighting/lighting.c \
+  lighting/power.c lighting/power_profile.c -o "$test_dir/usb-500ma-groups"
+"$test_dir/usb-500ma-groups"
 clang -std=c11 -O1 -g -fsanitize=address,undefined -DMODULE_LED_DISCOVERY -DMODULE_CURRENT_UNLIMITED \
   -I tools/tests/include -I ../../../tmk_core/protocol -I . -I "$test_dir" tools/tests/groups_test.c lighting/groups.c lighting/lighting.c \
   lighting/power.c lighting/power_profile.c -o "$test_dir/current-unlimited-groups"
@@ -48,9 +52,10 @@ for mode in production temporary current-unlimited; do
   "$test_dir/rear-$mode"
 done
 printf 'Test executables retained at %s\n' "$test_dir"
-for profile in production synthetic calibration manual current-unlimited; do
+for profile in production usb-500ma synthetic calibration manual current-unlimited; do
   profile_sources="lighting/power_profile.c"
   profile_define=""
+  if [ "$profile" = usb-500ma ]; then profile_define="-DMODULE_USB_500MA"; fi
   if [ "$profile" = current-unlimited ]; then profile_define="-DMODULE_CURRENT_UNLIMITED"; fi
   if [ "$profile" = synthetic ]; then
     profile_sources=""

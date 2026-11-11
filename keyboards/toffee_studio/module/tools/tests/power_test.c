@@ -95,14 +95,20 @@ int main(void) {
     rgb_led_t input[201], original[201], output[201], repeated[201];
     module_power_frame_t result, repeat;
 #if !defined(MODULE_POWER_CALIBRATION) && !defined(POWER_TEST_PROFILE)
-    // Repaired PCB-B model; 940 mA includes the fitted baseline.
+    // Repaired PCB-B model; the whole-board cap includes the fitted baseline.
+#ifdef MODULE_USB_500MA
+    assert(module_power_profile.revision == 15 && module_power_profile.configured);
+    assert(module_power_profile.board_limit_ma == 450);
+    assert(module_power_led_budget(&module_power_profile) == 375);
+#else
     assert(module_power_profile.revision == 13 && module_power_profile.configured);
-    assert(module_power_profile.front_badge_max == 190);
     assert(module_power_profile.board_limit_ma == 940);
+    assert(module_power_led_budget(&module_power_profile) == 865);
+#endif
+    assert(module_power_profile.front_badge_max == 190);
     assert(module_power_profile.base_ma == 75 && module_power_profile.margin_ma == 0);
     module_power_profile_t candidate = module_power_profile;
     candidate.front_badge_max = 255; // Isolate unchanged estimator and budget boundary.
-    assert(module_power_led_budget(&candidate) == 865);
     // Fixed unscaled regression vectors for the repaired-B coefficients.
     // Requested demand remains visible even when final output must be limited.
     const struct {int group; uint8_t r, g, b; uint16_t estimate_ma;} samples[] = {
@@ -119,10 +125,12 @@ int main(void) {
                 input[i] = (RGB){.r=samples[s].r, .g=samples[s].g, .b=samples[s].b};
         module_power_limit(&candidate, input, g_led_config.flags, 1000, output, &result);
         assert(candidate.base_ma + (result.requested_ua + 999) / 1000 == samples[s].estimate_ma);
-        assert(memcmp(input, output, sizeof(input)) == 0 && !result.limited);
+        assert(result.limited == (result.requested_ua > module_power_led_budget(&candidate) * 1000u));
+        assert(candidate.base_ma + (result.effective_ua + 999) / 1000 <= candidate.board_limit_ma);
+        if (!result.limited) assert(memcmp(input, output, sizeof(input)) == 0);
     }
-    // Exact integer boundary with a synthetic 100 uA per byte: 864.9/865/865.1
-    // mA LED demand. Below/at the cap passes unchanged; one byte over scales.
+    // Exact integer boundary with a synthetic 100 uA per byte.
+    // Below/at the selected LED cap passes unchanged; one byte over scales.
     candidate.channel_ua[0][0] = 25500;
     memset(input, 0, sizeof(input));
     const unsigned byte_boundary = module_power_led_budget(&candidate) * 10;

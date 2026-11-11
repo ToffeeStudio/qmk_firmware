@@ -48,19 +48,26 @@ const module_power_profile_t module_power_profile = {
 // older, unrepaired B records have greater underprediction with this model.
 // See AUTORESEARCH/04-09-2026 PCB Lacking Current/
 // repaired-b-fit-20261021/fit.json for data/provenance/limitations.
-// Ethan requests estimated BOARD current <=940 mA, including idle consumption.
-// No coefficient padding or extra margin: one common final-boundary scale
-// limits LED demand to 865 mA. Existing render/output caps and saves stay intact.
+// Normal defaults to 940 mA estimated BOARD current, including idle consumption.
+// MODULE_USB_500MA selects 450 mA total, leaving 50 mA nominal headroom below
+// a configured 500 mA USB allowance. The fitted 75 mA baseline leaves 375 mA
+// for LEDs. Existing render/output caps, startup and saves stay intact.
 // This caps an ESTIMATE, not sensed current or a certified hardware-safe load.
 const module_power_profile_t module_power_profile = {
-#ifdef MODULE_CURRENT_UNLIMITED
+#ifdef MODULE_USB_500MA
+    .revision = 15,
+#elif defined(MODULE_CURRENT_UNLIMITED)
     .revision = 14, // Normal saves/startup/output caps; current estimate only.
 #else
     .revision = 13,
 #endif
     .front_badge_max = 190, // 25 October: user-requested shared front/badge cap.
     .configured = true,
+#ifdef MODULE_USB_500MA
+    .board_limit_ma = 450,
+#else
     .board_limit_ma = 940,
+#endif
     .base_ma = 75,
     .margin_ma = 0,
     .channel_ua = {{11262, 10049, 11020}, {12994, 12869, 13131}, {11021, 11398, 11652}},

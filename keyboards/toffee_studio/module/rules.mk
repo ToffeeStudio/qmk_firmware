@@ -49,6 +49,12 @@ EXTRA_USB_INTERFACES = yes
 WPM_ENABLE = yes
 
 # Explicit opt-in only; the normal product build keeps saved-startup behaviour.
+ifeq ($(MODULE_USB_500MA),yes)
+    ifneq ($(filter yes,$(MODULE_CURRENT_UNLIMITED) $(MODULE_EXTENSIVE_TEST) $(MODULE_POWER_CALIBRATION) $(MODULE_MANUAL_MEASUREMENT)),)
+        $(error MODULE_USB_500MA cannot be combined with unlimited or test modes)
+    endif
+    OPT_DEFS += -DMODULE_USB_500MA
+endif
 ifeq ($(MODULE_CURRENT_UNLIMITED),yes)
     ifeq ($(MODULE_EXTENSIVE_TEST),yes)
         $(error MODULE_CURRENT_UNLIMITED is a normal-firmware option, not a test mode)
