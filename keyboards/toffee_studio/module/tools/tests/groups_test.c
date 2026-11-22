@@ -102,6 +102,18 @@ int main(void) {
     qmk_render();
     now = MODULE_LIGHTING_STARTUP_DELAY_MS + MODULE_LIGHTING_STARTUP_FADE_MS;
     qmk_render();
+#ifdef MODULE_DEFAULT_RAINBOW
+    assert(qmk_mode == RGB_MATRIX_CYCLE_ALL && qmk_hsv.s == 255);
+    assert(module_lighting_state.badge_effect == 3);
+    RGB first_badge = rgb_matrix_ws2812_array[68];
+    now += 500;
+    qmk_render();
+    assert(first_badge.r == 18 && first_badge.g == 255);
+    assert(rgb_matrix_ws2812_array[68].b != first_badge.b);
+#else
+    assert(qmk_mode == RGB_MATRIX_SOLID_COLOR && module_lighting_state.badge_effect == 1);
+#endif
+    assert(saves == 0);
     now = 0; // Existing debounce tests below use a zero-based clock.
     unsigned front = 0, badge = 0, rear = 0;
     for (unsigned i = 0; i < 201; i++) {

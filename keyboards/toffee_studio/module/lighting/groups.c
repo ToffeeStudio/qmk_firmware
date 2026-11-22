@@ -71,9 +71,15 @@ static void apply_front(void) {
 void lighting_groups_init(void) {
     memset(&module_lighting_state, 0, sizeof(module_lighting_state));
     memset(module_lighting_state.overrides, 255, sizeof(module_lighting_state.overrides));
+#ifdef MODULE_DEFAULT_RAINBOW
+    module_lighting_state.front = (front_config_t){3, 100, 18, 0, 255}; // Cycle All.
+    module_lighting_state.badge = (badge_config_t){1, 18, 0, 255};
+    module_lighting_state.badge_effect = 3; // Rainbow cycle.
+#else
     module_lighting_state.front = (front_config_t){1, 100, 18, 0, 0};
     module_lighting_state.badge = (badge_config_t){1, 18, 0, 0};
     module_lighting_state.badge_effect = 1;
+#endif
     module_lighting_state.badge_speed = 100;
     bool loaded = lighting_storage_load(&module_lighting_state);
     save_pending = false;

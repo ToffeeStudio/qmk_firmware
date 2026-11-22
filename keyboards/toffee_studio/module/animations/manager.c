@@ -2,6 +2,7 @@
 #include "quantum.h"
 #include <lib/lib8tion/lib8tion.h>   // for scale8(), sin8(), etc.
 #include "color.h"
+#include "lighting/lighting.h"
 #include "persistence.h"
 
 // --- Include all your animation modules here ---
@@ -48,11 +49,16 @@ const uint8_t UNDERGLOW_ANIMATION_COUNT = sizeof(underglow_animations) / sizeof(
  * @brief Initializes the underglow animation manager.
  */
 void underglow_manager_init(void) {
+#ifdef MODULE_DEFAULT_RAINBOW
+    const uint8_t initial_animation = ANIM_ID_CYCLE_LEFT_RIGHT;
+#else
+    const uint8_t initial_animation = ANIM_ID_SOLID;
+#endif
     g_underglow_config.brightness = 200;
     g_underglow_config.speed      = 100;
     g_underglow_config.color      = (HSV){170, 255, 255}; // A bright cyan
-    g_underglow_config.current_animation_id = 0;
-    g_underglow_config.active_animation = underglow_animations[0];
+    g_underglow_config.current_animation_id = initial_animation;
+    g_underglow_config.active_animation = underglow_animations[initial_animation];
 
     // If the selected animation has an initialization function, run it.
     if (g_underglow_config.active_animation->init) {

@@ -21,6 +21,9 @@ void lighting_enable_underglow(void);
 void keylight_set_brightness(uint16_t led_index, uint8_t brightness);
 
 #ifdef MODULE_LED_DISCOVERY
+#if !defined(MODULE_USB_500MA) && !defined(MODULE_CURRENT_UNLIMITED) && !defined(MODULE_EXTENSIVE_TEST)
+#define MODULE_DEFAULT_RAINBOW
+#endif
 #define LIGHTING_DISCOVERY_LED_COUNT 5
 void lighting_discovery_set_leds(const uint8_t *led_indices);
 bool lighting_rescue_off(void);
